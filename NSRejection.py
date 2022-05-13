@@ -1,70 +1,80 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
-def likelihood(x, C, sigma):
-    return np.exp(-x**(2/C)/(2*sigma**2))
+import scipy.special
+def logLikelihood(x, C, sigma=0.2):
+    return -x**(2/C)/(2*sigma**2)
 
 def prior(C, n_samples):
-    #random_directions = np.random.normal(size=(C,n_samples))
+    #random_directions = np.random.normal(silogze=(C,n_samples))
     #norm = np.linalg.norm(random_directions, axis=0)
     #random_directions/=norm
     radii = np.random.random(n_samples)**(1/C)
     return radii**2
 
-def nested_sampling(likelihood, prior, n_dim, nlive, stop_criterion, sigma):
+def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
     #initialisation
-    Z = 0
-    X_previous = 1
+    logZ_previous = -1e300 # Z = 0
+    logX_previous = 0 # X = 1
     iteration = 0
-    increase = 1000
+    logIncrease = 10 # evidence increase factor
 
     #sample from prior
     samples = prior(n_dim, nlive)
-    likelihoods = likelihood(samples, n_dim, sigma=sigma)
+    logLikelihoods = logLikelihood(samples, n_dim)
     samples = samples.tolist()
-    likelihoods = likelihoods.tolist()
+    logLikelihoods = logLikelihoods.tolist()
 
 
-    while increase > stop_criterion:
+    while logIncrease > np.log(stop_criterion):
         iteration += 1
-        minLike = min(likelihoods)
-        index = likelihoods.index(minLike)
+        minlogLike = min(logLikelihoods)
+        index = logLikelihoods.index(minlogLike)
 
-        X_current = np.exp(-iteration/nlive)
-        weight_current = X_previous- X_current
-        X_previous = X_current
+        logX_current = -iteration/nlive
 
-        Z += weight_current*minLike
+        subtraction_coeff = np.array([1,-1])
+        logWeights = np.array([logX_previous, logX_current])
+        logWeight_current =scipy.special.logsumexp(a=logWeights,b=subtraction_coeff)
+        logX_previous = logX_current
+
+        #TODO Fix log sum exp logic
+        logZ_current = logWeight_current + minlogLike
+        logZ_array = np.array([logZ_previous, logZ_current])
+        logZ_total =  scipy.special.logsumexp(logZ_array)
+        logZ_previous = logZ_total
 
 
         sampling = True
         while sampling:
             proposal_sample = prior(n_dim,1)
 
-            if likelihood(proposal_sample,n_dim, sigma=sigma) > minLike:
+            if logLikelihood(proposal_sample,n_dim) > minlogLike:
                 #accept
                 samples[index] = float(proposal_sample)
-                likelihoods[index] = float(likelihood(proposal_sample,n_dim, sigma=sigma))
+                logLikelihoods[index] = float(logLikelihood(proposal_sample,n_dim))
                 sampling = False
 
-        maxLike = max(likelihoods)
-        #print(np.log10(maxLike))
-        #print(np.log10(Z))
-        increase = weight_current*maxLike/Z
+        maxlogLike = max(logLikelihoods)
+        logIncrease = logWeight_current+maxlogLike-logZ_total
         if iteration%1000 == 0:
             print("current iteration: ", iteration)
             #print("current increase: ", increase)
 
-    finalLikelihoods = likelihood(np.array(samples), n_dim, sigma=sigma)
-    Z += nlive**(-1)*np.sum(finalLikelihoods)*X_current
+    finallogLikelihoods = logLikelihood(np.array(samples), n_dim)
+    #TODO Fix log Z addition
+    finallogLikesum = scipy.special.logsumexp(a=finallogLikelihoods)
+    logZ_current = -np.log(nlive) + finallogLikesum + logX_current
+    logZ_array = np.array([logZ_previous, logZ_current])
+    logZ_total = scipy.special.logsumexp(logZ_array)
 
-    return Z
+
+    return logZ_total
 
 
-Z =nested_sampling(likelihood=likelihood, prior=prior, n_dim=2,nlive=1000, stop_criterion=1e-3, sigma=0.01)
-print(np.log(Z))
+logZ =nested_sampling(logLikelihood=logLikelihood, prior=prior, n_dim=2,nlive=1000, stop_criterion=1e-3)
+print(logZ)
 C = 2
-sigma = 0.01
+sigma = 0.2
 
 Z = np.math.factorial(C/2)*(2*sigma**2)**(C/2)
 print(np.log(Z))
