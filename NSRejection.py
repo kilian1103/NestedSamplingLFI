@@ -54,10 +54,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, stop_criterion):
             proposal_sample = prior(ndim,1)
             if logLikelihood(proposal_sample,ndim) > minlogLike:
                 #accept
-                if ndim > 1:
-                    samples[index] = proposal_sample.tolist()[0]
-                else:
-                    samples[index] = float(proposal_sample)
+                samples[index] = proposal_sample.tolist()[0]
                 logLikelihoods[index] = float(logLikelihood(proposal_sample,ndim))
                 sampling = False
 
@@ -66,7 +63,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, stop_criterion):
         if iteration%1000 == 0:
             print("current iteration: ", iteration)
             #print("current increase: ", increase)
-    samples = np.array(samples)
+
     finallogLikesum = scipy.special.logsumexp(a=logLikelihoods)
     logZ_current = -np.log(nlive) + finallogLikesum + logX_current
     logZ_array = np.array([logZ_previous, logZ_current])
