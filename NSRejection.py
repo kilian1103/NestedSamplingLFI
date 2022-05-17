@@ -1,17 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import multivariate_normal
 import scipy.special
-def logLikelihood(x, C, sigma=0.01):
-    return -x**(2/C)/(2*sigma**2)
+def logLikelihood(x, ndim):
+    #Multivariate Gaussian centred at X = 0.5, y= 0.5
+    #x shape: (ndim, n_samples)
+    means = 0.5*np.ones(shape=ndim)
+    cov = 0.05*np.eye(N=ndim)
+    return multivariate_normal.logpdf(x=x, mean=means, cov=cov)
 
-def prior(C, n_samples):
+
+
+def prior(ndim, nsamples):
     #random_directions = np.random.normal(silogze=(C,n_samples))
     #norm = np.linalg.norm(random_directions, axis=0)
     #random_directions/=norm
-    radii = np.random.random(n_samples)**(1/C)
-    return radii**2
+    return np.random.uniform(low=0, high=3, size=(nsamples,ndim))
 
-def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
+def nested_sampling(logLikelihood, prior, ndim, nlive, stop_criterion):
     #initialisation
     logZ_previous = -1e300 # Z = 0
     logX_previous = 0 # X = 1
@@ -19,8 +25,8 @@ def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
     logIncrease = 10 # evidence increase factor
 
     #sample from prior
-    samples = prior(n_dim, nlive)
-    logLikelihoods = logLikelihood(samples, n_dim)
+    samples = prior(ndim, nlive)
+    logLikelihoods = logLikelihood(samples, ndim)
     logLikelihoods = logLikelihoods.tolist()
 
 
@@ -44,11 +50,11 @@ def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
 
         sampling = True
         while sampling:
-            proposal_sample = prior(n_dim,1)
+            proposal_sample = prior(ndim,1)
 
-            if logLikelihood(proposal_sample,n_dim) > minlogLike:
+            if logLikelihood(proposal_sample,ndim) > minlogLike:
                 #accept
-                logLikelihoods[index] = float(logLikelihood(proposal_sample,n_dim))
+                logLikelihoods[index] = float(logLikelihood(proposal_sample,ndim))
                 sampling = False
 
         maxlogLike = max(logLikelihoods)
@@ -56,6 +62,7 @@ def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
         if iteration%1000 == 0:
             print("current iteration: ", iteration)
             #print("current increase: ", increase)
+
 
     finallogLikesum = scipy.special.logsumexp(a=logLikelihoods)
     logZ_current = -np.log(nlive) + finallogLikesum + logX_current
@@ -66,11 +73,12 @@ def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
     return logZ_total
 
 
-logZ =nested_sampling(logLikelihood=logLikelihood, prior=prior, n_dim=2,nlive=1000, stop_criterion=1e-3)
+logZ =nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2,nlive=1000, stop_criterion=1e-3)
 print(logZ)
 C = 2
-sigma = 0.01
+sigma = 0.2
 
-Z = np.math.factorial(C/2)*(2*sigma**2)**(C/2)
-print(np.log(Z))
+#Z = np.math.factorial(C/2)*(2*sigma**2)**(C/2)
+#print(np.log(Z))
+
 
