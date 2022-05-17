@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.special
-def logLikelihood(x, C, sigma=0.2):
+def logLikelihood(x, C, sigma=0.01):
     return -x**(2/C)/(2*sigma**2)
 
 def prior(C, n_samples):
@@ -21,7 +21,6 @@ def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
     #sample from prior
     samples = prior(n_dim, nlive)
     logLikelihoods = logLikelihood(samples, n_dim)
-    samples = samples.tolist()
     logLikelihoods = logLikelihoods.tolist()
 
 
@@ -37,7 +36,6 @@ def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
         logWeight_current =scipy.special.logsumexp(a=logWeights,b=subtraction_coeff)
         logX_previous = logX_current
 
-        #TODO Fix log sum exp logic
         logZ_current = logWeight_current + minlogLike
         logZ_array = np.array([logZ_previous, logZ_current])
         logZ_total =  scipy.special.logsumexp(logZ_array)
@@ -50,7 +48,6 @@ def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
 
             if logLikelihood(proposal_sample,n_dim) > minlogLike:
                 #accept
-                samples[index] = float(proposal_sample)
                 logLikelihoods[index] = float(logLikelihood(proposal_sample,n_dim))
                 sampling = False
 
@@ -60,9 +57,7 @@ def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
             print("current iteration: ", iteration)
             #print("current increase: ", increase)
 
-    finallogLikelihoods = logLikelihood(np.array(samples), n_dim)
-    #TODO Fix log Z addition
-    finallogLikesum = scipy.special.logsumexp(a=finallogLikelihoods)
+    finallogLikesum = scipy.special.logsumexp(a=logLikelihoods)
     logZ_current = -np.log(nlive) + finallogLikesum + logX_current
     logZ_array = np.array([logZ_previous, logZ_current])
     logZ_total = scipy.special.logsumexp(logZ_array)
@@ -74,7 +69,7 @@ def nested_sampling(logLikelihood, prior, n_dim, nlive, stop_criterion):
 logZ =nested_sampling(logLikelihood=logLikelihood, prior=prior, n_dim=2,nlive=1000, stop_criterion=1e-3)
 print(logZ)
 C = 2
-sigma = 0.2
+sigma = 0.01
 
 Z = np.math.factorial(C/2)*(2*sigma**2)**(C/2)
 print(np.log(Z))
