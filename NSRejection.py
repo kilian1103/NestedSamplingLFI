@@ -1,84 +1,101 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import multivariate_normal
 import scipy.special
-def logLikelihood(x, ndim):
-    #Multivariate Gaussian centred at X = 0.5, y= 0.5
-    #x shape: (ndim, n_samples)
-    means = 0.5*np.ones(shape=ndim)
-    cov = 0.05*np.eye(N=ndim)
+from scipy.stats import multivariate_normal
+
+
+def logLikelihood(x, ndim) -> np.ndarray:
+    # Multivariate Gaussian centred at X = 0.5, y= 0.5
+    # x shape: (ndim, n_samples)
+    means = 0.5 * np.ones(shape=ndim)
+    cov = 0.01 * np.eye(N=ndim)
     return multivariate_normal.logpdf(x=x, mean=means, cov=cov)
 
 
+def prior(ndim, nsamples) -> np.ndarray:
+    # random_directions = np.random.normal(silogze=(C,n_samples))
+    # norm = np.linalg.norm(random_directions, axis=0)
+    # random_directions/=norm
+    return np.random.uniform(low=0, high=4, size=(nsamples, ndim))
 
-def prior(ndim, nsamples):
-    #random_directions = np.random.normal(silogze=(C,n_samples))
-    #norm = np.linalg.norm(random_directions, axis=0)
-    #random_directions/=norm
-    return np.random.uniform(low=0, high=1, size=(nsamples,ndim))
 
-def nested_sampling(logLikelihood, prior, ndim, nlive, stop_criterion):
-    #initialisation
-    logZ_previous = -1e300 # Z = 0
-    logX_previous = 0 # X = 1
+def rejection_sampler(ndim, prior) -> np.ndarray:
+    proposal_sample = prior(ndim, 1)[0]
+    return proposal_sample
+
+
+def metropolis_sampler(ndim, livepoints, nrepeat=5) -> np.ndarray:
+    random_index = np.random.randint(0, len(livepoints))
+    cov = np.cov(np.array(livepoints).T)
+    current_sample = livepoints[random_index]
+    for i in range(nrepeat * ndim):
+        withinPrior = False
+        while withinPrior is False:
+            proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)
+            # proposal_sample = np.random.normal(loc=livepoints[random_index], scale= 0.0005, size=ndim)
+            withinPrior = np.logical_and(proposal_sample > 0, proposal_sample < 4).all()
+        current_sample = proposal_sample
+    return current_sample
+
+
+def nested_sampling(logLikelihood, prior, ndim, nlive, stop_criterion, sampler) -> float:
+    # initialisation
+    logZ_previous = -1e300  # Z = 0
+    logX_previous = 0  # X = 1
     iteration = 0
-    logIncrease = 10 # evidence increase factor
+    logIncrease = 10  # evidence increase factor
 
-    #sample from prior
+    # sample from prior
     samples = prior(ndim, nlive)
     logLikelihoods = logLikelihood(samples, ndim)
     samples = samples.tolist()
     logLikelihoods = logLikelihoods.tolist()
 
-
     while logIncrease > np.log(stop_criterion):
         iteration += 1
         minlogLike = min(logLikelihoods)
         index = logLikelihoods.index(minlogLike)
+        logX_current = -iteration / nlive
 
-        logX_current = -iteration/nlive
-
-        subtraction_coeff = np.array([1,-1])
+        subtraction_coeff = np.array([1, -1])
         logWeights = np.array([logX_previous, logX_current])
-        logWeight_current =scipy.special.logsumexp(a=logWeights,b=subtraction_coeff)
+        logWeight_current = scipy.special.logsumexp(a=logWeights, b=subtraction_coeff)
         logX_previous = logX_current
 
         logZ_current = logWeight_current + minlogLike
         logZ_array = np.array([logZ_previous, logZ_current])
-        logZ_total =  scipy.special.logsumexp(logZ_array)
+        logZ_total = scipy.special.logsumexp(logZ_array)
         logZ_previous = logZ_total
-
 
         sampling = True
         while sampling:
-            proposal_sample = prior(ndim,1)
-            if logLikelihood(proposal_sample,ndim) > minlogLike:
-                #accept
-                samples[index] = proposal_sample.tolist()[0]
-                logLikelihoods[index] = float(logLikelihood(proposal_sample,ndim))
+            proposal_sample = sampler(ndim, samples)
+            # proposal_sample = sampler(ndim, prior)
+            if logLikelihood(proposal_sample, ndim) > minlogLike:
+                # accept
+                samples[index] = proposal_sample.tolist()
+                logLikelihoods[index] = float(logLikelihood(proposal_sample, ndim))
                 sampling = False
 
         maxlogLike = max(logLikelihoods)
-        logIncrease = logWeight_current+maxlogLike-logZ_total
-        if iteration%1000 == 0:
+        logIncrease = logWeight_current + maxlogLike - logZ_total
+        if iteration % 1000 == 0:
             print("current iteration: ", iteration)
-            #print("current increase: ", increase)
+            # print("current increase: ", increase)
 
     finallogLikesum = scipy.special.logsumexp(a=logLikelihoods)
     logZ_current = -np.log(nlive) + finallogLikesum + logX_current
     logZ_array = np.array([logZ_previous, logZ_current])
     logZ_total = scipy.special.logsumexp(logZ_array)
-
+    print(samples)
 
     return logZ_total
 
 
-logZ =nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2,nlive=1000, stop_criterion=1e-3)
+logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=1000, stop_criterion=1e-3,
+                       sampler=metropolis_sampler)
 print(logZ)
 C = 2
 sigma = 0.2
 
-#Z = np.math.factorial(C/2)*(2*sigma**2)**(C/2)
-#print(np.log(Z))
-
-
+# Z = np.math.factorial(C/2)*(2*sigma**2)**(C/2)
+# print(np.log(Z))
