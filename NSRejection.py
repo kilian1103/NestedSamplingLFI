@@ -18,7 +18,7 @@ def prior(ndim, nsamples) -> np.ndarray:
     return np.random.uniform(low=0, high=1, size=(nsamples, ndim))
 
 
-def rejection_sampler(ndim, prior, logLikelihood, minlogLike) -> np.ndarray:
+def rejection_sampler(ndim, samples, prior, logLikelihood, minlogLike) -> np.ndarray:
     while True:
         proposal_sample = prior(ndim, 1)[0]
         if logLikelihood(proposal_sample, ndim) > minlogLike:
@@ -26,7 +26,7 @@ def rejection_sampler(ndim, prior, logLikelihood, minlogLike) -> np.ndarray:
     return proposal_sample
 
 
-def metropolis_sampler(ndim, samples, logLikelihood, minlogLike, nrepeat=5) -> np.ndarray:
+def metropolis_sampler(ndim, samples, prior, logLikelihood, minlogLike, nrepeat=5) -> np.ndarray:
     cov = np.cov(np.array(samples).T)
     random_index = np.random.randint(0, len(samples))
     current_sample = samples[random_index]
@@ -76,7 +76,8 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         logZ_total = scipy.special.logsumexp(logZ_array, axis=0)
         logZ_previous = logZ_total
 
-        proposal_sample = sampler(ndim, prior=prior, logLikelihood=logLikelihood, minlogLike=minlogLike)
+        proposal_sample = sampler(ndim, samples=livepoints, prior=prior, logLikelihood=logLikelihood,
+                                  minlogLike=minlogLike)
         livepoints[index] = proposal_sample.tolist()
         logLikelihoods[index] = float(logLikelihood(proposal_sample, ndim))
 
@@ -97,7 +98,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
 
 
 logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=1000, nsim=10000, stop_criterion=1e-3,
-                       sampler=rejection_sampler)
+                       sampler=metropolis_sampler)
 print(logZ)
 C = 2
 sigma = 0.2
