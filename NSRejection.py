@@ -5,7 +5,6 @@ from scipy.stats import multivariate_normal
 
 def logLikelihood(x, ndim) -> np.ndarray:
     # Multivariate Gaussian centred at X = 0.5, y= 0.5
-    # x shape: (ndim, n_samples)
     means = 0.5 * np.ones(shape=ndim)
     cov = 0.01 * np.eye(N=ndim)
     return multivariate_normal.logpdf(x=x, mean=means, cov=cov)
@@ -92,7 +91,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
 
         maxlogLike = max(logLikelihoods)
         logIncrease_array = logWeight_current + maxlogLike - logZ_total
-        logIncrease = min(logIncrease_array)
+        logIncrease = max(logIncrease_array)
         if iteration % 500 == 0:
             print("current iteration: ", iteration)
 
@@ -105,6 +104,6 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
             "log Z std": np.std(logZ_total)}
 
 
-logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=1000, nsim=10000, stop_criterion=1e-3,
+logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=1000, nsim=100, stop_criterion=1e-3,
                        sampler=metropolis_sampler)
 print(logZ)
