@@ -12,9 +12,6 @@ def logLikelihood(x, ndim) -> np.ndarray:
 
 
 def prior(ndim, nsamples) -> np.ndarray:
-    # random_directions = np.random.normal(silogze=(C,n_samplles))
-    # norm = np.linalg.norm(random_directions, axis=0)
-    # random_directions/=norm
     return np.random.uniform(low=0, high=1, size=(nsamples, ndim))
 
 
@@ -86,7 +83,6 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         logIncrease = min(logIncrease_array)
         if iteration % 500 == 0:
             print("current iteration: ", iteration)
-            # print("current increase: ", increase)
 
     finallogLikesum = scipy.special.logsumexp(a=logLikelihoods)
     logZ_current = -np.log(nlive) + finallogLikesum + logX_current
@@ -100,8 +96,3 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
 logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=1000, nsim=10000, stop_criterion=1e-3,
                        sampler=metropolis_sampler)
 print(logZ)
-C = 2
-sigma = 0.2
-
-# Z = np.math.factorial(C/2)*(2*sigma**2)**(C/2)
-# print(np.log(Z))
