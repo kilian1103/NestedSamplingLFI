@@ -51,30 +51,42 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
     logLikelihoods = logLikelihood(livepoints, ndim)
     livepoints = livepoints.tolist()
     logLikelihoods = logLikelihoods.tolist()
+    deadpoints = []
+    deadpoints_logL = []
 
     while logIncrease > np.log(stop_criterion):
         iteration += 1
+        # identifying lowest likelihood point
         minlogLike = min(logLikelihoods)
         index = logLikelihoods.index(minlogLike)
+
+        # save deadpoint and its loglike
+        deadpoint = livepoints[index]
+        deadpoints.append(deadpoint)
+        deadpoints_logL.append(minlogLike)
 
         # sample t's
         ti_s = np.random.power(a=nlive, size=nsim)
         log_ti_s = np.log(ti_s)
 
+        # Calculate X contraction and weight
         logX_current = logX_previous + log_ti_s
-
         subtraction_coeff = np.array([1, -1]).reshape(2, 1)
         logWeights = np.array([logX_previous, logX_current])
         logWeight_current = scipy.special.logsumexp(a=logWeights, b=subtraction_coeff, axis=0)
         logX_previous = logX_current
 
+        # Calculate evidence increase
         logZ_current = logWeight_current + minlogLike
         logZ_array = np.array([logZ_previous, logZ_current])
         logZ_total = scipy.special.logsumexp(logZ_array, axis=0)
         logZ_previous = logZ_total
 
+        # find new sample satisfying likelihood constraint
         proposal_sample = sampler(ndim, samples=livepoints, prior=prior, logLikelihood=logLikelihood,
                                   minlogLike=minlogLike)
+
+        # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.tolist()
         logLikelihoods[index] = float(logLikelihood(proposal_sample, ndim))
 
