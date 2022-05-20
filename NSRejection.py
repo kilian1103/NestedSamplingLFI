@@ -2,6 +2,8 @@ import numpy as np
 import scipy.special
 from scipy.stats import multivariate_normal
 
+from Sampler import Sampler
+
 
 def logLikelihood(x, ndim) -> np.ndarray:
     # Multivariate Gaussian centred at X = 0.5, y= 0.5
@@ -14,30 +16,7 @@ def prior(ndim, nsamples) -> np.ndarray:
     return np.random.uniform(low=0, high=1, size=(nsamples, ndim))
 
 
-def rejection_sampler(ndim, samples, prior, logLikelihood, minlogLike) -> np.ndarray:
-    while True:
-        proposal_sample = prior(ndim, 1)[0]
-        if logLikelihood(proposal_sample, ndim) > minlogLike:
-            break
-    return proposal_sample
-
-
-def metropolis_sampler(ndim, samples, prior, logLikelihood, minlogLike, nrepeat=5) -> np.ndarray:
-    cov = np.cov(np.array(samples).T)
-    random_index = np.random.randint(0, len(samples))
-    current_sample = samples[random_index]
-    for i in range(nrepeat * ndim):
-        while True:
-            proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)
-            withinPrior = np.logical_and(proposal_sample > 0, proposal_sample < 1).all()
-            withinContour = logLikelihood(proposal_sample, ndim) > minlogLike
-            if withinPrior and withinContour:
-                break
-        current_sample = proposal_sample
-    return current_sample
-
-
-def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sampler):
+def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, samplertype):
     # initialisation
     logZ_previous = -1e300 * np.ones(nsim)  # Z = 0
     logX_previous = np.zeros(nsim)  # X = 1
@@ -82,8 +61,8 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         logZ_previous = logZ_total
 
         # find new sample satisfying likelihood constraint
-        proposal_sample = sampler(ndim, samples=livepoints, prior=prior, logLikelihood=logLikelihood,
-                                  minlogLike=minlogLike)
+        sampler = Sampler(prior=prior, logLikelihood=logLikelihood, ndim=ndim).getSampler(samplertype)
+        proposal_sample = sampler.sample(samples=livepoints, minlogLike=minlogLike)
 
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.tolist()
@@ -105,5 +84,5 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
 
 
 logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=1000, nsim=100, stop_criterion=1e-3,
-                       sampler=metropolis_sampler)
+                       samplertype="Metropolis")
 print(logZ)
