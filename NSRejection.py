@@ -42,7 +42,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
     # code for birthlog likelihood tracking
     samples = []
     for livepoint in livepoints:
-        sample = Sample(sample=livepoint, birthlogL=-1e300)
+        sample = Sample(sample=livepoint, birthlogL=-1e300)  # L = 0
         samples.append(sample)
 
     while logIncrease > np.log(stop_criterion):
@@ -110,11 +110,15 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         deadpoints_birthlogL.append(samples[index].birthlogL)
         weights.append(np.mean(logX_current) - np.log(nlive))
 
+    np.save(file="weights", arr=np.array(weights))
+    np.save(file="posterior_samples", arr=np.array(deadpoints))
+    np.save(file="logL", arr=np.array(deadpoints_logL))
+    np.save(file="logL_birth", arr=np.array(deadpoints_birthlogL))
     print(f"Algorithm terminated after {iteration} iterations!")
     return {"log Z mean": np.mean(logZ_total),
             "log Z std": np.std(logZ_total)}
 
 
-logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=1000, nsim=100, stop_criterion=1e-3,
+logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=8, nlive=1000, nsim=100, stop_criterion=1e-3,
                        samplertype="Metropolis")
 print(logZ)
