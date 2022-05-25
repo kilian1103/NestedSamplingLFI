@@ -5,12 +5,6 @@ from scipy.stats import multivariate_normal
 from Sampler import Sampler
 
 
-class Sample:
-    def __init__(self, sample, birthlogL):
-        self.sample = sample
-        self.birthlogL = birthlogL
-
-
 def logLikelihood(x, ndim) -> np.ndarray:
     # Multivariate Gaussian centred at X = 0.5, y= 0.5
     means = 0.5 * np.ones(shape=ndim)
@@ -38,12 +32,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
     deadpoints_logL = []
     deadpoints_birthlogL = []
     weights = []
-
-    # code for birthlog likelihood tracking
-    samples = []
-    for livepoint in livepoints:
-        sample = Sample(sample=livepoint, birthlogL=-1e300)  # L = 0
-        samples.append(sample)
+    livepoints_birthlogL = [-1e300 for i in livepoints]  # L_birth = 0
 
     while logIncrease > np.log(stop_criterion):
         iteration += 1
@@ -55,7 +44,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         deadpoint = livepoints[index]
         deadpoints.append(deadpoint)
         deadpoints_logL.append(minlogLike)
-        deadpoints_birthlogL.append(samples[index].birthlogL)
+        deadpoints_birthlogL.append(livepoints_birthlogL[index])
 
         # sample t's
         ti_s = np.random.power(a=nlive, size=nsim)
@@ -82,8 +71,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.tolist()
         logLikelihoods[index] = float(logLikelihood(proposal_sample, ndim))
-        sample = Sample(sample=proposal_sample, birthlogL=minlogLike)
-        samples[index] = sample
+        livepoints_birthlogL[index] = minlogLike
 
         maxlogLike = max(logLikelihoods)
         logIncrease_array = logWeight_current + maxlogLike - logZ_total
@@ -107,7 +95,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
 
         deadpoints.append(deadpoint)
         deadpoints_logL.append(minlogLike)
-        deadpoints_birthlogL.append(samples[index].birthlogL)
+        deadpoints_birthlogL.append(livepoints_birthlogL[index])
         weights.append(np.mean(logX_current) - np.log(nlive))
 
     np.save(file="weights", arr=np.array(weights))
