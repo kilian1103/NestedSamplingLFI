@@ -5,6 +5,12 @@ from scipy.stats import multivariate_normal
 from Sampler import Sampler
 
 
+class Sample:
+    def __init__(self, sample, birthlogL):
+        self.sample = sample
+        self.birthlogL = birthlogL
+
+
 def logLikelihood(x, ndim) -> np.ndarray:
     # Multivariate Gaussian centred at X = 0.5, y= 0.5
     means = 0.5 * np.ones(shape=ndim)
@@ -25,13 +31,19 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
 
     # sample from prior
     print(f"Sampling {nlive} livepoints from the prior!")
-    livepoints = prior(ndim, nlive)
-    logLikelihoods = logLikelihood(livepoints, ndim)
-    livepoints = livepoints.tolist()
-    logLikelihoods = logLikelihoods.tolist()
+    livepoints = prior(ndim, nlive).tolist()
+    logLikelihoods = logLikelihood(livepoints, ndim).tolist()
+
     deadpoints = []
     deadpoints_logL = []
+    deadpoints_birthlogL = []
     weights = []
+
+    # code for birthlog likelihood tracking
+    samples = []
+    for livepoint in livepoints:
+        sample = Sample(sample=livepoint, birthlogL=-1e300)
+        samples.append(sample)
 
     while logIncrease > np.log(stop_criterion):
         iteration += 1
@@ -43,6 +55,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         deadpoint = livepoints[index]
         deadpoints.append(deadpoint)
         deadpoints_logL.append(minlogLike)
+        deadpoints_birthlogL.append(samples[index].birthlogL)
 
         # sample t's
         ti_s = np.random.power(a=nlive, size=nsim)
@@ -69,6 +82,8 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.tolist()
         logLikelihoods[index] = float(logLikelihood(proposal_sample, ndim))
+        sample = Sample(sample=proposal_sample, birthlogL=minlogLike)
+        samples[index] = sample
 
         maxlogLike = max(logLikelihoods)
         logIncrease_array = logWeight_current + maxlogLike - logZ_total
@@ -92,6 +107,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
 
         deadpoints.append(deadpoint)
         deadpoints_logL.append(minlogLike)
+        deadpoints_birthlogL.append(samples[index].birthlogL)
         weights.append(np.mean(logX_current) - np.log(nlive))
 
     print(f"Algorithm terminated after {iteration} iterations!")
