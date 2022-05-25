@@ -31,6 +31,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
     logLikelihoods = logLikelihoods.tolist()
     deadpoints = []
     deadpoints_logL = []
+    weights = []
 
     while logIncrease > np.log(stop_criterion):
         iteration += 1
@@ -53,6 +54,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         logWeights = np.array([logX_previous, logX_current])
         logWeight_current = scipy.special.logsumexp(a=logWeights, b=subtraction_coeff, axis=0)
         logX_previous = logX_current
+        weights.append(np.mean(logWeight_current))
 
         # Calculate evidence increase
         logZ_current = logWeight_current + minlogLike
@@ -90,6 +92,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
 
         deadpoints.append(deadpoint)
         deadpoints_logL.append(minlogLike)
+        weights.append(np.mean(logX_current) - np.log(nlive))
 
     print(f"Algorithm terminated after {iteration} iterations!")
     return {"log Z mean": np.mean(logZ_total),
