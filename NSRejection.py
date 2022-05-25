@@ -74,10 +74,23 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         if iteration % 500 == 0:
             print("current iteration: ", iteration)
 
+    # final <L>*dX sum calculation
     finallogLikesum = scipy.special.logsumexp(a=logLikelihoods)
     logZ_current = -np.log(nlive) + finallogLikesum + logX_current
     logZ_array = np.array([logZ_previous, logZ_current])
     logZ_total = scipy.special.logsumexp(logZ_array, axis=0)
+
+    # convert surviving livepoints to deadpoints
+    while len(logLikelihoods) > 0:
+        minlogLike = min(logLikelihoods)
+        index = logLikelihoods.index(minlogLike)
+
+        deadpoint = livepoints.pop(index)
+        logLikelihoods.pop(index)
+
+        deadpoints.append(deadpoint)
+        deadpoints_logL.append(minlogLike)
+
     print(f"Algorithm terminated after {iteration} iterations!")
     return {"log Z mean": np.mean(logZ_total),
             "log Z std": np.std(logZ_total)}
