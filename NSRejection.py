@@ -32,7 +32,8 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
     deadpoints_logL = []
     deadpoints_birthlogL = []
     weights = []
-    livepoints_birthlogL = [-1e300 for i in livepoints]  # L_birth = 0
+    livepoints_birthlogL = (-1e300 * np.ones(nlive)).tolist()  # L_birth = 0
+    sampler = Sampler(prior=prior, logLikelihood=logLikelihood, ndim=ndim).getSampler(samplertype)
 
     while logIncrease > np.log(stop_criterion):
         iteration += 1
@@ -65,7 +66,6 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         logZ_previous = logZ_total
 
         # find new sample satisfying likelihood constraint
-        sampler = Sampler(prior=prior, logLikelihood=logLikelihood, ndim=ndim).getSampler(samplertype)
         proposal_sample = sampler.sample(samples=livepoints, minlogLike=minlogLike)
 
         # replace lowest likelihood sample with proposal sample
@@ -107,6 +107,6 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
             "log Z std": np.std(logZ_total)}
 
 
-logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=8, nlive=1000, nsim=100, stop_criterion=1e-3,
+logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=100, nsim=100, stop_criterion=1e-3,
                        samplertype="Metropolis")
 print(logZ)
