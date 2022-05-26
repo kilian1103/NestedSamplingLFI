@@ -20,7 +20,7 @@ class Metropolis(Sampler):
         super().__init__(prior=prior, logLikelihood=logLikelihood, ndim=ndim)
 
     def sample(self, minlogLike, livepoints, nrepeat=5) -> np.ndarray:
-        cov = np.cov(np.array(livepoints).T)
+        cov = np.cov(livepoints.T)
         random_index = np.random.randint(0, len(livepoints))
         current_sample = livepoints[random_index].copy()
         for i in range(nrepeat * self.ndim):
@@ -30,7 +30,7 @@ class Metropolis(Sampler):
                 withinContour = self.logLikelihood(proposal_sample, self.ndim) > minlogLike
                 if withinPrior and withinContour:
                     break
-            current_sample = proposal_sample
+            current_sample = proposal_sample.copy()
         return current_sample
 
 

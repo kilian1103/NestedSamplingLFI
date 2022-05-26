@@ -44,10 +44,10 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         index = logLikelihoods.argmin()
 
         # save deadpoint and its loglike
-        deadpoint = livepoints[index]
+        deadpoint = livepoints[index].copy()
         deadpoints.append(deadpoint)
         deadpoints_logL.append(minlogLike)
-        deadpoints_birthlogL.append(livepoints_birthlogL[index])
+        deadpoints_birthlogL.append(livepoints_birthlogL[index].copy())
 
         # sample t's
         ti_s = np.random.power(a=nlive, size=nsim)
@@ -58,20 +58,20 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         subtraction_coeff = np.array([1, -1]).reshape(2, 1)
         logWeights = np.array([logX_previous, logX_current])
         logWeight_current = scipy.special.logsumexp(a=logWeights, b=subtraction_coeff, axis=0)
-        logX_previous = logX_current
+        logX_previous = logX_current.copy()
         weights.append(np.mean(logWeight_current))
 
         # Calculate evidence increase
         logZ_current = logWeight_current + minlogLike
         logZ_array = np.array([logZ_previous, logZ_current])
         logZ_total = scipy.special.logsumexp(logZ_array, axis=0)
-        logZ_previous = logZ_total
+        logZ_previous = logZ_total.copy()
 
         # find new sample satisfying likelihood constraint
-        proposal_sample = sampler.sample(livepoints=livepoints, minlogLike=minlogLike)
+        proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike)
 
         # replace lowest likelihood sample with proposal sample
-        livepoints[index] = proposal_sample.tolist()
+        livepoints[index] = proposal_sample.copy().tolist()
         logLikelihoods[index] = float(logLikelihood(proposal_sample, ndim))
         livepoints_birthlogL[index] = minlogLike
 
@@ -111,6 +111,6 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
             "log Z std": np.std(logZ_total)}
 
 
-logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=6, nlive=1000, nsim=100, stop_criterion=1e-3,
+logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=100, nsim=1000, stop_criterion=1e-2,
                        samplertype="Metropolis")
 print(logZ)
