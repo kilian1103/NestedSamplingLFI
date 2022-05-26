@@ -111,6 +111,6 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
             "log Z std": np.std(logZ_total)}
 
 
-logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=100, nsim=1000, stop_criterion=1e-2,
+logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=1000, nsim=100, stop_criterion=1e-2,
                        samplertype="Metropolis")
 print(logZ)

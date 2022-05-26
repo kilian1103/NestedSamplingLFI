@@ -24,13 +24,11 @@ class Metropolis(Sampler):
         random_index = np.random.randint(0, len(livepoints))
         current_sample = livepoints[random_index].copy()
         for i in range(nrepeat * self.ndim):
-            while True:
-                proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)
-                withinPrior = np.logical_and(proposal_sample > 0, proposal_sample < 1).all()
-                withinContour = self.logLikelihood(proposal_sample, self.ndim) > minlogLike
-                if withinPrior and withinContour:
-                    break
-            current_sample = proposal_sample.copy()
+            proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)
+            withinPrior = np.logical_and(proposal_sample > 0, proposal_sample < 1).all()
+            withinContour = self.logLikelihood(proposal_sample, self.ndim) > minlogLike
+            if withinPrior and withinContour:
+                current_sample = proposal_sample.copy()
         return current_sample
 
 
