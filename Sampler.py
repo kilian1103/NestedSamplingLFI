@@ -19,10 +19,10 @@ class Metropolis(Sampler):
     def __init__(self, prior, logLikelihood, ndim):
         super().__init__(prior=prior, logLikelihood=logLikelihood, ndim=ndim)
 
-    def sample(self, minlogLike, samples, nrepeat=5) -> np.ndarray:
-        cov = np.cov(np.array(samples).T)
-        random_index = np.random.randint(0, len(samples))
-        current_sample = samples[random_index].copy()
+    def sample(self, minlogLike, livepoints, nrepeat=5) -> np.ndarray:
+        cov = np.cov(np.array(livepoints).T)
+        random_index = np.random.randint(0, len(livepoints))
+        current_sample = livepoints[random_index].copy()
         for i in range(nrepeat * self.ndim):
             while True:
                 proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)

@@ -66,7 +66,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         logZ_previous = logZ_total
 
         # find new sample satisfying likelihood constraint
-        proposal_sample = sampler.sample(samples=livepoints, minlogLike=minlogLike)
+        proposal_sample = sampler.sample(livepoints=livepoints, minlogLike=minlogLike)
 
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.tolist()
