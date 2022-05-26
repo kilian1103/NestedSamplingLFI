@@ -25,21 +25,23 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
 
     # sample from prior
     print(f"Sampling {nlive} livepoints from the prior!")
-    livepoints = prior(ndim, nlive).tolist()
-    logLikelihoods = logLikelihood(livepoints, ndim).tolist()
+    # fixed length storage -> nd.array
+    livepoints = prior(ndim, nlive)
+    logLikelihoods = logLikelihood(livepoints, ndim)
+    livepoints_birthlogL = -1e300 * np.ones(nlive)  # L_birth = 0
 
+    # dynamic storage -> lists
     deadpoints = []
     deadpoints_logL = []
     deadpoints_birthlogL = []
     weights = []
-    livepoints_birthlogL = (-1e300 * np.ones(nlive)).tolist()  # L_birth = 0
-    sampler = Sampler(prior=prior, logLikelihood=logLikelihood, ndim=ndim).getSampler(samplertype)
 
+    sampler = Sampler(prior=prior, logLikelihood=logLikelihood, ndim=ndim).getSampler(samplertype)
     while logIncrease > np.log(stop_criterion):
         iteration += 1
         # identifying lowest likelihood point
-        minlogLike = min(logLikelihoods)
-        index = logLikelihoods.index(minlogLike)
+        minlogLike = logLikelihoods.min()
+        index = logLikelihoods.argmin()
 
         # save deadpoint and its loglike
         deadpoint = livepoints[index]
@@ -73,9 +75,9 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
         logLikelihoods[index] = float(logLikelihood(proposal_sample, ndim))
         livepoints_birthlogL[index] = minlogLike
 
-        maxlogLike = max(logLikelihoods)
+        maxlogLike = logLikelihoods.max()
         logIncrease_array = logWeight_current + maxlogLike - logZ_total
-        logIncrease = max(logIncrease_array)
+        logIncrease = logIncrease_array.max()
         if iteration % 500 == 0:
             print("current iteration: ", iteration)
 
@@ -86,6 +88,8 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
     logZ_total = scipy.special.logsumexp(logZ_array, axis=0)
 
     # convert surviving livepoints to deadpoints
+    livepoints = livepoints.tolist()
+    logLikelihoods = logLikelihoods.tolist()
     while len(logLikelihoods) > 0:
         minlogLike = min(logLikelihoods)
         index = logLikelihoods.index(minlogLike)
@@ -107,6 +111,6 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
             "log Z std": np.std(logZ_total)}
 
 
-logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=100, nsim=100, stop_criterion=1e-3,
+logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=6, nlive=1000, nsim=100, stop_criterion=1e-3,
                        samplertype="Metropolis")
 print(logZ)
