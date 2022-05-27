@@ -18,7 +18,7 @@ def prior(ndim, nsamples) -> np.ndarray:
 
 def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, samplertype):
     # initialisation
-    logZ_previous = -1e300 * np.ones(nsim)  # Z = 0
+    logZ_previous = -np.inf * np.ones(nsim)  # Z = 0
     logX_previous = np.zeros(nsim)  # X = 1
     iteration = 0
     logIncrease = 10  # evidence increase factor
@@ -28,7 +28,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
     # fixed length storage -> nd.array
     livepoints = prior(ndim, nlive)
     logLikelihoods = logLikelihood(livepoints, ndim)
-    livepoints_birthlogL = -1e300 * np.ones(nlive)  # L_birth = 0
+    livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
 
     # dynamic storage -> lists
     deadpoints = []
