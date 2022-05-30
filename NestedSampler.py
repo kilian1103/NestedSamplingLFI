@@ -2,7 +2,7 @@ import numpy as np
 import scipy.special
 from scipy.stats import multivariate_normal
 
-from Sampler import Sampler
+from MCMCSampler import Sampler
 
 
 def logLikelihood(x, ndim) -> np.ndarray:
