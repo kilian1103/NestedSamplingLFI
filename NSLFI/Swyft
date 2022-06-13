@@ -1,0 +1,158 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import swyft
+from anesthetic import MCMCSamples
+
+# mode = "train"
+mode = "load"
+device = "cpu"
+n_training_samples = 10_000
+n_weighted_samples = 10_000
+theta_0 = np.array([5, 25, 10])
+labels = ["sigma", "f0", "A"]
+
+prior_filename = "swyft_data/toyproblem.prior.pt"
+dataset_filename = "swyft_data/toyproblem.dataset.pt"
+mre_1d_filename = "swyft_data/toyproblem.mre_1d.pt"
+mre_2d_filename = "swyft_data/toyproblem.mre_2d.pt"
+mre_3d_filename = "swyft_data/toyproblem.mre_3d.pt"
+
+
+def forwardmodel(theta):
+    freq = np.arange(0, 50, 0.5)
+    sigma = theta[0]
+    f0 = theta[1]
+    A = theta[2]
+    x = A * np.exp(-0.5 * (freq - f0) ** 2 / sigma ** 2)
+    # x = np.random.normal(loc=x, scale = 0.5)
+    return {"x": x}
+
+
+x_0 = forwardmodel(theta_0)
+x_0["x"] = np.random.normal(loc=x_0["x"], scale=0.5)
+freq = np.arange(0, 50, 0.5)
+
+plt.figure()
+plt.title("test dataset")
+plt.plot(freq, x_0["x"])
+plt.show()
+
+n_parameters = len(theta_0)
+observation_key = "x"
+observation_shapes = {observation_key: x_0[observation_key].shape}
+simulator = swyft.Simulator(
+    forwardmodel,
+    n_parameters,
+    sim_shapes=observation_shapes
+)
+
+low = 0 * np.ones(n_parameters)
+high = 30 * np.ones(n_parameters)
+prior = swyft.get_uniform_prior(low, high)
+store = swyft.Store.memory_store(simulator)
+
+store.add(n_training_samples, prior)
+store.simulate()
+dataset = swyft.Dataset(n_training_samples, prior, store)
+
+marginal_indices_1d, marginal_indices_2d = swyft.utils.get_corner_marginal_indices(n_parameters)
+marginal_indices_3d = tuple([x for x in range(len(theta_0))])
+
+network_1d = swyft.get_marginal_classifier(
+    observation_key=observation_key,
+    marginal_indices=marginal_indices_1d,
+    observation_shapes=observation_shapes,
+    n_parameters=n_parameters,
+    hidden_features=32,
+    num_blocks=2,
+)
+network_2d = swyft.get_marginal_classifier(
+    observation_key=observation_key,
+    marginal_indices=marginal_indices_2d,
+    observation_shapes=observation_shapes,
+    n_parameters=n_parameters,
+    hidden_features=32,
+    num_blocks=2,
+)
+
+network_3d = swyft.get_marginal_classifier(
+    observation_key=observation_key,
+    marginal_indices=marginal_indices_3d,
+    observation_shapes=observation_shapes,
+    n_parameters=n_parameters,
+    hidden_features=32,
+    num_blocks=2,
+)
+
+if mode == "train":
+    mre_1d = swyft.MarginalRatioEstimator(
+        marginal_indices=marginal_indices_1d,
+        network=network_1d,
+        device=device,
+    )
+    mre_1d.train(dataset)
+
+    mre_2d = swyft.MarginalRatioEstimator(
+        marginal_indices=marginal_indices_2d,
+        network=network_2d,
+        device=device,
+    )
+    mre_2d.train(dataset)
+
+    mre_3d = swyft.MarginalRatioEstimator(
+        marginal_indices=marginal_indices_3d,
+        network=network_3d,
+        device=device,
+    )
+    mre_3d.train(dataset)
+
+    prior.save(prior_filename)
+    dataset.save(dataset_filename)
+    mre_1d.save(mre_1d_filename)
+    mre_2d.save(mre_2d_filename)
+    mre_3d.save(mre_3d_filename)
+else:
+    prior = swyft.Prior.load(prior_filename)
+    dataset = swyft.Dataset.load(
+        filename=dataset_filename,
+        store=store
+    )
+
+    mre_1d = swyft.MarginalRatioEstimator.load(
+        network=network_1d,
+        device=device,
+        filename=mre_1d_filename,
+    )
+
+    mre_2d = swyft.MarginalRatioEstimator.load(
+        network=network_2d,
+        device=device,
+        filename=mre_2d_filename,
+    )
+
+    mre_3d = swyft.MarginalRatioEstimator.load(
+        network=network_3d,
+        device=device,
+        filename=mre_3d_filename,
+    )
+
+posterior_1d = swyft.MarginalPosterior(mre_1d, prior)
+weighted_samples_1d = posterior_1d.weighted_sample(n_weighted_samples, x_0)
+posterior_2d = swyft.MarginalPosterior(mre_2d, prior)
+weighted_samples_2d = posterior_2d.weighted_sample(n_weighted_samples, x_0)
+plt.figure()
+_, _ = swyft.corner(
+    weighted_samples_1d,
+    weighted_samples_2d,
+    kde=True,
+    truth=theta_0,
+    labels=labels
+)
+plt.show()
+
+posterior_3d = swyft.MarginalPosterior(mre_3d, prior)
+posteriorSamp = posterior_3d.sample(n_weighted_samples, observation=x_0)
+mcmc = MCMCSamples(posteriorSamp[marginal_indices_3d])
+plt.figure()
+mcmc.plot_2d(axes=[0, 1, 2])
+plt.show()
