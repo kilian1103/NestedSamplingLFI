@@ -164,8 +164,9 @@ _, _ = swyft.corner(
 plt.show()
 
 posterior_3d = swyft.MarginalPosterior(mre_3d, prior)
-posteriorSamp = posterior_3d.sample(n_weighted_samples, observation=x_0)
-mcmc = MCMCSamples(posteriorSamp[marginal_indices_3d])
+weighted_samples_3d = posterior_3d.weighted_sample(n_weighted_samples, x_0)
+data = weighted_samples_3d.get_df(marginal_indices_3d)
+mcmc = MCMCSamples(data=data, weights=data.weight)
 plt.figure()
 mcmc.plot_2d(axes=[0, 1, 2])
 plt.show()
