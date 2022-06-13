@@ -3,14 +3,18 @@ import numpy as np
 import swyft
 from anesthetic import MCMCSamples
 
+### swyft mode###
 # mode = "train"
 mode = "load"
 device = "cpu"
 n_training_samples = 10_000
 n_weighted_samples = 10_000
+
+# true parameters of simmulator
 theta_0 = np.array([5, 25, 10])
 labels = ["sigma", "f0", "A"]
 
+# saving file namees
 prior_filename = "swyft_data/toyproblem.prior.pt"
 dataset_filename = "swyft_data/toyproblem.dataset.pt"
 mre_1d_filename = "swyft_data/toyproblem.mre_1d.pt"
@@ -18,6 +22,7 @@ mre_2d_filename = "swyft_data/toyproblem.mre_2d.pt"
 mre_3d_filename = "swyft_data/toyproblem.mre_3d.pt"
 
 
+# simulator
 def forwardmodel(theta):
     freq = np.arange(0, 50, 0.5)
     sigma = theta[0]
@@ -28,15 +33,18 @@ def forwardmodel(theta):
     return {"x": x}
 
 
+# create real obsveration
 x_0 = forwardmodel(theta_0)
 x_0["x"] = np.random.normal(loc=x_0["x"], scale=0.5)
 freq = np.arange(0, 50, 0.5)
 
+# plot observation
 plt.figure()
-plt.title("test dataset")
+plt.title("Observation x0")
 plt.plot(freq, x_0["x"])
 plt.show()
 
+# initialize swyft
 n_parameters = len(theta_0)
 observation_key = "x"
 observation_shapes = {observation_key: x_0[observation_key].shape}
@@ -45,19 +53,21 @@ simulator = swyft.Simulator(
     n_parameters,
     sim_shapes=observation_shapes
 )
-
+# assign prior
 low = 0 * np.ones(n_parameters)
 high = 30 * np.ones(n_parameters)
 prior = swyft.get_uniform_prior(low, high)
 store = swyft.Store.memory_store(simulator)
-
+# initialize simulator and simulate
 store.add(n_training_samples, prior)
 store.simulate()
 dataset = swyft.Dataset(n_training_samples, prior, store)
 
+# get marginal indices
 marginal_indices_1d, marginal_indices_2d = swyft.utils.get_corner_marginal_indices(n_parameters)
 marginal_indices_3d = tuple([x for x in range(len(theta_0))])
 
+# define networks
 network_1d = swyft.get_marginal_classifier(
     observation_key=observation_key,
     marginal_indices=marginal_indices_1d,
@@ -84,6 +94,7 @@ network_3d = swyft.get_marginal_classifier(
     num_blocks=2,
 )
 
+# train MRE
 if mode == "train":
     mre_1d = swyft.MarginalRatioEstimator(
         marginal_indices=marginal_indices_1d,
@@ -111,6 +122,7 @@ if mode == "train":
     mre_1d.save(mre_1d_filename)
     mre_2d.save(mre_2d_filename)
     mre_3d.save(mre_3d_filename)
+# load MRE from file
 else:
     prior = swyft.Prior.load(prior_filename)
     dataset = swyft.Dataset.load(
@@ -136,6 +148,7 @@ else:
         filename=mre_3d_filename,
     )
 
+# get posterior samples
 posterior_1d = swyft.MarginalPosterior(mre_1d, prior)
 weighted_samples_1d = posterior_1d.weighted_sample(n_weighted_samples, x_0)
 posterior_2d = swyft.MarginalPosterior(mre_2d, prior)
