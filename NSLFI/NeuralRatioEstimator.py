@@ -21,10 +21,10 @@ class NRE:
         n_weighted_samples = nreSettings.n_weighted_samples
 
         # true parameters of simulator
-        theta_0 = np.array([5, 25, 10])
+        theta_0 = nreSettings.theta_0
         paramNames = nreSettings.paramNames
         n_parameters = nreSettings.n_parameters
-        
+
         # saving file names
         prior_filename = nreSettings.prior_filename
         dataset_filename = nreSettings.dataset_filename

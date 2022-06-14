@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class NRE_Settings:
     def __init__(self):
         """NRE initialisation.
@@ -11,6 +14,7 @@ class NRE_Settings:
         self.device = "cpu"
         self.n_training_samples = 10_000
         self.n_weighted_samples = 10_000
+        self.theta_0 = np.array([5, 25, 10])
         self.paramNames = [r"$\sigma$", r"$f_0$", r"$A$"]
         self.n_parameters = len(self.paramNames)
         self.prior_filename = "swyft_data/toyproblem.prior.pt"
