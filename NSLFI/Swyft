@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.stats
 import swyft
 from anesthetic import MCMCSamples
 
@@ -55,10 +56,16 @@ simulator = swyft.Simulator(
     n_parameters,
     sim_shapes=observation_shapes
 )
-# assign prior
-low = 0 * np.ones(n_parameters)
-high = 30 * np.ones(n_parameters)
-prior = swyft.get_uniform_prior(low, high)
+# assign prior for each 1-dim parameter
+uniform_scipy_1 = scipy.stats.uniform(0, 10)
+uniform_scipy_2 = scipy.stats.uniform(15, 35)
+uniform_scipy_3 = scipy.stats.uniform(0, 20)
+prior = swyft.prior.Prior.composite_prior(
+    cdfs=[uniform_scipy_1.cdf, uniform_scipy_2.cdf, uniform_scipy_3.cdf],
+    icdfs=[uniform_scipy_1.ppf, uniform_scipy_2.ppf, uniform_scipy_3.ppf],
+    log_probs=[uniform_scipy_1.logpdf, uniform_scipy_2.logpdf, uniform_scipy_3.logpdf],
+    parameter_dimensions=[1 for x in range(n_parameters)],
+)
 store = swyft.Store.memory_store(simulator)
 
 # get marginal indices (here fit 1d,2d and 3d marginals for 3d problem)
@@ -98,6 +105,11 @@ if mode == "train":
     store.add(n_training_samples, prior)
     store.simulate()
     dataset = swyft.Dataset(n_training_samples, prior, store)
+    # save objects before training network
+    prior.save(prior_filename)
+    store.save(store_filename)
+    dataset.save(dataset_filename)
+
     mre_1d = swyft.MarginalRatioEstimator(
         marginal_indices=marginal_indices_1d,
         network=network_1d,
@@ -119,12 +131,9 @@ if mode == "train":
     )
     mre_3d.train(dataset)
 
-    prior.save(prior_filename)
-    dataset.save(dataset_filename)
     mre_1d.save(mre_1d_filename)
     mre_2d.save(mre_2d_filename)
     mre_3d.save(mre_3d_filename)
-    store.save(store_filename)
 # load MRE from file
 else:
     store = swyft.Store.load(store_filename, simulator=simulator).to_memory()
