@@ -1,4 +1,4 @@
-class NRE_Settiings:
+class NRE_Settings:
     def __init__(self):
         """NRE initialisation.
 
