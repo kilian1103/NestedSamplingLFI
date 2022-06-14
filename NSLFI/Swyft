@@ -3,6 +3,7 @@ import numpy as np
 import swyft
 from anesthetic import MCMCSamples
 
+np.random.seed(234)
 ### swyft mode###
 # mode = "train"
 mode = "load"
@@ -10,16 +11,17 @@ device = "cpu"
 n_training_samples = 10_000
 n_weighted_samples = 10_000
 
-# true parameters of simmulator
+# true parameters of simulator
 theta_0 = np.array([5, 25, 10])
 labels = ["sigma", "f0", "A"]
 
-# saving file namees
+# saving file names
 prior_filename = "swyft_data/toyproblem.prior.pt"
 dataset_filename = "swyft_data/toyproblem.dataset.pt"
 mre_1d_filename = "swyft_data/toyproblem.mre_1d.pt"
 mre_2d_filename = "swyft_data/toyproblem.mre_2d.pt"
 mre_3d_filename = "swyft_data/toyproblem.mre_3d.pt"
+store_filename = "swyft_data/SavedStore"
 
 
 # simulator
@@ -33,7 +35,7 @@ def forwardmodel(theta):
     return {"x": x}
 
 
-# create real obsveration
+# create real observation
 x_0 = forwardmodel(theta_0)
 x_0["x"] = np.random.normal(loc=x_0["x"], scale=0.5)
 freq = np.arange(0, 50, 0.5)
@@ -58,12 +60,8 @@ low = 0 * np.ones(n_parameters)
 high = 30 * np.ones(n_parameters)
 prior = swyft.get_uniform_prior(low, high)
 store = swyft.Store.memory_store(simulator)
-# initialize simulator and simulate
-store.add(n_training_samples, prior)
-store.simulate()
-dataset = swyft.Dataset(n_training_samples, prior, store)
 
-# get marginal indices
+# get marginal indices (here fit 1d,2d and 3d marginals for 3d problem)
 marginal_indices_1d, marginal_indices_2d = swyft.utils.get_corner_marginal_indices(n_parameters)
 marginal_indices_3d = tuple([x for x in range(len(theta_0))])
 
@@ -96,6 +94,10 @@ network_3d = swyft.get_marginal_classifier(
 
 # train MRE
 if mode == "train":
+    # initialize simulator and simulate
+    store.add(n_training_samples, prior)
+    store.simulate()
+    dataset = swyft.Dataset(n_training_samples, prior, store)
     mre_1d = swyft.MarginalRatioEstimator(
         marginal_indices=marginal_indices_1d,
         network=network_1d,
@@ -122,8 +124,10 @@ if mode == "train":
     mre_1d.save(mre_1d_filename)
     mre_2d.save(mre_2d_filename)
     mre_3d.save(mre_3d_filename)
+    store.save(store_filename)
 # load MRE from file
 else:
+    store = swyft.Store.load(store_filename, simulator=simulator).to_memory()
     prior = swyft.Prior.load(prior_filename)
     dataset = swyft.Dataset.load(
         filename=dataset_filename,
