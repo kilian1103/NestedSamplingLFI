@@ -23,7 +23,8 @@ class NRE:
         # true parameters of simulator
         theta_0 = np.array([5, 25, 10])
         paramNames = nreSettings.paramNames
-
+        n_parameters = nreSettings.n_parameters
+        
         # saving file names
         prior_filename = nreSettings.prior_filename
         dataset_filename = nreSettings.dataset_filename
@@ -65,7 +66,6 @@ class NRE:
         plt.show()
 
         # initialize swyft
-        n_parameters = len(theta_0)
         observation_shapes = {observation_key: x_0[observation_key].shape}
         simulator = swyft.Simulator(
             forwardmodel,
@@ -211,5 +211,4 @@ class NRE:
 
 
 nreSettings = NRE_Settings()
-nreSettings.MNREmode = True
 nre = NRE(nreSettings)

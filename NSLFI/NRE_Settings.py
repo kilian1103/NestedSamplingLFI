@@ -12,7 +12,7 @@ class NRE_Settings:
         self.n_training_samples = 10_000
         self.n_weighted_samples = 10_000
         self.paramNames = [r"$\sigma$", r"$f_0$", r"$A$"]
-        self.ndim = len(self.paramNames)
+        self.n_parameters = len(self.paramNames)
         self.prior_filename = "swyft_data/toyproblem.prior.pt"
         self.dataset_filename = "swyft_data/toyproblem.dataset.pt"
         self.mre_1d_filename = "swyft_data/toyproblem.mre_1d.pt"
