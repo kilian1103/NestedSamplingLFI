@@ -4,7 +4,7 @@ import scipy.stats
 import swyft
 from anesthetic import MCMCSamples
 
-import NRE_settings
+from NSLFI.NRE_Settings import NRE_Settings
 
 
 class NRE:
@@ -210,6 +210,6 @@ class NRE:
         print(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_3d]):.3f}")
 
 
-nreSettings = NRE_settings.NRE_Settings()
+nreSettings = NRE_Settings()
 nreSettings.MNREmode = True
 nre = NRE(nreSettings)
