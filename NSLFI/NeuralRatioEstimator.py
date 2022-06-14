@@ -9,6 +9,7 @@ np.random.seed(234)
 # mode = "train"
 mode = "load"
 MNREmode = False
+simulatedObservations = False
 device = "cpu"
 n_training_samples = 10_000
 n_weighted_samples = 10_000
@@ -24,9 +25,12 @@ mre_1d_filename = "swyft_data/toyproblem.mre_1d.pt"
 mre_2d_filename = "swyft_data/toyproblem.mre_2d.pt"
 mre_3d_filename = "swyft_data/toyproblem.mre_3d.pt"
 store_filename = "swyft_data/SavedStore"
-
+observation_filename = "swyft_data/observation.npy"
 
 # simulator
+observation_key = "x"
+
+
 def forwardmodel(theta):
     freq = np.arange(0, 50, 0.5)
     sigma = theta[0]
@@ -34,12 +38,18 @@ def forwardmodel(theta):
     A = theta[2]
     x = A * np.exp(-0.5 * (freq - f0) ** 2 / sigma ** 2)
     # x = np.random.normal(loc=x, scale = 0.5)
-    return {"x": x}
+    return {observation_key: x}
 
 
-# create real observation
-x_0 = forwardmodel(theta_0)
-x_0["x"] = np.random.normal(loc=x_0["x"], scale=0.5)
+# create (simulated real) observation data
+if simulatedObservations:
+    x_0 = forwardmodel(theta_0)
+    x_0[observation_key] = np.random.normal(loc=x_0[observation_key], scale=0.5)
+    np.save(file=observation_filename, arr=x_0[observation_key])
+else:
+    # else load from file
+    x_0 = np.load(file=observation_filename, allow_pickle=True)
+    x_0 = {observation_key: x_0}
 freq = np.arange(0, 50, 0.5)
 
 # plot observation
@@ -52,7 +62,6 @@ plt.show()
 
 # initialize swyft
 n_parameters = len(theta_0)
-observation_key = "x"
 observation_shapes = {observation_key: x_0[observation_key].shape}
 simulator = swyft.Simulator(
     forwardmodel,
