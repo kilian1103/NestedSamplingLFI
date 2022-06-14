@@ -1,7 +1,6 @@
-# Metropolis Hastings Nested Sampler
+# Nested sampling Neural Ratio estimator
 
 ### Ongoing Ph.D. project
 
-Implementing a nested sampler for the truncated marginal neural ratio estimator to build my first likelihood-free
-inference algorithm.
+Implementing a nested sampler neural ratio estimator to build my first likelihood-free inference algorithm.
 
