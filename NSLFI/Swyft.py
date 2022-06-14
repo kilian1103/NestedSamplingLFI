@@ -15,7 +15,7 @@ n_weighted_samples = 10_000
 
 # true parameters of simulator
 theta_0 = np.array([5, 25, 10])
-labels = ["sigma", "f0", "A"]
+paramNames = [r"$\sigma$", r"$f_0$", r"$A$"]
 
 # saving file names
 prior_filename = "swyft_data/toyproblem.prior.pt"
@@ -44,7 +44,9 @@ freq = np.arange(0, 50, 0.5)
 
 # plot observation
 plt.figure()
-plt.title("Observation x0")
+plt.title(r"Observation $x_0$ to fit")
+plt.xlabel("Frequency")
+plt.ylabel("Signal strength")
 plt.plot(freq, x_0["x"])
 plt.show()
 
@@ -173,16 +175,23 @@ if MNREmode:
         weighted_samples_2d,
         kde=True,
         truth=theta_0,
-        labels=labels
+        labels=paramNames
     )
+    plt.suptitle("MNRE parameter estimation")
     plt.show()
 
 posterior_3d = swyft.MarginalPosterior(mre_3d, prior)
 weighted_samples_3d = posterior_3d.weighted_sample(n_weighted_samples, x_0)
 data = weighted_samples_3d.get_df(marginal_indices_3d)
+
+columnNames = {}
+for i, j in enumerate(paramNames):
+    columnNames[i] = j
+data.rename(columns=columnNames, inplace=True)
 mcmc = MCMCSamples(data=data, weights=data.weight)
 plt.figure()
-mcmc.plot_2d(axes=[0, 1, 2])
+mcmc.plot_2d(axes=paramNames)
+plt.suptitle("NRE parameter estimations")
 plt.show()
 logProb_0 = posterior_3d.log_prob(observation=x_0, v=[theta_0])
 print(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_3d]):.3f}")
