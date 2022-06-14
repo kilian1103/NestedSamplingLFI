@@ -8,6 +8,7 @@ np.random.seed(234)
 ### swyft mode###
 # mode = "train"
 mode = "load"
+MNREmode = False
 device = "cpu"
 n_training_samples = 10_000
 n_weighted_samples = 10_000
@@ -109,20 +110,22 @@ if mode == "train":
     prior.save(prior_filename)
     store.save(store_filename)
     dataset.save(dataset_filename)
+    if MNREmode:
+        mre_1d = swyft.MarginalRatioEstimator(
+            marginal_indices=marginal_indices_1d,
+            network=network_1d,
+            device=device,
+        )
+        mre_1d.train(dataset)
+        mre_1d.save(mre_1d_filename)
 
-    mre_1d = swyft.MarginalRatioEstimator(
-        marginal_indices=marginal_indices_1d,
-        network=network_1d,
-        device=device,
-    )
-    mre_1d.train(dataset)
-
-    mre_2d = swyft.MarginalRatioEstimator(
-        marginal_indices=marginal_indices_2d,
-        network=network_2d,
-        device=device,
-    )
-    mre_2d.train(dataset)
+        mre_2d = swyft.MarginalRatioEstimator(
+            marginal_indices=marginal_indices_2d,
+            network=network_2d,
+            device=device,
+        )
+        mre_2d.train(dataset)
+        mre_2d.save(mre_2d_filename)
 
     mre_3d = swyft.MarginalRatioEstimator(
         marginal_indices=marginal_indices_3d,
@@ -130,9 +133,6 @@ if mode == "train":
         device=device,
     )
     mre_3d.train(dataset)
-
-    mre_1d.save(mre_1d_filename)
-    mre_2d.save(mre_2d_filename)
     mre_3d.save(mre_3d_filename)
 # load MRE from file
 else:
@@ -142,18 +142,18 @@ else:
         filename=dataset_filename,
         store=store
     )
+    if MNREmode:
+        mre_1d = swyft.MarginalRatioEstimator.load(
+            network=network_1d,
+            device=device,
+            filename=mre_1d_filename,
+        )
 
-    mre_1d = swyft.MarginalRatioEstimator.load(
-        network=network_1d,
-        device=device,
-        filename=mre_1d_filename,
-    )
-
-    mre_2d = swyft.MarginalRatioEstimator.load(
-        network=network_2d,
-        device=device,
-        filename=mre_2d_filename,
-    )
+        mre_2d = swyft.MarginalRatioEstimator.load(
+            network=network_2d,
+            device=device,
+            filename=mre_2d_filename,
+        )
 
     mre_3d = swyft.MarginalRatioEstimator.load(
         network=network_3d,
@@ -162,19 +162,20 @@ else:
     )
 
 # get posterior samples
-posterior_1d = swyft.MarginalPosterior(mre_1d, prior)
-weighted_samples_1d = posterior_1d.weighted_sample(n_weighted_samples, x_0)
-posterior_2d = swyft.MarginalPosterior(mre_2d, prior)
-weighted_samples_2d = posterior_2d.weighted_sample(n_weighted_samples, x_0)
-plt.figure()
-_, _ = swyft.corner(
-    weighted_samples_1d,
-    weighted_samples_2d,
-    kde=True,
-    truth=theta_0,
-    labels=labels
-)
-plt.show()
+if MNREmode:
+    posterior_1d = swyft.MarginalPosterior(mre_1d, prior)
+    weighted_samples_1d = posterior_1d.weighted_sample(n_weighted_samples, x_0)
+    posterior_2d = swyft.MarginalPosterior(mre_2d, prior)
+    weighted_samples_2d = posterior_2d.weighted_sample(n_weighted_samples, x_0)
+    plt.figure()
+    _, _ = swyft.corner(
+        weighted_samples_1d,
+        weighted_samples_2d,
+        kde=True,
+        truth=theta_0,
+        labels=labels
+    )
+    plt.show()
 
 posterior_3d = swyft.MarginalPosterior(mre_3d, prior)
 weighted_samples_3d = posterior_3d.weighted_sample(n_weighted_samples, x_0)
