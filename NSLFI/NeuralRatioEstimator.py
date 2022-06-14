@@ -57,7 +57,7 @@ plt.figure()
 plt.title(r"Observation $x_0$ to fit")
 plt.xlabel("Frequency")
 plt.ylabel("Signal strength")
-plt.plot(freq, x_0["x"])
+plt.plot(freq, x_0[observation_key])
 plt.show()
 
 # initialize swyft
