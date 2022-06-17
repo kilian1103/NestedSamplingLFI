@@ -12,11 +12,11 @@ def logLikelihood(x, ndim) -> np.ndarray:
     return multivariate_normal.logpdf(x=x, mean=means, cov=cov)
 
 
-def prior(ndim, nsamples) -> np.ndarray:
-    return np.random.uniform(low=0, high=1, size=(nsamples, ndim))
+def prior(ndim, nsamples, limits) -> np.ndarray:
+    return np.random.uniform(low=limits["lower"], high=limits["upper"], size=(nsamples, ndim))
 
 
-def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, samplertype):
+def nested_sampling(logLikelihood, prior, priorLimits, ndim, nlive, nsim, stop_criterion, samplertype):
     # initialisation
     logZ_previous = -np.inf * np.ones(nsim)  # Z = 0
     logX_previous = np.zeros(nsim)  # X = 1
@@ -26,7 +26,7 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
     # sample from prior
     print(f"Sampling {nlive} livepoints from the prior!")
     # fixed length storage -> nd.array
-    livepoints = prior(ndim, nlive)
+    livepoints = prior(ndim, nlive, priorLimits)
     logLikelihoods = logLikelihood(livepoints, ndim)
     livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
 
@@ -36,7 +36,8 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
     deadpoints_birthlogL = []
     weights = []
 
-    sampler = Sampler(prior=prior, logLikelihood=logLikelihood, ndim=ndim).getSampler(samplertype)
+    sampler = Sampler(prior=prior, logLikelihood=logLikelihood, ndim=ndim, priorLimits=priorLimits).getSampler(
+        samplertype)
     while logIncrease > np.log(stop_criterion):
         iteration += 1
         # identifying lowest likelihood point
@@ -111,6 +112,10 @@ def nested_sampling(logLikelihood, prior, ndim, nlive, nsim, stop_criterion, sam
             "log Z std": np.std(logZ_total)}
 
 
-logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, ndim=2, nlive=1000, nsim=100, stop_criterion=1e-2,
+ndim = 2
+priorLimits = {"lower": np.zeros(ndim),
+               "upper": np.ones(ndim)}
+logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, priorLimits=priorLimits, ndim=ndim,
+                       nlive=1000, nsim=100, stop_criterion=1e-3,
                        samplertype="Metropolis")
 print(logZ)
