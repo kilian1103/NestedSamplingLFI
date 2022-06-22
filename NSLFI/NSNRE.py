@@ -9,7 +9,7 @@ from NSLFI.MCMCSampler import Sampler
 from NSLFI.NRE_Settings import NRE_Settings
 
 
-def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings, totalIteration):
+def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
     # initialisation
     np.random.seed(234)
     logZ_previous = -np.inf * np.ones(nsim)  # Z = 0
@@ -201,8 +201,8 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings, totalI
         plt.suptitle("MNRE parameter estimation")
         plt.show()
 
-    posterior_3d = swyft.MarginalPosterior(mre_3d, prior)
-    weighted_samples_3d = posterior_3d.weighted_sample(n_weighted_samples, x_0)
+    NRE = swyft.MarginalPosterior(mre_3d, prior)
+    weighted_samples_3d = NRE.weighted_sample(n_weighted_samples, x_0)
     data = weighted_samples_3d.get_df(marginal_indices_3d)
 
     columnNames = {}
@@ -214,14 +214,14 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings, totalI
     mcmc.plot_2d(axes=paramNames)
     plt.suptitle("NRE parameter estimations")
     plt.show()
-    logProb_0 = posterior_3d.log_prob(observation=x_0, v=[theta_0])
+    logProb_0 = NRE.log_prob(observation=x_0, v=[theta_0])
     print(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_3d]):.3f}")
 
     # fixed length storage -> nd.array
     livepoints = dataset.v.copy()
     nlive = len(livepoints)
-    logPosteriors = posterior_3d.log_prob(observation=x_0, v=livepoints)[marginal_indices_3d].copy()
-    logRatios = mre_3d.log_ratio(observation=x_0, v=livepoints)[marginal_indices_3d].copy()
+    # logLikelihoods = NRE.log_prob(observation=x_0, v=livepoints)[marginal_indices_3d].copy()
+    logLikelihoods = mre_3d.log_ratio(observation=x_0, v=livepoints)[marginal_indices_3d].copy()
     livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
 
     # dynamic storage -> lists
@@ -230,14 +230,13 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings, totalI
     deadpoints_birthlogL = []
     weights = []
 
-    sampler = Sampler(prior=prior, priorLimits=priorLimits, logLikelihood=posterior_3d, ndim=ndim).getSampler(
+    sampler = Sampler(prior=prior, priorLimits=priorLimits, logLikelihood=mre_3d, ndim=ndim).getSampler(
         samplertype)
     while logIncrease > np.log(stop_criterion):
-        # for it in range(totalIteration):
         iteration += 1
         # identifying lowest likelihood point
-        minlogLike = logPosteriors.min()
-        index = logPosteriors.argmin()
+        minlogLike = logLikelihoods.min()
+        index = logLikelihoods.argmin()
 
         # save deadpoint and its loglike
         deadpoint = livepoints[index].copy()
@@ -269,39 +268,38 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings, totalI
 
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.copy().tolist()
-        logPosteriors[index] = float(posterior_3d.log_prob(observation=x_0, v=[proposal_sample])[
-                                         marginal_indices_3d].copy())
-        logRatios[index] = float(mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[marginal_indices_3d].copy())
+        logLikelihoods[index] = float(
+            mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[marginal_indices_3d].copy())
         livepoints_birthlogL[index] = minlogLike
         # add datapoint to NRE
         store._append_new_points(v=[proposal_sample],
                                  log_w=mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[marginal_indices_3d])
 
-        maxlogLike = logPosteriors.max()
-        maxlogRatio = logRatios.max()
+        maxlogLike = logLikelihoods.max()
         logIncrease_array = logWeight_current + maxlogLike - logZ_total
         # logIncrease_array = logWeight_current + maxlogRatio - logZ_total
         logIncrease = logIncrease_array.max()
         if iteration % 500 == 0:
             print("current logIncrease ", logIncrease)
+            print("Current log evidence ", logZ_total)
             print("current iteration: ", iteration)
 
     store.get_simulation_status()
     # final <L>*dX sum calculation
-    finallogLikesum = scipy.special.logsumexp(a=logPosteriors)
+    finallogLikesum = scipy.special.logsumexp(a=logLikelihoods)
     logZ_current = -np.log(nlive) + finallogLikesum + logX_current
     logZ_array = np.array([logZ_previous, logZ_current])
     logZ_total = scipy.special.logsumexp(logZ_array, axis=0)
 
     # convert surviving livepoints to deadpoints
     livepoints = livepoints.tolist()
-    logPosteriors = logPosteriors.tolist()
-    while len(logPosteriors) > 0:
-        minlogLike = min(logPosteriors)
-        index = logPosteriors.index(minlogLike)
+    logLikelihoods = logLikelihoods.tolist()
+    while len(logLikelihoods) > 0:
+        minlogLike = min(logLikelihoods)
+        index = logLikelihoods.index(minlogLike)
 
         deadpoint = livepoints.pop(index)
-        logPosteriors.pop(index)
+        logLikelihoods.pop(index)
 
         deadpoints.append(deadpoint)
         deadpoints_logL.append(minlogLike)
@@ -319,5 +317,5 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings, totalI
 
 nre_settings = NRE_Settings()
 logZ = nested_sampling(ndim=3, nsim=100, stop_criterion=1e-3,
-                       samplertype="MetropolisNRE", nreSettings=nre_settings, totalIteration=10000)
+                       samplertype="MetropolisNRE", nreSettings=nre_settings)
 print(logZ)
