@@ -16,6 +16,9 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
     logX_previous = np.zeros(nsim)  # X = 1
     iteration = 0
     logIncrease = 10  # evidence increase factor
+    # uniform prior limits
+    priorLimits = {"lower": np.array([0, 15, 0]),
+                   "upper": np.array([10, 35, 20])}
 
     ### swyft mode###
     # mode = "train"
@@ -78,12 +81,14 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
         n_parameters,
         sim_shapes=observation_shapes
     )
+
     # assign prior for each 1-dim parameter
-    priorLimits = {"lower": [0, 15, 0],
-                   "upper": [10, 35, 20]}
-    uniform_scipy_1 = scipy.stats.uniform(0, 10)
-    uniform_scipy_2 = scipy.stats.uniform(15, 35)
-    uniform_scipy_3 = scipy.stats.uniform(0, 20)
+    uniform_scipy_1 = scipy.stats.uniform(loc=priorLimits["lower"][0],
+                                          scale=priorLimits["upper"][0] - priorLimits["lower"][0])
+    uniform_scipy_2 = scipy.stats.uniform(loc=priorLimits["lower"][1],
+                                          scale=priorLimits["upper"][1] - priorLimits["lower"][1])
+    uniform_scipy_3 = scipy.stats.uniform(loc=priorLimits["lower"][2],
+                                          scale=priorLimits["upper"][2] - priorLimits["lower"][2])
     prior = swyft.prior.Prior.composite_prior(
         cdfs=[uniform_scipy_1.cdf, uniform_scipy_2.cdf, uniform_scipy_3.cdf],
         icdfs=[uniform_scipy_1.ppf, uniform_scipy_2.ppf, uniform_scipy_3.ppf],
@@ -280,8 +285,7 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
         # logIncrease_array = logWeight_current + maxlogRatio - logZ_total
         logIncrease = logIncrease_array.max()
         if iteration % 500 == 0:
-            print("current logIncrease ", logIncrease)
-            print("Current log evidence ", logZ_total)
+            print("Current log evidence ", logZ_total.max())
             print("current iteration: ", iteration)
 
     store.get_simulation_status()
@@ -316,6 +320,10 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
 
 
 nre_settings = NRE_Settings()
-logZ = nested_sampling(ndim=3, nsim=100, stop_criterion=1e-3,
+nre_settings.n_weighted_samples = 1000
+nre_settings.n_training_samples = 1000
+nre_settings.mode = "train"
+nre_settings.simulatedObservations = True
+logZ = nested_sampling(ndim=3, nsim=100, stop_criterion=1e-2,
                        samplertype="MetropolisNRE", nreSettings=nre_settings)
 print(logZ)

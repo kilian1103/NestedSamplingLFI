@@ -19,6 +19,9 @@ class NRE:
         device = nreSettings.device
         n_training_samples = nreSettings.n_training_samples
         n_weighted_samples = nreSettings.n_weighted_samples
+        # uniform prior limits
+        priorLimits = {"lower": np.array([0, 15, 0]),
+                       "upper": np.array([10, 35, 20])}
 
         # true parameters of simulator
         theta_0 = nreSettings.theta_0
@@ -73,9 +76,12 @@ class NRE:
             sim_shapes=observation_shapes
         )
         # assign prior for each 1-dim parameter
-        uniform_scipy_1 = scipy.stats.uniform(0, 10)
-        uniform_scipy_2 = scipy.stats.uniform(15, 35)
-        uniform_scipy_3 = scipy.stats.uniform(0, 20)
+        uniform_scipy_1 = scipy.stats.uniform(loc=priorLimits["lower"][0],
+                                              scale=priorLimits["upper"][0] - priorLimits["lower"][0])
+        uniform_scipy_2 = scipy.stats.uniform(loc=priorLimits["lower"][1],
+                                              scale=priorLimits["upper"][1] - priorLimits["lower"][1])
+        uniform_scipy_3 = scipy.stats.uniform(loc=priorLimits["lower"][2],
+                                              scale=priorLimits["upper"][2] - priorLimits["lower"][2])
         prior = swyft.prior.Prior.composite_prior(
             cdfs=[uniform_scipy_1.cdf, uniform_scipy_2.cdf, uniform_scipy_3.cdf],
             icdfs=[uniform_scipy_1.ppf, uniform_scipy_2.ppf, uniform_scipy_3.ppf],
