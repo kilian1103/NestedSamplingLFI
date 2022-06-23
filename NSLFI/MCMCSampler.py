@@ -30,8 +30,7 @@ class Metropolis(Sampler):
         upper = self.priorLimits["upper"]
         for i in range(nrepeat * self.ndim):
             proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)
-            withinPrior = np.logical_and(proposal_sample > lower,
-                                         proposal_sample < upper).all()
+            withinPrior = np.logical_and(np.greater(proposal_sample, lower), np.less(proposal_sample, upper)).all()
             withinContour = self.logLikelihood(proposal_sample, self.ndim) > minlogLike
             if withinPrior and withinContour:
                 current_sample = proposal_sample.copy()
@@ -62,7 +61,7 @@ class MetropolisNRE(Sampler):
         upper = self.priorLimits["upper"]
         for i in range(nrepeat * self.ndim):
             proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)
-            withinPrior = np.logical_and(proposal_sample > lower, proposal_sample < upper).all()
+            withinPrior = np.logical_and(np.greater(proposal_sample, lower), np.less(proposal_sample, upper)).all()
             withinContour = self.logLikelihood.log_ratio(observation=x_0, v=[proposal_sample])[
                                 marginal_indices_3d].copy() > minlogLike
             if withinPrior and withinContour:
