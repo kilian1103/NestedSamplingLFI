@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt  #
 import numpy as np
 import scipy.special
 import swyft
-from anesthetic import MCMCSamples
+from anesthetic import MCMCSamples, NestedSamples
 from scipy.stats import multivariate_normal
 
 from NSLFI.MCMCSampler import Sampler
@@ -72,7 +72,7 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
     plt.xlabel("Frequency")
     plt.ylabel("Signal strength")
     plt.plot(freq, x_0[observation_key])
-    plt.show()
+    plt.savefig(fname="swyft_data/observation.pdf")
 
     # initialize swyft
     observation_shapes = {observation_key: x_0[observation_key].shape}
@@ -217,8 +217,8 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
     mcmc = MCMCSamples(data=data, weights=data.weight)
     plt.figure()
     mcmc.plot_2d(axes=paramNames)
-    plt.suptitle("NRE parameter estimations")
-    plt.show()
+    plt.suptitle("NRE parameter estimation")
+    plt.savefig(fname="swyft_data/firstNRE.pdf")
     logProb_0 = NRE.log_prob(observation=x_0, v=[theta_0])
     print(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_3d]):.3f}")
 
@@ -314,16 +314,48 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
     np.save(file="posterior_samples", arr=np.array(deadpoints))
     np.save(file="logL", arr=np.array(deadpoints_logL))
     np.save(file="logL_birth", arr=np.array(deadpoints_birthlogL))
+    nested = NestedSamples(data=deadpoints, weights=weights, logL_birth=np.array(deadpoints_birthlogL),
+                           logL=np.array(deadpoints_logL))
+    plt.figure()
+    nested.plot_2d([0, 1, 2])
+    plt.suptitle("NRE NS enhanced samples")
+    plt.savefig(fname="swyft_data/afterNS.pdf")
     print(f"Algorithm terminated after {iteration} iterations!")
+
+    # retrain NRE
+    store.simulate()
+    dataset = swyft.Dataset(n_training_samples, prior, store)
+    store.save(path=nreSettings.store_filename_NSenhanced)
+    dataset.save(nreSettings.dataset_filename_NSenhanced)
+    mre_3d.train(dataset)
+    mre_3d.save(nreSettings.mre_3d_filename_NSenhanced)
+
+    NRE = swyft.MarginalPosterior(mre_3d, prior)
+    weighted_samples_3d = NRE.weighted_sample(n_weighted_samples, x_0)
+    data = weighted_samples_3d.get_df(marginal_indices_3d)
+
+    columnNames = {}
+    for i, j in enumerate(paramNames):
+        columnNames[i] = j
+    data.rename(columns=columnNames, inplace=True)
+    mcmc = MCMCSamples(data=data, weights=data.weight)
+    plt.figure()
+    mcmc.plot_2d(axes=paramNames)
+    plt.suptitle("Retrained NRE parameter estimations")
+    plt.savefig(fname="swyft_data/retrained_NRE.pdf")
     return {"log Z mean": np.mean(logZ_total),
-            "log Z std": np.std(logZ_total)}
+            "log Z std": np.std(logZ_total),
+            "nre": mre_3d,
+            "posterior": NRE}
 
 
 nre_settings = NRE_Settings()
 nre_settings.n_weighted_samples = 1000
 nre_settings.n_training_samples = 1000
-nre_settings.mode = "train"
+nre_settings.mode = "load"
 nre_settings.simulatedObservations = True
-logZ = nested_sampling(ndim=3, nsim=100, stop_criterion=1e-2,
-                       samplertype="MetropolisNRE", nreSettings=nre_settings)
-print(logZ)
+output = nested_sampling(ndim=3, nsim=100, stop_criterion=1e-3,
+                         samplertype="MetropolisNRE", nreSettings=nre_settings)
+
+NRE = output["nre"]
+posterior = output["posterior"]
