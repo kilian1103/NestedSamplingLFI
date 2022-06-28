@@ -2,231 +2,23 @@ import matplotlib.pyplot as plt  #
 import numpy as np
 import scipy.special
 import swyft
-from anesthetic import MCMCSamples, NestedSamples
-from scipy.stats import multivariate_normal
+from anesthetic import NestedSamples
 
 from NSLFI.MCMCSampler import Sampler
-from NSLFI.NRE_Settings import NRE_Settings
+from NSLFI.NRE import NRE
 
 
-def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
+def nested_sampling(ndim, nsim, stop_criterion, samplertype, trained_nre: NRE, x_0: np.ndarray):
     # initialisation
-    np.random.seed(234)
     logZ_previous = -np.inf * np.ones(nsim)  # Z = 0
     logX_previous = np.zeros(nsim)  # X = 1
     iteration = 0
     logIncrease = 10  # evidence increase factor
-    # uniform prior limits
-    priorLimits = {"lower": np.array([0, 15, 0]),
-                   "upper": np.array([10, 35, 20])}
-
-    ### swyft mode###
-    # mode = "train"
-    mode = nreSettings.mode
-    MNREmode = nreSettings.MNREmode
-    simulatedObservations = nreSettings.simulatedObservations
-    device = nreSettings.device
-    n_training_samples = nreSettings.n_training_samples
-    n_weighted_samples = nreSettings.n_weighted_samples
-
-    # true parameters of simulator
-    theta_0 = nreSettings.theta_0
-    paramNames = nreSettings.paramNames
-    n_parameters = nreSettings.n_parameters
-
-    # saving file names
-    prior_filename = nreSettings.prior_filename
-    dataset_filename = nreSettings.dataset_filename
-    mre_1d_filename = nreSettings.mre_1d_filename
-    mre_2d_filename = nreSettings.mre_2d_filename
-    mre_3d_filename = nreSettings.mre_3d_filename
-    store_filename = nreSettings.store_filename
-    observation_filename = nreSettings.observation_filename
-
-    # simulator
-    observation_key = nreSettings.observation_key
-
-    def forwardmodel(theta):
-        freq = np.arange(0, 50, 0.5)
-        sigma = theta[0]
-        f0 = theta[1]
-        A = theta[2]
-        x = A * np.exp(-0.5 * (freq - f0) ** 2 / sigma ** 2)
-        # x = np.random.normal(loc=x, scale = 0.5)
-        return {observation_key: x}
-
-    # create (simulated real) observation data
-    if simulatedObservations:
-        x_0 = forwardmodel(theta_0)
-        x_0[observation_key] = np.random.normal(loc=x_0[observation_key], scale=0.5)
-        np.save(file=observation_filename, arr=x_0[observation_key])
-    else:
-        # else load from file
-        x_0 = np.load(file=observation_filename, allow_pickle=True)
-        x_0 = {observation_key: x_0}
-    freq = np.arange(0, 50, 0.5)
-
-    # plot observation
-    plt.figure()
-    plt.title(r"Observation $x_0$ to fit")
-    plt.xlabel("Frequency")
-    plt.ylabel("Signal strength")
-    plt.plot(freq, x_0[observation_key])
-    plt.savefig(fname="swyft_data/observation.pdf")
-
-    # initialize swyft
-    observation_shapes = {observation_key: x_0[observation_key].shape}
-    simulator = swyft.Simulator(
-        forwardmodel,
-        n_parameters,
-        sim_shapes=observation_shapes
-    )
-
-    # assign prior for each 1-dim parameter
-    uniform_scipy_1 = scipy.stats.uniform(loc=priorLimits["lower"][0],
-                                          scale=priorLimits["upper"][0] - priorLimits["lower"][0])
-    uniform_scipy_2 = scipy.stats.uniform(loc=priorLimits["lower"][1],
-                                          scale=priorLimits["upper"][1] - priorLimits["lower"][1])
-    uniform_scipy_3 = scipy.stats.uniform(loc=priorLimits["lower"][2],
-                                          scale=priorLimits["upper"][2] - priorLimits["lower"][2])
-    prior = swyft.prior.Prior.composite_prior(
-        cdfs=[uniform_scipy_1.cdf, uniform_scipy_2.cdf, uniform_scipy_3.cdf],
-        icdfs=[uniform_scipy_1.ppf, uniform_scipy_2.ppf, uniform_scipy_3.ppf],
-        log_probs=[uniform_scipy_1.logpdf, uniform_scipy_2.logpdf, uniform_scipy_3.logpdf],
-        parameter_dimensions=[1 for x in range(n_parameters)],
-    )
-    store = swyft.Store.memory_store(simulator)
-
-    # get marginal indices (here fit 1d,2d and 3d marginals for 3d problem)
-    marginal_indices_1d, marginal_indices_2d = swyft.utils.get_corner_marginal_indices(n_parameters)
-    marginal_indices_3d = tuple([x for x in range(len(theta_0))])
-
-    # define networks
-    network_1d = swyft.get_marginal_classifier(
-        observation_key=observation_key,
-        marginal_indices=marginal_indices_1d,
-        observation_shapes=observation_shapes,
-        n_parameters=n_parameters,
-        hidden_features=32,
-        num_blocks=2,
-    )
-    network_2d = swyft.get_marginal_classifier(
-        observation_key=observation_key,
-        marginal_indices=marginal_indices_2d,
-        observation_shapes=observation_shapes,
-        n_parameters=n_parameters,
-        hidden_features=32,
-        num_blocks=2,
-    )
-
-    network_3d = swyft.get_marginal_classifier(
-        observation_key=observation_key,
-        marginal_indices=marginal_indices_3d,
-        observation_shapes=observation_shapes,
-        n_parameters=n_parameters,
-        hidden_features=32,
-        num_blocks=2,
-    )
-
-    # train MRE
-    if mode == "train":
-        # initialize simulator and simulate
-        store.add(n_training_samples, prior)
-        store.simulate()
-        dataset = swyft.Dataset(n_training_samples, prior, store)
-        # save objects before training network
-        prior.save(prior_filename)
-        store.save(store_filename)
-        dataset.save(dataset_filename)
-        if MNREmode:
-            mre_1d = swyft.MarginalRatioEstimator(
-                marginal_indices=marginal_indices_1d,
-                network=network_1d,
-                device=device,
-            )
-            mre_1d.train(dataset)
-            mre_1d.save(mre_1d_filename)
-
-            mre_2d = swyft.MarginalRatioEstimator(
-                marginal_indices=marginal_indices_2d,
-                network=network_2d,
-                device=device,
-            )
-            mre_2d.train(dataset)
-            mre_2d.save(mre_2d_filename)
-
-        mre_3d = swyft.MarginalRatioEstimator(
-            marginal_indices=marginal_indices_3d,
-            network=network_3d,
-            device=device,
-        )
-        mre_3d.train(dataset)
-        mre_3d.save(mre_3d_filename)
-    # load MRE from file
-    else:
-        store = swyft.Store.load(store_filename, simulator=simulator).to_memory()
-        prior = swyft.Prior.load(prior_filename)
-        dataset = swyft.Dataset.load(
-            filename=dataset_filename,
-            store=store
-        )
-        if MNREmode:
-            mre_1d = swyft.MarginalRatioEstimator.load(
-                network=network_1d,
-                device=device,
-                filename=mre_1d_filename,
-            )
-
-            mre_2d = swyft.MarginalRatioEstimator.load(
-                network=network_2d,
-                device=device,
-                filename=mre_2d_filename,
-            )
-
-        mre_3d = swyft.MarginalRatioEstimator.load(
-            network=network_3d,
-            device=device,
-            filename=mre_3d_filename,
-        )
-
-    # get posterior samples
-    if MNREmode:
-        posterior_1d = swyft.MarginalPosterior(mre_1d, prior)
-        weighted_samples_1d = posterior_1d.weighted_sample(n_weighted_samples, x_0)
-        posterior_2d = swyft.MarginalPosterior(mre_2d, prior)
-        weighted_samples_2d = posterior_2d.weighted_sample(n_weighted_samples, x_0)
-        plt.figure()
-        _, _ = swyft.corner(
-            weighted_samples_1d,
-            weighted_samples_2d,
-            kde=True,
-            truth=theta_0,
-            labels=paramNames
-        )
-        plt.suptitle("MNRE parameter estimation")
-        plt.show()
-
-    NRE = swyft.MarginalPosterior(mre_3d, prior)
-    weighted_samples_3d = NRE.weighted_sample(n_weighted_samples, x_0)
-    data = weighted_samples_3d.get_df(marginal_indices_3d)
-
-    columnNames = {}
-    for i, j in enumerate(paramNames):
-        columnNames[i] = j
-    data.rename(columns=columnNames, inplace=True)
-    mcmc = MCMCSamples(data=data, weights=data.weight)
-    plt.figure()
-    mcmc.plot_2d(axes=paramNames)
-    plt.suptitle("NRE parameter estimation")
-    plt.savefig(fname="swyft_data/firstNRE.pdf")
-    logProb_0 = NRE.log_prob(observation=x_0, v=[theta_0])
-    print(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_3d]):.3f}")
 
     # fixed length storage -> nd.array
-    livepoints = dataset.v.copy()
+    livepoints = trained_nre.dataset.v.copy()
     nlive = len(livepoints)
-    # logLikelihoods = NRE.log_prob(observation=x_0, v=livepoints)[marginal_indices_3d].copy()
-    logLikelihoods = mre_3d.log_ratio(observation=x_0, v=livepoints)[marginal_indices_3d].copy()
+    logLikelihoods = trained_nre.mre_3d.log_ratio(observation=x_0, v=livepoints)[trained_nre.marginal_indices_3d].copy()
     livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
 
     # dynamic storage -> lists
@@ -235,7 +27,8 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
     deadpoints_birthlogL = []
     weights = []
 
-    sampler = Sampler(prior=prior, priorLimits=priorLimits, logLikelihood=mre_3d, ndim=ndim).getSampler(
+    sampler = Sampler(prior=trained_nre.prior, priorLimits=trained_nre.priorLimits, logLikelihood=trained_nre.mre_3d,
+                      ndim=ndim).getSampler(
         samplertype)
     while logIncrease > np.log(stop_criterion):
         iteration += 1
@@ -269,16 +62,17 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
 
         # find new sample satisfying likelihood constraint
         proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
-                                         marginal_indices_3d=marginal_indices_3d, x_0=x_0)
+                                         marginal_indices_3d=trained_nre.marginal_indices_3d, x_0=x_0)
 
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.copy().tolist()
         logLikelihoods[index] = float(
-            mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[marginal_indices_3d].copy())
+            trained_nre.mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[trained_nre.marginal_indices_3d].copy())
         livepoints_birthlogL[index] = minlogLike
         # add datapoint to NRE
-        store._append_new_points(v=[proposal_sample],
-                                 log_w=mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[marginal_indices_3d])
+        trained_nre.store._append_new_points(v=[proposal_sample],
+                                             log_w=trained_nre.mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[
+                                                 trained_nre.marginal_indices_3d])
 
         maxlogLike = logLikelihoods.max()
         logIncrease_array = logWeight_current + maxlogLike - logZ_total
@@ -288,7 +82,6 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
             print("Current log evidence ", logZ_total.max())
             print("current iteration: ", iteration)
 
-    store.get_simulation_status()
     # final <L>*dX sum calculation
     finallogLikesum = scipy.special.logsumexp(a=logLikelihoods)
     logZ_current = -np.log(nlive) + finallogLikesum + logX_current
@@ -322,40 +115,21 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, nreSettings):
     plt.savefig(fname="swyft_data/afterNS.pdf")
     print(f"Algorithm terminated after {iteration} iterations!")
 
+    # update store state dict
+    trained_nre.store.log_lambdas.resize(len(trained_nre.store.log_lambdas) + 1)
+    pdf = swyft.PriorTruncator(trained_nre.prior, bound=None)
+    trained_nre.store.log_lambdas[-1] = dict(pdf=pdf.state_dict(),
+                                             N=trained_nre.nre_settings.n_training_samples + iteration)
     # retrain NRE
-    store.simulate()
-    dataset = swyft.Dataset(n_training_samples, prior, store)
-    store.save(path=nreSettings.store_filename_NSenhanced)
-    dataset.save(nreSettings.dataset_filename_NSenhanced)
-    mre_3d.train(dataset)
-    mre_3d.save(nreSettings.mre_3d_filename_NSenhanced)
-
-    NRE = swyft.MarginalPosterior(mre_3d, prior)
-    weighted_samples_3d = NRE.weighted_sample(n_weighted_samples, x_0)
-    data = weighted_samples_3d.get_df(marginal_indices_3d)
-
-    columnNames = {}
-    for i, j in enumerate(paramNames):
-        columnNames[i] = j
-    data.rename(columns=columnNames, inplace=True)
-    mcmc = MCMCSamples(data=data, weights=data.weight)
-    plt.figure()
-    mcmc.plot_2d(axes=paramNames)
-    plt.suptitle("Retrained NRE parameter estimations")
-    plt.savefig(fname="swyft_data/retrained_NRE.pdf")
+    trained_nre.store.simulate()
+    trained_nre.dataset = swyft.Dataset(trained_nre.nre_settings.n_training_samples + iteration,
+                                        trained_nre.prior,
+                                        trained_nre.store)
+    trained_nre.store.save(path=trained_nre.nre_settings.store_filename_NSenhanced)
+    trained_nre.dataset.save(trained_nre.nre_settings.dataset_filename_NSenhanced)
+    trained_nre.mre_3d.train(trained_nre.dataset)
+    trained_nre.mre_3d.save(trained_nre.nre_settings.mre_3d_filename_NSenhanced)
+    trained_nre.posterior = swyft.MarginalPosterior(trained_nre.mre_3d, trained_nre.prior)
     return {"log Z mean": np.mean(logZ_total),
             "log Z std": np.std(logZ_total),
-            "nre": mre_3d,
-            "posterior": NRE}
-
-
-nre_settings = NRE_Settings()
-nre_settings.n_weighted_samples = 1000
-nre_settings.n_training_samples = 1000
-nre_settings.mode = "load"
-nre_settings.simulatedObservations = True
-output = nested_sampling(ndim=3, nsim=100, stop_criterion=1e-3,
-                         samplertype="MetropolisNRE", nreSettings=nre_settings)
-
-NRE = output["nre"]
-posterior = output["posterior"]
+            "retrainedNRE": trained_nre}
