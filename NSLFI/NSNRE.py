@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 import matplotlib.pyplot as plt  #
 import numpy as np
 import scipy.special
@@ -8,7 +10,8 @@ from NSLFI.MCMCSampler import Sampler
 from NSLFI.NRE import NRE
 
 
-def nested_sampling(ndim, nsim, stop_criterion, samplertype, trained_nre: NRE, x_0: np.ndarray):
+def nested_sampling(ndim: int, nsim: int, stop_criterion: float, samplerType: str, trainedNRE: NRE,
+                    x_0: Dict[str, np.ndarray]) -> Dict[str, Any]:
     # initialisation
     logZ_previous = -np.inf * np.ones(nsim)  # Z = 0
     logX_previous = np.zeros(nsim)  # X = 1
@@ -16,9 +19,9 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, trained_nre: NRE, x
     logIncrease = 10  # evidence increase factor
 
     # fixed length storage -> nd.array
-    livepoints = trained_nre.dataset.v.copy()
+    livepoints = trainedNRE.dataset.v.copy()
     nlive = len(livepoints)
-    logLikelihoods = trained_nre.mre_3d.log_ratio(observation=x_0, v=livepoints)[trained_nre.marginal_indices_3d].copy()
+    logLikelihoods = trainedNRE.mre_3d.log_ratio(observation=x_0, v=livepoints)[trainedNRE.marginal_indices_3d].copy()
     livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
 
     # dynamic storage -> lists
@@ -27,9 +30,8 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, trained_nre: NRE, x
     deadpoints_birthlogL = []
     weights = []
 
-    sampler = Sampler(prior=trained_nre.prior, priorLimits=trained_nre.priorLimits, logLikelihood=trained_nre.mre_3d,
-                      ndim=ndim).getSampler(
-        samplertype)
+    sampler = Sampler(prior=trainedNRE.prior, priorLimits=trainedNRE.priorLimits, logLikelihood=trainedNRE.mre_3d,
+                      ndim=ndim).getSampler(samplerType)
     while logIncrease > np.log(stop_criterion):
         iteration += 1
         # identifying lowest likelihood point
@@ -62,17 +64,17 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, trained_nre: NRE, x
 
         # find new sample satisfying likelihood constraint
         proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
-                                         marginal_indices_3d=trained_nre.marginal_indices_3d, x_0=x_0)
+                                         marginal_indices_3d=trainedNRE.marginal_indices_3d, x_0=x_0)
 
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.copy().tolist()
         logLikelihoods[index] = float(
-            trained_nre.mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[trained_nre.marginal_indices_3d].copy())
+            trainedNRE.mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[trainedNRE.marginal_indices_3d].copy())
         livepoints_birthlogL[index] = minlogLike
         # add datapoint to NRE
-        trained_nre.store._append_new_points(v=[proposal_sample],
-                                             log_w=trained_nre.mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[
-                                                 trained_nre.marginal_indices_3d])
+        trainedNRE.store._append_new_points(v=[proposal_sample],
+                                            log_w=trainedNRE.mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[
+                                                trainedNRE.marginal_indices_3d])
 
         maxlogLike = logLikelihoods.max()
         logIncrease_array = logWeight_current + maxlogLike - logZ_total
@@ -116,20 +118,19 @@ def nested_sampling(ndim, nsim, stop_criterion, samplertype, trained_nre: NRE, x
     print(f"Algorithm terminated after {iteration} iterations!")
 
     # update store state dict
-    trained_nre.store.log_lambdas.resize(len(trained_nre.store.log_lambdas) + 1)
-    pdf = swyft.PriorTruncator(trained_nre.prior, bound=None)
-    trained_nre.store.log_lambdas[-1] = dict(pdf=pdf.state_dict(),
-                                             N=trained_nre.nre_settings.n_training_samples + iteration)
+    trainedNRE.store.log_lambdas.resize(len(trainedNRE.store.log_lambdas) + 1)
+    pdf = swyft.PriorTruncator(trainedNRE.prior, bound=None)
+    trainedNRE.store.log_lambdas[-1] = dict(pdf=pdf.state_dict(),
+                                            N=trainedNRE.nre_settings.n_training_samples + iteration)
     # retrain NRE
-    trained_nre.store.simulate()
-    trained_nre.dataset = swyft.Dataset(trained_nre.nre_settings.n_training_samples + iteration,
-                                        trained_nre.prior,
-                                        trained_nre.store)
-    trained_nre.store.save(path=trained_nre.nre_settings.store_filename_NSenhanced)
-    trained_nre.dataset.save(trained_nre.nre_settings.dataset_filename_NSenhanced)
-    trained_nre.mre_3d.train(trained_nre.dataset)
-    trained_nre.mre_3d.save(trained_nre.nre_settings.mre_3d_filename_NSenhanced)
-    trained_nre.posterior = swyft.MarginalPosterior(trained_nre.mre_3d, trained_nre.prior)
+    trainedNRE.store.simulate()
+    trainedNRE.dataset = swyft.Dataset(trainedNRE.nre_settings.n_training_samples + iteration,
+                                       trainedNRE.prior,
+                                       trainedNRE.store)
+    trainedNRE.store.save(path=trainedNRE.nre_settings.store_filename_NSenhanced)
+    trainedNRE.dataset.save(trainedNRE.nre_settings.dataset_filename_NSenhanced)
+    trainedNRE.mre_3d.train(trainedNRE.dataset)
+    trainedNRE.mre_3d.save(trainedNRE.nre_settings.mre_3d_filename_NSenhanced)
     return {"log Z mean": np.mean(logZ_total),
             "log Z std": np.std(logZ_total),
-            "retrainedNRE": trained_nre}
+            "retrainedNRE": trainedNRE}

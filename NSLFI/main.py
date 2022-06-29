@@ -223,10 +223,10 @@ logProb_0 = posterior.log_prob(observation=x_0, v=[theta_0])
 print(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_3d]):.3f}")
 
 trained_NRE = NRE(dataset=dataset, store=store, prior=prior, priorLimits=priorLimits, trainedNRE=mre_3d,
-                  nreSettings=nreSettings, posterior=posterior)
+                  nreSettings=nreSettings)
 
 output = NSLFI.NSNRE.nested_sampling(ndim=3, nsim=100, stop_criterion=1e-3,
-                                     samplertype="MetropolisNRE", trained_nre=trained_NRE, x_0=x_0)
+                                     samplerType="MetropolisNRE", trainedNRE=trained_NRE, x_0=x_0)
 
 trained_nre = output["retrainedNRE"]
 weighted_samples_3d = posterior.weighted_sample(trained_nre.nre_settings.n_weighted_samples * 10, x_0)
