@@ -1,10 +1,13 @@
+from typing import Dict, Any
+
 import numpy as np
+import swyft
 from scipy.stats import multivariate_normal
 
 
 class Sampler:
 
-    def __init__(self, prior, priorLimits, logLikelihood, ndim):
+    def __init__(self, prior: Any, priorLimits: Dict[str, float], logLikelihood: Any, ndim: int):
         self.prior = prior
         self.priorLimits = priorLimits
         self.logLikelihood = logLikelihood
@@ -19,7 +22,7 @@ class Sampler:
 
 
 class Metropolis(Sampler):
-    def __init__(self, prior, priorLimits, logLikelihood, ndim, **kwargs):
+    def __init__(self, prior: Any, priorLimits: Dict[str, float], logLikelihood: Any, ndim: int, **kwargs):
         super().__init__(prior=prior, priorLimits=priorLimits, logLikelihood=logLikelihood, ndim=ndim)
 
     def sample(self, minlogLike, livepoints, nrepeat=5) -> np.ndarray:
@@ -38,7 +41,7 @@ class Metropolis(Sampler):
 
 
 class Rejection(Sampler):
-    def __init__(self, prior, priorLimits, logLikelihood, ndim):
+    def __init__(self, prior: Any, priorLimits: Dict[str, float], logLikelihood: Any, ndim: int):
         super().__init__(prior=prior, priorLimits=priorLimits, logLikelihood=logLikelihood, ndim=ndim)
 
     def sample(self, minlogLike, **kwargs) -> np.ndarray:
@@ -50,7 +53,8 @@ class Rejection(Sampler):
 
 
 class MetropolisNRE(Sampler):
-    def __init__(self, prior, priorLimits, logLikelihood, ndim):
+    def __init__(self, prior: Any, priorLimits: Dict[str, float], logLikelihood: swyft.MarginalRatioEstimator,
+                 ndim: int):
         super().__init__(prior=prior, priorLimits=priorLimits, logLikelihood=logLikelihood, ndim=ndim)
 
     def sample(self, minlogLike, livepoints, x_0, marginal_indices_3d, nrepeat=5) -> np.ndarray:
