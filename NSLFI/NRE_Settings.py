@@ -14,8 +14,8 @@ class NRE_Settings:
         self.device = "cpu"
         self.n_training_samples = 10_000
         self.n_weighted_samples = 10_000
-        self.theta_0 = np.array([0.5, 0.25])
-        self.paramNames = [r"$\mu$", r"$\sigma$"]
+        self.theta_0 = np.array([0.5, 0.5])
+        self.paramNames = [r"$\mu_1$", r"$\mu_2$"]
         self.n_parameters = len(self.paramNames)
         self.prior_filename = "swyft_data/toyproblem.prior.pt"
         self.dataset_filename = "swyft_data/toyproblem.dataset.pt"

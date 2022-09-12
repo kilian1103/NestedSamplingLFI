@@ -14,7 +14,7 @@ np.random.seed(234)
 nreSettings = NRE_Settings()
 nreSettings.n_training_samples = 1000
 nreSettings.n_weighted_samples = 10000
-nreSettings.mode = "load"
+nreSettings.mode = "train"
 priorLimits = {"lower": np.array([0, 0]),
                "upper": np.array([1, 1])}
 ### swyft mode###
@@ -22,7 +22,7 @@ priorLimits = {"lower": np.array([0, 0]),
 mode = nreSettings.mode
 MNREmode = nreSettings.MNREmode
 simulatedObservations = nreSettings.simulatedObservations
-# simulatedObservations = True
+simulatedObservations = True
 device = nreSettings.device
 n_training_samples = nreSettings.n_training_samples
 n_weighted_samples = nreSettings.n_weighted_samples
@@ -47,17 +47,16 @@ observation_key = nreSettings.observation_key
 def forwardmodel(theta, ndim=2):
     # data space
     nData = 100
-    # estimate mean and cov from multivariate normal distribution
-    means = theta[0] * np.ones(shape=ndim)
-    cov = theta[1] * np.eye(N=ndim)
-    x = multivariate_normal.rvs(mean=means, cov=cov, size=(nData)).reshape(ndim, nData)
+    # estimate 2d mean from multivariate normal distribution
+    means = np.array([theta[0], theta[1]]) * np.ones(shape=ndim)
+    cov = 0.01 * np.eye(N=ndim)
+    x = multivariate_normal.rvs(mean=means, cov=cov, size=nData).reshape(ndim, nData)
     return {observation_key: x}
 
 
 # create (simulated real) observation data
 if simulatedObservations:
     x_0 = forwardmodel(theta_0)
-    # x_0[observation_key] = np.random.normal(loc=x_0[observation_key], scale=0.5)
     np.save(file=observation_filename, arr=x_0[observation_key])
 else:
     # else load from file
