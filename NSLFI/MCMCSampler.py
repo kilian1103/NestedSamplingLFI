@@ -57,7 +57,7 @@ class MetropolisNRE(Sampler):
                  ndim: int):
         super().__init__(prior=prior, priorLimits=priorLimits, logLikelihood=logLikelihood, ndim=ndim)
 
-    def sample(self, minlogLike, livepoints, x_0, marginal_indices_3d, nrepeat=5) -> np.ndarray:
+    def sample(self, minlogLike, livepoints, x_0, marginal_indices_2d, nrepeat=5) -> np.ndarray:
         cov = np.cov(livepoints.T)
         random_index = np.random.randint(0, len(livepoints))
         current_sample = livepoints[random_index].copy()
@@ -67,7 +67,7 @@ class MetropolisNRE(Sampler):
             proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)
             withinPrior = np.logical_and(np.greater(proposal_sample, lower), np.less(proposal_sample, upper)).all()
             withinContour = self.logLikelihood.log_ratio(observation=x_0, v=[proposal_sample])[
-                                marginal_indices_3d].copy() > minlogLike
+                                marginal_indices_2d].copy() > minlogLike
             if withinPrior and withinContour:
                 current_sample = proposal_sample.copy()
         return current_sample

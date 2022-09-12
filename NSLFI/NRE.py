@@ -13,5 +13,5 @@ class NRE:
         self.prior = prior
         self.priorLimits = priorLimits
         self.nre_settings = nreSettings
-        self.mre_3d = trainedNRE
-        self.marginal_indices_3d = (0, 1, 2)
+        self.mre_2d = trainedNRE
+        self.marginal_indices_2d = (0, 1)

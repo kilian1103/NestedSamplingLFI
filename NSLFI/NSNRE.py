@@ -21,7 +21,7 @@ def nested_sampling(ndim: int, nsim: int, stop_criterion: float, samplerType: st
     # fixed length storage -> nd.array
     livepoints = trainedNRE.dataset.v.copy()
     nlive = len(livepoints)
-    logLikelihoods = trainedNRE.mre_3d.log_ratio(observation=x_0, v=livepoints)[trainedNRE.marginal_indices_3d].copy()
+    logLikelihoods = trainedNRE.mre_2d.log_ratio(observation=x_0, v=livepoints)[trainedNRE.marginal_indices_2d].copy()
     livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
 
     # dynamic storage -> lists
@@ -30,7 +30,7 @@ def nested_sampling(ndim: int, nsim: int, stop_criterion: float, samplerType: st
     deadpoints_birthlogL = []
     weights = []
 
-    sampler = Sampler(prior=trainedNRE.prior, priorLimits=trainedNRE.priorLimits, logLikelihood=trainedNRE.mre_3d,
+    sampler = Sampler(prior=trainedNRE.prior, priorLimits=trainedNRE.priorLimits, logLikelihood=trainedNRE.mre_2d,
                       ndim=ndim).getSampler(samplerType)
     while logIncrease > np.log(stop_criterion):
         iteration += 1
@@ -64,17 +64,17 @@ def nested_sampling(ndim: int, nsim: int, stop_criterion: float, samplerType: st
 
         # find new sample satisfying likelihood constraint
         proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
-                                         marginal_indices_3d=trainedNRE.marginal_indices_3d, x_0=x_0)
+                                         marginal_indices_2d=trainedNRE.marginal_indices_2d, x_0=x_0)
 
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.copy().tolist()
         logLikelihoods[index] = float(
-            trainedNRE.mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[trainedNRE.marginal_indices_3d].copy())
+            trainedNRE.mre_2d.log_ratio(observation=x_0, v=[proposal_sample])[trainedNRE.marginal_indices_2d].copy())
         livepoints_birthlogL[index] = minlogLike
         # add datapoint to NRE
         trainedNRE.store._append_new_points(v=[proposal_sample],
-                                            log_w=trainedNRE.mre_3d.log_ratio(observation=x_0, v=[proposal_sample])[
-                                                trainedNRE.marginal_indices_3d])
+                                            log_w=trainedNRE.mre_2d.log_ratio(observation=x_0, v=[proposal_sample])[
+                                                trainedNRE.marginal_indices_2d])
 
         maxlogLike = logLikelihoods.max()
         logIncrease_array = logWeight_current + maxlogLike - logZ_total
@@ -112,7 +112,7 @@ def nested_sampling(ndim: int, nsim: int, stop_criterion: float, samplerType: st
     nested = NestedSamples(data=deadpoints, weights=weights, logL_birth=np.array(deadpoints_birthlogL),
                            logL=np.array(deadpoints_logL))
     plt.figure()
-    nested.plot_2d([0, 1, 2])
+    nested.plot_2d([0, 1])
     plt.suptitle("NRE NS enhanced samples")
     plt.savefig(fname="swyft_data/afterNS.pdf")
     print(f"Algorithm terminated after {iteration} iterations!")
@@ -129,8 +129,8 @@ def nested_sampling(ndim: int, nsim: int, stop_criterion: float, samplerType: st
                                        trainedNRE.store)
     trainedNRE.store.save(path=trainedNRE.nre_settings.store_filename_NSenhanced)
     trainedNRE.dataset.save(trainedNRE.nre_settings.dataset_filename_NSenhanced)
-    trainedNRE.mre_3d.train(trainedNRE.dataset)
-    trainedNRE.mre_3d.save(trainedNRE.nre_settings.mre_3d_filename_NSenhanced)
+    trainedNRE.mre_2d.train(trainedNRE.dataset)
+    trainedNRE.mre_2d.save(trainedNRE.nre_settings.mre_2d_filename_NSenhanced)
     return {"log Z mean": np.mean(logZ_total),
             "log Z std": np.std(logZ_total),
             "retrainedNRE": trainedNRE}
