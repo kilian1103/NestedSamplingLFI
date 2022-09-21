@@ -1,25 +1,33 @@
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
+import pypolychord
 import scipy.special
 import swyft
 from anesthetic import MCMCSamples
+from mpi4py import MPI
+from pypolychord.settings import PolyChordSettings
 from scipy.stats import multivariate_normal
 
-import NSLFI.NSNRE
 from NSLFI.NRE import NRE
+from NSLFI.NRE_PolyChord_Wrapper import NRE_Wrapper
 from NSLFI.NRE_Settings import NRE_Settings
 
 np.random.seed(234)
-
+logging.basicConfig(filename="myLFI.log", level=logging.INFO,
+                    filemode="w")
+logger = logging.getLogger()
+logger.info('Started')
 nreSettings = NRE_Settings()
 nreSettings.n_training_samples = 1000
 nreSettings.n_weighted_samples = 10000
-nreSettings.mode = "train"
+nreSettings.mode = "load"
 priorLimits = {"lower": np.array([0, 0]),
                "upper": np.array([1, 1])}
 ### swyft mode###
-# mode = "train"
-mode = nreSettings.mode
+mode = "load"
+# mode = nreSettings.mode
 MNREmode = nreSettings.MNREmode
 simulatedObservations = nreSettings.simulatedObservations
 simulatedObservations = True
@@ -209,23 +217,32 @@ mcmc.plot_2d(axes=paramNames)
 plt.suptitle("NRE parameter estimation")
 plt.savefig(fname="swyft_data/firstNRE.pdf")
 logProb_0 = posterior.log_prob(observation=x_0, v=[theta_0])
-print(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_2d]):.3f}")
+logger.info(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_2d]):.3f}")
 
 trained_NRE = NRE(dataset=dataset, store=store, prior=prior, priorLimits=priorLimits, trainedNRE=mre_2d,
                   nreSettings=nreSettings)
 
-output = NSLFI.NSNRE.nested_sampling(ndim=2, nsim=100, stop_criterion=1e-3,
-                                     samplerType="MetropolisNRE", trainedNRE=trained_NRE, x_0=x_0)
 
-trained_nre = output["retrainedNRE"]
-weighted_samples_3d = posterior.weighted_sample(trained_nre.nre_settings.n_weighted_samples * 10, x_0)
-data = weighted_samples_3d.get_df(trained_nre.marginal_indices_2d)
-columnNames = {}
-for i, j in enumerate(trained_nre.nre_settings.paramNames):
-    columnNames[i] = j
-data.rename(columns=columnNames, inplace=True)
-mcmc = MCMCSamples(data=data, weights=data.weight)
-plt.figure()
-mcmc.plot_2d(axes=trained_nre.nre_settings.paramNames)
-plt.suptitle("Retrained NRE parameter estimations")
-plt.savefig(fname="swyft_data/retrained_NRE.pdf")
+def dumper(live, dead, logweights, logZ, logZerr):
+    """Dumper Function for PolyChord for runtime progress access."""
+    logger.info("Last dead point: {}".format(dead[-1]))
+
+
+nreWrapper = NRE_Wrapper(nre=trained_NRE.mre_2d, x_0=x_0)
+polychordSet = PolyChordSettings(nDims=nreWrapper.nDims, nDerived=nreWrapper.nDerived)
+polychordSet.nlive = n_training_samples
+try:
+    comm_analyse = MPI.COMM_WORLD
+    rank_analyse = comm_analyse.Get_rank()
+except Exception as e:
+    logger.error(
+        "Oops! {} occurred. when Get_rank()".format(e.__class__))
+    rank_analyse = 0
+
+output = pypolychord.run_polychord(nreWrapper.toylogLikelihood,
+                                   nreWrapper.nDims,
+                                   nreWrapper.nDerived,
+                                   polychordSet,
+                                   nreWrapper.prior, dumper)
+comm_analyse.Barrier()
+logger.info("Done")
