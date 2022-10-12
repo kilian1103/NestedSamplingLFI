@@ -9,7 +9,6 @@ from anesthetic import MCMCSamples
 from mpi4py import MPI
 from pypolychord.settings import PolyChordSettings
 from scipy.stats import multivariate_normal
-
 from NSLFI.NRE import NRE
 from NSLFI.NRE_PolyChord_Wrapper import NRE_Wrapper
 from NSLFI.NRE_Settings import NRE_Settings
@@ -28,7 +27,7 @@ def main():
     priorLimits = {"lower": np.array([0, 0]),
                    "upper": np.array([1, 1])}
     ### swyft mode###
-    mode = "load"
+    mode = "train"
     # mode = nreSettings.mode
     MNREmode = nreSettings.MNREmode
     simulatedObservations = nreSettings.simulatedObservations
@@ -45,7 +44,6 @@ def main():
     # saving file names
     prior_filename = nreSettings.prior_filename
     dataset_filename = nreSettings.dataset_filename
-    mre_1d_filename = nreSettings.mre_1d_filename
     mre_2d_filename = nreSettings.mre_2d_filename
     store_filename = nreSettings.store_filename
     observation_filename = nreSettings.observation_filename
@@ -55,7 +53,7 @@ def main():
 
     def forwardmodel(theta, ndim=2):
         # data space
-        nData = 100
+        nData = 2
         # estimate 2d mean from multivariate normal distribution
         means = np.array([theta[0], theta[1]]) * np.ones(shape=ndim)
         cov = 0.01 * np.eye(N=ndim)
@@ -101,18 +99,9 @@ def main():
     store = swyft.Store.memory_store(simulator)
 
     # get marginal indices (here fit 1d,2d and 3d marginals for 3d problem)
-    marginal_indices_1d, marginal_indices_2d = swyft.utils.get_corner_marginal_indices(n_parameters)
-    # marginal_indices_3d = tuple([x for x in range(len(theta_0))])
     marginal_indices_2d = (0, 1)
+
     # define networks
-    network_1d = swyft.get_marginal_classifier(
-        observation_key=observation_key,
-        marginal_indices=marginal_indices_1d,
-        observation_shapes=observation_shapes,
-        n_parameters=n_parameters,
-        hidden_features=32,
-        num_blocks=2,
-    )
     network_2d = swyft.get_marginal_classifier(
         observation_key=observation_key,
         marginal_indices=marginal_indices_2d,
@@ -121,15 +110,6 @@ def main():
         hidden_features=32,
         num_blocks=2,
     )
-    #
-    # network_3d = swyft.get_marginal_classifier(
-    #     observation_key=observation_key,
-    #     marginal_indices=marginal_indices_3d,
-    #     observation_shapes=observation_shapes,
-    #     n_parameters=n_parameters,
-    #     hidden_features=32,
-    #     num_blocks=2,
-    # )
 
     # train MRE
     if mode == "train":
@@ -141,14 +121,6 @@ def main():
         prior.save(prior_filename)
         store.save(store_filename)
         dataset.save(dataset_filename)
-        if MNREmode:
-            mre_1d = swyft.MarginalRatioEstimator(
-                marginal_indices=marginal_indices_1d,
-                network=network_1d,
-                device=device,
-            )
-            mre_1d.train(dataset)
-            mre_1d.save(mre_1d_filename)
 
         mre_2d = swyft.MarginalRatioEstimator(
             marginal_indices=marginal_indices_2d,
@@ -158,13 +130,6 @@ def main():
         mre_2d.train(dataset)
         mre_2d.save(mre_2d_filename)
 
-        # mre_3d = swyft.MarginalRatioEstimator(
-        #     marginal_indices=marginal_indices_3d,
-        #     network=network_3d,
-        #     device=device,
-        # )
-        # mre_3d.train(dataset)
-        # mre_3d.save(mre_3d_filename)
     # load MRE from file
     else:
         store = swyft.Store.load(store_filename, simulator=simulator).to_memory()
@@ -180,29 +145,7 @@ def main():
             filename=mre_2d_filename,
         )
 
-        # mre_3d = swyft.MarginalRatioEstimator.load(
-        #     network=network_3d,
-        #     device=device,
-        #     filename=mre_3d_filename,
-        # )
-
     # get posterior samples
-    if MNREmode:
-        posterior_1d = swyft.MarginalPosterior(mre_1d, prior)
-        weighted_samples_1d = posterior_1d.weighted_sample(n_weighted_samples, x_0)
-        posterior_2d = swyft.MarginalPosterior(mre_2d, prior)
-        weighted_samples_2d = posterior_2d.weighted_sample(n_weighted_samples, x_0)
-        plt.figure()
-        _, _ = swyft.corner(
-            weighted_samples_1d,
-            weighted_samples_2d,
-            kde=True,
-            truth=theta_0,
-            labels=paramNames
-        )
-        plt.suptitle("MNRE parameter estimation")
-        plt.show()
-
     posterior = swyft.MarginalPosterior(mre_2d, prior)
     weighted_samples_2d = posterior.weighted_sample(n_weighted_samples, x_0)
     data = weighted_samples_2d.get_df(marginal_indices_2d)
@@ -219,13 +162,11 @@ def main():
     logProb_0 = posterior.log_prob(observation=x_0, v=[theta_0])
     logger.info(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_2d]):.3f}")
 
+    # wrap NRE object
     trained_NRE = NRE(dataset=dataset, store=store, prior=prior, priorLimits=priorLimits, trainedNRE=mre_2d,
                       nreSettings=nreSettings)
 
-    def dumper(live, dead, logweights, logZ, logZerr):
-        """Dumper Function for PolyChord for runtime progress access."""
-        logger.info("Last dead point: {}".format(dead[-1]))
-
+    # wrap NRE for Polychord
     nreWrapper = NRE_Wrapper(nre=trained_NRE.mre_2d, x_0=x_0)
     polychordSet = PolyChordSettings(nDims=nreWrapper.nDims, nDerived=nreWrapper.nDerived)
     polychordSet.nlive = n_training_samples
@@ -237,6 +178,10 @@ def main():
             "Oops! {} occurred. when Get_rank()".format(e.__class__))
         rank_analyse = 0
 
+    def dumper(live, dead, logweights, logZ, logZerr):
+        """Dumper Function for PolyChord for runtime progress access."""
+        logger.info("Last dead point: {}".format(dead[-1]))
+
     output = pypolychord.run_polychord(nreWrapper.toylogLikelihood,
                                        nreWrapper.nDims,
                                        nreWrapper.nDerived,
@@ -244,7 +189,7 @@ def main():
                                        nreWrapper.prior, dumper)
     comm_analyse.Barrier()
     logger.info("Done")
-    
+
 
 if __name__ == '__main__':
     main()
