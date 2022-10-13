@@ -197,7 +197,7 @@ comm_analyse.Barrier()
 # optimize with my NS run
 output = NSLFI.NSNRE.nested_sampling(ndim=2, nsim=100, stop_criterion=1e-3,
                                      samplerType="MetropolisNRE", trainedNRE=trained_NRE, x_0=x_0)
-
+logger.info(output)
 trained_nre = output["retrainedNRE"]
 weighted_samples_3d = posterior.weighted_sample(trained_nre.nre_settings.n_weighted_samples * 10, x_0)
 data = weighted_samples_3d.get_df(trained_nre.marginal_indices_2d)
