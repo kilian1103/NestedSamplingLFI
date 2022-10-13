@@ -4,7 +4,7 @@ from pypolychord.priors import UniformPrior
 from scipy.stats import multivariate_normal
 
 
-class NRE_Wrapper:
+class NRE_Poly:
     """Polychord wrapper"""
 
     def __init__(self, nre: swyft.MarginalRatioEstimator, x_0: np.ndarray):
