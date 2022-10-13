@@ -10,7 +10,7 @@ from mpi4py import MPI
 from pypolychord import PolyChordSettings
 from scipy.stats import multivariate_normal
 
-import NSLFI.NRE
+import NSLFI.NSNRE
 from NSLFI.NRE import NRE
 from NSLFI.NRE_PolyChord_Wrapper import NRE_Poly
 from NSLFI.NRE_Settings import NRE_Settings
