@@ -23,11 +23,11 @@ logger.info('Started')
 nreSettings = NRE_Settings()
 nreSettings.n_training_samples = 1000
 nreSettings.n_weighted_samples = 10000
-nreSettings.mode = "train"
+nreSettings.mode = "load"
 priorLimits = {"lower": np.array([0, 0]),
                "upper": np.array([1, 1])}
 ### swyft mode###
-mode = "load"
+mode = "train"
 # mode = nreSettings.mode
 MNREmode = nreSettings.MNREmode
 simulatedObservations = nreSettings.simulatedObservations
@@ -54,7 +54,7 @@ observation_key = nreSettings.observation_key
 
 def forwardmodel(theta, ndim=2):
     # data space
-    nData = 2
+    nData = 10
     # estimate 2d mean from multivariate normal distribution
     means = np.array([theta[0], theta[1]]) * np.ones(shape=ndim)
     cov = 0.01 * np.eye(N=ndim)
