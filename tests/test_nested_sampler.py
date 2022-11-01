@@ -18,11 +18,12 @@ def test_nested_sampler():
 
     ndim = 2
     nlive = 100
+
     priorLimits = {"lower": np.zeros(ndim),
                    "upper": np.ones(ndim)}
 
     livepoints = prior(ndim=ndim, nsamples=nlive, limits=priorLimits)
-    logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, priorLimits=priorLimits, ndim=ndim,
+    logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, priorLimits=priorLimits,
                            nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Metropolis")
     print(logZ)
     np.testing.assert_almost_equal(actual=logZ["log Z mean"], desired=0, decimal=0.2)

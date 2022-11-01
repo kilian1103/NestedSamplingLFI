@@ -4,14 +4,15 @@ import scipy.special
 from NSLFI.MCMCSampler import Sampler
 
 
-def nested_sampling(logLikelihood, prior, priorLimits, livepoints, ndim, nsim, stop_criterion, samplertype):
+def nested_sampling(logLikelihood, prior, priorLimits, livepoints, nsim, stop_criterion, samplertype):
     # initialisation
     logZ_previous = -np.inf * np.ones(nsim)  # Z = 0
     logX_previous = np.zeros(nsim)  # X = 1
     iteration = 0
     logIncrease = 10  # evidence increase factor
-    nlive = len(livepoints)
-    
+    nlive = livepoints.shape[0]
+    ndim = livepoints.shape[1]
+
     logLikelihoods = logLikelihood(livepoints, ndim)
     livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
 
