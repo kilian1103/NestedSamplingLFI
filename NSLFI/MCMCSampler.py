@@ -4,6 +4,8 @@ import numpy as np
 from scipy.stats import multivariate_normal, uniform
 
 
+# TODO
+# use icdf instead of prior limits
 class Sampler:
 
     def __init__(self, prior: Any, priorLimits: Dict[str, float], logLikelihood: Any, ndim: int):
