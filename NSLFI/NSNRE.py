@@ -30,7 +30,8 @@ def nested_sampling(ndim: int, nsim: int, stop_criterion: float, samplerType: st
     deadpoints_birthlogL = []
     weights = []
 
-    sampler = Sampler(prior=trainedNRE.prior, priorLimits=trainedNRE.priorLimits, logLikelihood=trainedNRE.mre_2d,
+    sampler = Sampler(prior=trainedNRE.prior, priorLimits=trainedNRE.priorLimits,
+                      logLikelihood=trainedNRE.logLikelihood,
                       ndim=ndim).getSampler(samplerType)
     while logIncrease > np.log(stop_criterion):
         iteration += 1
@@ -63,8 +64,7 @@ def nested_sampling(ndim: int, nsim: int, stop_criterion: float, samplerType: st
         logZ_previous = logZ_total.copy()
 
         # find new sample satisfying likelihood constraint
-        proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
-                                         marginal_indices_2d=trainedNRE.marginal_indices_2d, x_0=x_0)
+        proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike)
 
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.copy().tolist()

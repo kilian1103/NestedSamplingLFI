@@ -27,7 +27,7 @@ nreSettings.mode = "load"
 priorLimits = {"lower": np.array([0, 0]),
                "upper": np.array([1, 1])}
 ### swyft mode###
-mode = "train"
+mode = "load"
 # mode = nreSettings.mode
 MNREmode = nreSettings.MNREmode
 simulatedObservations = nreSettings.simulatedObservations
@@ -196,7 +196,7 @@ comm_analyse.Barrier()
 
 # optimize with my NS run
 output = NSLFI.NSNRE.nested_sampling(ndim=2, nsim=100, stop_criterion=1e-3,
-                                     samplerType="MetropolisNRE", trainedNRE=trained_NRE, x_0=x_0)
+                                     samplerType="Metropolis", trainedNRE=trained_NRE, x_0=x_0)
 logger.info(output)
 trained_nre = output["retrainedNRE"]
 weighted_samples_3d = posterior.weighted_sample(trained_nre.nre_settings.n_weighted_samples * 10, x_0)
