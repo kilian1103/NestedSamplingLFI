@@ -238,6 +238,7 @@ trained_NRE.dataset.save(trained_NRE.nre_settings.dataset_filename_NSenhanced)
 trained_NRE.mre_2d.train(trained_NRE.dataset)
 trained_NRE.mre_2d.save(trained_NRE.nre_settings.mre_2d_filename_NSenhanced)
 
+# plot samples of retrained NRE
 weighted_samples_3d = posterior.weighted_sample(trained_NRE.nre_settings.n_weighted_samples * 10, x_0)
 data = weighted_samples_3d.get_df(trained_NRE.marginal_indices_2d)
 columnNames = {}
@@ -249,5 +250,4 @@ plt.figure()
 mcmc.plot_2d(axes=trained_NRE.nre_settings.paramNames)
 plt.suptitle("Retrained NRE parameter estimations")
 plt.savefig(fname="swyft_data/retrained_NRE.pdf")
-
 logger.info("Done")
