@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
 import numpy as np
-from scipy.stats import multivariate_normal
+from scipy.stats import multivariate_normal, uniform
 
 
 class Sampler:
@@ -43,8 +43,10 @@ class Rejection(Sampler):
         super().__init__(prior=prior, priorLimits=priorLimits, logLikelihood=logLikelihood, ndim=ndim)
 
     def sample(self, minlogLike, **kwargs) -> np.ndarray:
+        lower = self.priorLimits["lower"]
+        upper = self.priorLimits["upper"]
         while True:
-            proposal_sample = self.prior(self.ndim, 1)[0]
+            proposal_sample = uniform.rvs(loc=lower, scale=upper - lower)
             if self.logLikelihood(proposal_sample, self.ndim) > minlogLike:
                 break
         return proposal_sample
