@@ -5,12 +5,12 @@ import numpy as np
 import pypolychord
 import scipy.special
 import swyft
-from anesthetic import MCMCSamples
+from anesthetic import MCMCSamples, NestedSamples
 from mpi4py import MPI
 from pypolychord import PolyChordSettings
 from scipy.stats import multivariate_normal
 
-import NSLFI.NSNRE
+import NSLFI.NestedSampler
 from NSLFI.NRE import NRE
 from NSLFI.NRE_PolyChord_Wrapper import NRE_Poly
 from NSLFI.NRE_Settings import NRE_Settings
@@ -27,7 +27,7 @@ nreSettings.mode = "load"
 priorLimits = {"lower": np.array([0, 0]),
                "upper": np.array([1, 1])}
 ### swyft mode###
-mode = "load"
+mode = "train"
 # mode = nreSettings.mode
 MNREmode = nreSettings.MNREmode
 simulatedObservations = nreSettings.simulatedObservations
@@ -166,8 +166,8 @@ logProb_0 = posterior.log_prob(observation=x_0, v=[theta_0])
 logger.info(f"log probability of theta_0 using NRE is: {float(logProb_0[marginal_indices_2d]):.3f}")
 
 # wrap NRE object
-trained_NRE = NRE(dataset=dataset, store=store, prior=prior, priorLimits=priorLimits, trainedNRE=mre_2d,
-                  nreSettings=nreSettings)
+trained_NRE = NRE(dataset=dataset, store=store, prior=prior, priorLimits=priorLimits, trained_NRE=mre_2d,
+                  nreSettings=nreSettings, x_0=x_0)
 
 # wrap NRE for Polychord
 poly_NRE = NRE_Poly(nre=trained_NRE.mre_2d, x_0=x_0)
@@ -195,19 +195,58 @@ output = pypolychord.run_polychord(poly_NRE.loglike,
 comm_analyse.Barrier()
 
 # optimize with my NS run
-output = NSLFI.NSNRE.nested_sampling(ndim=2, nsim=100, stop_criterion=1e-3,
-                                     samplerType="Metropolis", trainedNRE=trained_NRE, x_0=x_0)
+output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
+                                             livepoints=trained_NRE.dataset.v.copy(), prior=trained_NRE.prior,
+                                             priorLimits=trained_NRE.priorLimits, ndim=trained_NRE.ndim, nsim=100,
+                                             stop_criterion=1e-3,
+                                             samplertype="Metropolis")
 logger.info(output)
-trained_nre = output["retrainedNRE"]
-weighted_samples_3d = posterior.weighted_sample(trained_nre.nre_settings.n_weighted_samples * 10, x_0)
-data = weighted_samples_3d.get_df(trained_nre.marginal_indices_2d)
+
+deadpoints = np.load(file="posterior_samples.npy")
+weights = np.load(file="weights.npy")
+deadpoints_birthlogL = np.load(file="logL_birth.npy")
+deadpoints_logL = np.load(file="logL.npy")
+newPoints = np.load(file="newPoints.npy")
+nested = NestedSamples(data=deadpoints, weights=weights, logL_birth=deadpoints_birthlogL,
+                       logL=deadpoints_logL)
+plt.figure()
+nested.plot_2d([0, 1])
+plt.suptitle("NRE NS enhanced samples")
+plt.savefig(fname="swyft_data/afterNS.pdf")
+
+# add datapoint to NRE
+iteration = 0
+logger.info(f"Adding newly found datapoints to NRE")
+for proposal_sample in newPoints:
+    iteration += 1
+    trained_NRE.store._append_new_points(v=[proposal_sample],
+                                         log_w=trained_NRE.mre_2d.log_ratio(observation=x_0, v=[proposal_sample])[
+                                             trained_NRE.marginal_indices_2d])
+logger.info(f"Added {iteration} newly found datapoints to NRE")
+# update store state dict
+trained_NRE.store.log_lambdas.resize(len(trained_NRE.store.log_lambdas) + 1)
+pdf = swyft.PriorTruncator(trained_NRE.prior, bound=None)
+trained_NRE.store.log_lambdas[-1] = dict(pdf=pdf.state_dict(),
+                                         N=trained_NRE.nre_settings.n_training_samples + iteration)
+# retrain NRE
+trained_NRE.store.simulate()
+trained_NRE.dataset = swyft.Dataset(trained_NRE.nre_settings.n_training_samples + iteration,
+                                    trained_NRE.prior,
+                                    trained_NRE.store)
+trained_NRE.store.save(path=trained_NRE.nre_settings.store_filename_NSenhanced)
+trained_NRE.dataset.save(trained_NRE.nre_settings.dataset_filename_NSenhanced)
+trained_NRE.mre_2d.train(trained_NRE.dataset)
+trained_NRE.mre_2d.save(trained_NRE.nre_settings.mre_2d_filename_NSenhanced)
+
+weighted_samples_3d = posterior.weighted_sample(trained_NRE.nre_settings.n_weighted_samples * 10, x_0)
+data = weighted_samples_3d.get_df(trained_NRE.marginal_indices_2d)
 columnNames = {}
-for i, j in enumerate(trained_nre.nre_settings.paramNames):
+for i, j in enumerate(trained_NRE.nre_settings.paramNames):
     columnNames[i] = j
 data.rename(columns=columnNames, inplace=True)
 mcmc = MCMCSamples(data=data, weights=data.weight)
 plt.figure()
-mcmc.plot_2d(axes=trained_nre.nre_settings.paramNames)
+mcmc.plot_2d(axes=trained_NRE.nre_settings.paramNames)
 plt.suptitle("Retrained NRE parameter estimations")
 plt.savefig(fname="swyft_data/retrained_NRE.pdf")
 

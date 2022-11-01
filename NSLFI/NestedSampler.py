@@ -1,32 +1,17 @@
 import numpy as np
 import scipy.special
-from scipy.stats import multivariate_normal
 
 from NSLFI.MCMCSampler import Sampler
 
 
-def logLikelihood(x, ndim) -> np.ndarray:
-    # Multivariate Gaussian centred at X = 0.5, y= 0.5
-    means = 0.5 * np.ones(shape=ndim)
-    cov = 0.01 * np.eye(N=ndim)
-    return multivariate_normal.logpdf(x=x, mean=means, cov=cov)
-
-
-def prior(ndim, nsamples, limits) -> np.ndarray:
-    return np.random.uniform(low=limits["lower"], high=limits["upper"], size=(nsamples, ndim))
-
-
-def nested_sampling(logLikelihood, prior, priorLimits, ndim, nlive, nsim, stop_criterion, samplertype):
+def nested_sampling(logLikelihood, prior, priorLimits, livepoints, ndim, nsim, stop_criterion, samplertype):
     # initialisation
     logZ_previous = -np.inf * np.ones(nsim)  # Z = 0
     logX_previous = np.zeros(nsim)  # X = 1
     iteration = 0
     logIncrease = 10  # evidence increase factor
-
-    # sample from prior
-    print(f"Sampling {nlive} livepoints from the prior!")
-    # fixed length storage -> nd.array
-    livepoints = prior(ndim, nlive, priorLimits)
+    nlive = len(livepoints)
+    
     logLikelihoods = logLikelihood(livepoints, ndim)
     livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
 
@@ -35,6 +20,7 @@ def nested_sampling(logLikelihood, prior, priorLimits, ndim, nlive, nsim, stop_c
     deadpoints_logL = []
     deadpoints_birthlogL = []
     weights = []
+    newPoints = []
 
     sampler = Sampler(prior=prior, logLikelihood=logLikelihood, ndim=ndim, priorLimits=priorLimits).getSampler(
         samplertype)
@@ -70,6 +56,7 @@ def nested_sampling(logLikelihood, prior, priorLimits, ndim, nlive, nsim, stop_c
 
         # find new sample satisfying likelihood constraint
         proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike)
+        newPoints.append(proposal_sample)
 
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.copy().tolist()
@@ -80,6 +67,7 @@ def nested_sampling(logLikelihood, prior, priorLimits, ndim, nlive, nsim, stop_c
         logIncrease_array = logWeight_current + maxlogLike - logZ_total
         logIncrease = logIncrease_array.max()
         if iteration % 500 == 0:
+            print("Current log evidence ", logZ_total.max())
             print("current iteration: ", iteration)
 
     # final <L>*dX sum calculation
@@ -107,15 +95,7 @@ def nested_sampling(logLikelihood, prior, priorLimits, ndim, nlive, nsim, stop_c
     np.save(file="posterior_samples", arr=np.array(deadpoints))
     np.save(file="logL", arr=np.array(deadpoints_logL))
     np.save(file="logL_birth", arr=np.array(deadpoints_birthlogL))
+    np.save(file="newPoints", arr=np.array(newPoints))
     print(f"Algorithm terminated after {iteration} iterations!")
     return {"log Z mean": np.mean(logZ_total),
             "log Z std": np.std(logZ_total)}
-
-
-ndim = 2
-priorLimits = {"lower": np.zeros(ndim),
-               "upper": np.ones(ndim)}
-logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, priorLimits=priorLimits, ndim=ndim,
-                       nlive=1000, nsim=100, stop_criterion=1e-3,
-                       samplertype="Metropolis")
-print(logZ)
