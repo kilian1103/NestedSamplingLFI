@@ -197,7 +197,7 @@ comm_analyse.Barrier()
 # optimize with my NS run
 output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                              livepoints=trained_NRE.dataset.v.copy(), prior=trained_NRE.prior,
-                                             priorLimits=trained_NRE.priorLimits, ndim=trained_NRE.ndim, nsim=100,
+                                             priorLimits=trained_NRE.priorLimits, nsim=100,
                                              stop_criterion=1e-3,
                                              samplertype="Metropolis")
 logger.info(output)
