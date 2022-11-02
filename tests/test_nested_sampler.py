@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 from scipy.stats import multivariate_normal
 
@@ -27,3 +29,8 @@ def test_nested_sampler():
                            nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Metropolis")
     print(logZ)
     np.testing.assert_almost_equal(actual=logZ["log Z mean"], desired=0, decimal=0.2)
+    os.remove("logL.npy")
+    os.remove("logL_birth.npy")
+    os.remove("newPoints.npy")
+    os.remove("posterior_samples.npy")
+    os.remove("weights.npy")
