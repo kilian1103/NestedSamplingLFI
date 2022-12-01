@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import scipy.stats as stats
 from scipy.stats import multivariate_normal
 
 from NSLFI.NestedSampler import nested_sampling
@@ -13,7 +14,7 @@ def test_nested_sampler():
     """
     np.random.seed(234)
 
-    ndim = 5
+    ndim = 10
     nlive = 100
 
     def logLikelihood(x, ndim) -> np.ndarray:
@@ -22,14 +23,11 @@ def test_nested_sampler():
         cov = 0.01 * np.eye(N=ndim)
         return multivariate_normal.logpdf(x=x, mean=means, cov=cov)
 
-    def prior(ndim, nsamples, limits) -> np.ndarray:
-        return np.random.uniform(low=limits["lower"], high=limits["upper"], size=(nsamples, ndim))
+    priors = {f"theta_{i}": stats.uniform(loc=0, scale=1) for i in range(ndim)}
 
-    priorLimits = {"lower": np.zeros(ndim),
-                   "upper": np.ones(ndim)}
+    livepoints = priors["theta_0"].rvs(size=(nlive, ndim))
 
-    livepoints = prior(ndim=ndim, nsamples=nlive, limits=priorLimits)
-    logZ = nested_sampling(logLikelihood=logLikelihood, prior=prior, priorLimits=priorLimits,
+    logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
                            nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Metropolis")
     print(logZ)
     np.testing.assert_almost_equal(actual=logZ["log Z mean"], desired=0, decimal=0.2)
