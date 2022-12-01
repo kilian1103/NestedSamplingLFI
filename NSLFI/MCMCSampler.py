@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict
 
 import numpy as np
 from scipy.stats import multivariate_normal, uniform
@@ -6,7 +6,7 @@ from scipy.stats import multivariate_normal, uniform
 
 class Sampler:
 
-    def __init__(self, prior: Any, logLikelihood: Any):
+    def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         self.prior = prior
         self.logLikelihood = logLikelihood
         self.ndim = len(prior)
@@ -18,7 +18,7 @@ class Sampler:
 
 
 class Metropolis(Sampler):
-    def __init__(self, prior: Any, logLikelihood: Any, ):
+    def __init__(self, prior: Dict[str, Any], logLikelihood: Any, ):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
     def sample(self, minlogLike, livepoints, nrepeat=5) -> np.ndarray:
@@ -42,7 +42,7 @@ class Metropolis(Sampler):
 
 
 class Rejection(Sampler):
-    def __init__(self, prior: Any, logLikelihood: Any):
+    def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
     def sample(self, minlogLike, **kwargs) -> np.ndarray:
