@@ -23,7 +23,7 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
     weights = []
     newPoints = []
 
-    sampler = Sampler(prior=prior, logLikelihood=logLikelihood, ndim=ndim).getSampler(
+    sampler = Sampler(prior=prior, logLikelihood=logLikelihood).getSampler(
         samplertype)
     while logIncrease > np.log(stop_criterion):
         iteration += 1

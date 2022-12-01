@@ -4,25 +4,22 @@ import numpy as np
 from scipy.stats import multivariate_normal, uniform
 
 
-# TODO
-# use icdf instead of prior limits
 class Sampler:
 
-    def __init__(self, prior: Any, logLikelihood: Any, ndim: int):
+    def __init__(self, prior: Any, logLikelihood: Any):
         self.prior = prior
         self.logLikelihood = logLikelihood
-        self.ndim = ndim
+        self.ndim = len(prior)
         self.samplers = {"Metropolis": Metropolis,
                          "Rejection": Rejection}
 
     def getSampler(self, type):
-        return self.samplers[type](prior=self.prior, logLikelihood=self.logLikelihood,
-                                   ndim=self.ndim)
+        return self.samplers[type](prior=self.prior, logLikelihood=self.logLikelihood)
 
 
 class Metropolis(Sampler):
-    def __init__(self, prior: Any, logLikelihood: Any, ndim: int, **kwargs):
-        super().__init__(prior=prior, logLikelihood=logLikelihood, ndim=ndim)
+    def __init__(self, prior: Any, logLikelihood: Any, ):
+        super().__init__(prior=prior, logLikelihood=logLikelihood)
 
     def sample(self, minlogLike, livepoints, nrepeat=5) -> np.ndarray:
         cov = np.cov(livepoints.T)
@@ -45,8 +42,8 @@ class Metropolis(Sampler):
 
 
 class Rejection(Sampler):
-    def __init__(self, prior: Any, logLikelihood: Any, ndim: int):
-        super().__init__(prior=prior, logLikelihood=logLikelihood, ndim=ndim)
+    def __init__(self, prior: Any, logLikelihood: Any):
+        super().__init__(prior=prior, logLikelihood=logLikelihood)
 
     def sample(self, minlogLike, **kwargs) -> np.ndarray:
         lower = np.zeros(self.ndim)
