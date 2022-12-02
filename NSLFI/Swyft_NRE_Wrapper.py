@@ -16,7 +16,7 @@ class NRE:
         self.nre_settings = nreSettings
         self.obs = obs
 
-    def logLikelihood(self, proposal_sample: np.ndarray, ndim):
+    def logLikelihood(self, proposal_sample: np.ndarray):
         # check if list of datapoints or single datapoint
         if proposal_sample.ndim == 1:
             proposal_sample = swyft.Sample(means=proposal_sample)
