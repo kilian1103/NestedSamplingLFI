@@ -61,14 +61,15 @@ def execute():
             super().__init__()
             marginals = (tuple(x for x in range(ndim)),)
             # self.logratios1 = swyft.LogRatioEstimator_1dim(num_features = 1, num_params = 3, varnames = 'z')
-            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=ndim, marginals=marginals, varnames='means')
+            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=ndim, marginals=marginals, varnames='means',
+                                                           hidden_features=32)
 
         def forward(self, A, B):
             # logratios1 = self.logratios1(A['x'], B['z'])
             logratios2 = self.logratios2(A['x'], B['means'])
             return logratios2
 
-    trainer = swyft.SwyftTrainer(accelerator=device, devices=1, max_epochs=3, precision=64, logger=False,
+    trainer = swyft.SwyftTrainer(accelerator=device, devices=1, max_epochs=20, precision=64,
                                  enable_progress_bar=False)
     dm = swyft.SwyftDataModule(samples, fractions=[0.8, 0.02, 0.1], num_workers=3, batch_size=256)
     network = Network()
