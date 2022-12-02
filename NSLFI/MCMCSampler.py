@@ -35,7 +35,7 @@ class Metropolis(Sampler):
         for i in range(nrepeat * self.ndim):
             proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)
             withinPrior = np.logical_and(np.greater(proposal_sample, lower), np.less(proposal_sample, upper)).all()
-            withinContour = self.logLikelihood(proposal_sample, self.ndim) > minlogLike
+            withinContour = self.logLikelihood(proposal_sample) > minlogLike
             if withinPrior and withinContour:
                 current_sample = proposal_sample.copy()
         return current_sample
@@ -54,6 +54,6 @@ class Rejection(Sampler):
             upper[i] = up
         while True:
             proposal_sample = uniform.rvs(loc=lower, scale=upper - lower)
-            if self.logLikelihood(proposal_sample, self.ndim) > minlogLike:
+            if self.logLikelihood(proposal_sample) > minlogLike:
                 break
         return proposal_sample

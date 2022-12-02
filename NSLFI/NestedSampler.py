@@ -11,9 +11,8 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
     iteration = 0
     logIncrease = 10  # evidence increase factor
     nlive = livepoints.shape[0]
-    ndim = livepoints.shape[1]
 
-    logLikelihoods = logLikelihood(livepoints, ndim)
+    logLikelihoods = logLikelihood(livepoints)
     livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
 
     # dynamic storage -> lists
@@ -61,7 +60,7 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
 
         # replace lowest likelihood sample with proposal sample
         livepoints[index] = proposal_sample.copy().tolist()
-        logLikelihoods[index] = float(logLikelihood(proposal_sample, ndim))
+        logLikelihoods[index] = float(logLikelihood(proposal_sample))
         livepoints_birthlogL[index] = minlogLike
 
         maxlogLike = logLikelihoods.max()
