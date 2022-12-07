@@ -1,4 +1,5 @@
 import logging
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,24 +22,17 @@ def execute():
     nreSettings = NRE_Settings(base_path="swyft_data/")
     nreSettings.n_training_samples = 10_00
     nreSettings.n_weighted_samples = 10_000
-
-    ndim = 2
-    prior = {f"theta_{i}": stats.uniform(loc=0, scale=1) for i in range(ndim)}
-
-    ### swyft mode###
-    mode = "train"
-    device = nreSettings.device
-
-    # true parameters of simulator
-    x0 = np.array([0.5 for x in range(ndim)])
-
-    # saving file names
-    observation_filename = nreSettings.observation_filename
+    nreSettings.trainmode = True
 
     # define forward model
-    # ndim parameter space we try to infer
+    ndim = 2
     nData = 1
     cov = 0.05 * np.eye(ndim)
+    # true parameters of simulator
+    mu = 0.5 * np.ones(ndim)
+    x0 = multivariate_normal.rvs(mu, cov, size=nData).flatten()
+
+    prior = {f"theta_{i}": stats.uniform(loc=0, scale=1) for i in range(ndim)}
 
     class Simulator(swyft.Simulator):
         def __init__(self):
@@ -47,21 +41,23 @@ def execute():
 
         def build(self, graph):
             means = graph.node('means', lambda: np.random.rand(ndim))
-            x = graph.node('x', lambda means: multivariate_normal.rvs(mean=means, cov=cov, size=nData), means)
+            x = graph.node('x',
+                           lambda means: multivariate_normal.rvs(mean=means, cov=cov, size=nData).flatten(),
+                           means)
 
     sim = Simulator()
     samples = sim.sample(N=nreSettings.n_training_samples)
 
     # plot observation
 
-    # initialize swyft
-
+    # initialize swyft network
     class Network(swyft.SwyftModule):
         def __init__(self):
             super().__init__()
             marginals = (tuple(x for x in range(ndim)),)
             # self.logratios1 = swyft.LogRatioEstimator_1dim(num_features = 1, num_params = 3, varnames = 'z')
-            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=ndim, marginals=marginals, varnames='means',
+            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=ndim * nData, marginals=marginals,
+                                                           varnames='means',
                                                            hidden_features=32)
 
         def forward(self, A, B):
@@ -69,14 +65,19 @@ def execute():
             logratios2 = self.logratios2(A['x'], B['means'])
             return logratios2
 
-    trainer = swyft.SwyftTrainer(accelerator=device, devices=1, max_epochs=20, precision=64,
-                                 enable_progress_bar=False)
+    trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=20, precision=64,
+                                 enable_progress_bar=False, default_root_dir=nreSettings.base_path)
     dm = swyft.SwyftDataModule(samples, fractions=[0.8, 0.02, 0.1], num_workers=3, batch_size=256)
     network = Network()
 
     # train NRE
-    trainer.fit(network, dm)
-    # load MRE from file
+    if nreSettings.trainmode is True:
+        trainer.fit(network, dm)
+    # load NRE from file
+    else:
+        checkpoint_path = os.path.join(nreSettings.base_path,
+                                       "lightning_logs/version_4/checkpoints/epoch=19-step=80.ckpt")
+        network = network.load_from_checkpoint(checkpoint_path)
 
     # get posterior samples
     means = np.random.rand(nreSettings.n_weighted_samples, ndim)

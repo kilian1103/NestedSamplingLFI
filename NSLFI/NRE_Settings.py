@@ -5,7 +5,7 @@ class NRE_Settings:
         Settings for the (M)NRE algorithm
 
         """
-        self.mode = "load"
+        self.trainmode = True
         self.device = "cpu"
         self.n_training_samples = 10_000
         self.n_weighted_samples = 10_000
