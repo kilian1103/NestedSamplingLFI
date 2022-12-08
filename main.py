@@ -24,15 +24,17 @@ def execute():
     nreSettings.n_weighted_samples = 10_000
     nreSettings.trainmode = True
 
-    # define forward model
-    ndim = 2
-    nData = 1
-    cov = 0.05 * np.eye(ndim)
-    # true parameters of simulator
-    mu = 0.5 * np.ones(ndim)
-    x0 = multivariate_normal.rvs(mu, cov, size=nData).flatten()
+    # define forward model dimensions
+    nParam = 2
+    nData = 3
 
-    prior = {f"theta_{i}": stats.uniform(loc=0, scale=1) for i in range(ndim)}
+    # true parameters of simulator
+    cov = 0.01 * np.eye(nData)
+    mu = 0.5 * np.ones(nParam)
+    F = np.eye(nData, nParam)
+    x0 = multivariate_normal.rvs(F @ mu, cov)
+
+    prior = {f"theta_{i}": stats.uniform(loc=0, scale=1) for i in range(nParam)}
 
     class Simulator(swyft.Simulator):
         def __init__(self):
@@ -40,23 +42,21 @@ def execute():
             self.transform_samples = swyft.to_numpy32
 
         def build(self, graph):
-            means = graph.node('means', lambda: np.random.rand(ndim))
+            means = graph.node('means', lambda: np.random.rand(nParam))
             x = graph.node('x',
-                           lambda means: multivariate_normal.rvs(mean=means, cov=cov, size=nData).flatten(),
+                           lambda means: multivariate_normal.rvs(F @ means, cov),
                            means)
 
     sim = Simulator()
     samples = sim.sample(N=nreSettings.n_training_samples)
 
-    # plot observation
-
     # initialize swyft network
     class Network(swyft.SwyftModule):
         def __init__(self):
             super().__init__()
-            marginals = (tuple(x for x in range(ndim)),)
+            marginals = (tuple(x for x in range(nParam)),)
             # self.logratios1 = swyft.LogRatioEstimator_1dim(num_features = 1, num_params = 3, varnames = 'z')
-            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=ndim * nData, marginals=marginals,
+            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=nData, marginals=marginals,
                                                            varnames='means',
                                                            hidden_features=32)
 
@@ -80,23 +80,23 @@ def execute():
         network = network.load_from_checkpoint(checkpoint_path)
 
     # get posterior samples
-    means = np.random.rand(nreSettings.n_weighted_samples, ndim)
+    means = np.random.rand(nreSettings.n_weighted_samples, nParam)
     B = swyft.Samples(means=means)
-    theta_0 = swyft.Sample(x=x0)
+    x_0 = swyft.Sample(x=x0)
     C = swyft.Sample(means=x0)
-    predictions = trainer.infer(network, theta_0, B)
+    predictions = trainer.infer(network, x_0, B)
     # plot initial NRE
 
     plt.figure()
-    labeler = {f"means[{i}]": fr"$\mu_{i}$" for i in range(ndim)}
-    swyft.corner(predictions, tuple(f"means[{i}]" for i in range(ndim)), labeler=labeler, bins=200, smooth=3);
+    labeler = {f"means[{i}]": fr"$\mu_{i}$" for i in range(nParam)}
+    swyft.corner(predictions, tuple(f"means[{i}]" for i in range(nParam)), labeler=labeler, bins=200, smooth=3);
     plt.suptitle("NRE parameter estimation")
     plt.savefig(fname="swyft_data/firstNRE.pdf")
-    logProb_0 = trainer.infer(network, theta_0, C)
+    logProb_0 = trainer.infer(network, x_0, C)
     logger.info(f"log probability of theta_0 using NRE is: {float(logProb_0.logratios):.3f}")
 
     # wrap NRE object
-    trained_NRE = NRE(network=network, trainer=trainer, prior=prior, nreSettings=nreSettings, obs=theta_0,
+    trained_NRE = NRE(network=network, trainer=trainer, prior=prior, nreSettings=nreSettings, obs=x_0,
                       livepoints=means)
 
     # # wrap NRE for Polychord
