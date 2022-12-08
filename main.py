@@ -76,7 +76,7 @@ def execute():
     # load NRE from file
     else:
         checkpoint_path = os.path.join(nreSettings.base_path,
-                                       "lightning_logs/version_4/checkpoints/epoch=19-step=80.ckpt")
+                                       "lightning_logs/version_7/checkpoints/epoch=19-step=80.ckpt")
         network = network.load_from_checkpoint(checkpoint_path)
 
     # get posterior samples
@@ -92,15 +92,15 @@ def execute():
     swyft.corner(predictions, tuple(f"means[{i}]" for i in range(nParam)), labeler=labeler, bins=200, smooth=3);
     plt.suptitle("NRE parameter estimation")
     plt.savefig(fname="swyft_data/firstNRE.pdf")
-    logProb_0 = trainer.infer(network, x_0, C)
+    logProb_0 = trainer.infer(network, x0, C)
     logger.info(f"log probability of theta_0 using NRE is: {float(logProb_0.logratios):.3f}")
 
     # wrap NRE object
-    trained_NRE = NRE(network=network, trainer=trainer, prior=prior, nreSettings=nreSettings, obs=x_0,
+    trained_NRE = NRE(network=network, trainer=trainer, prior=prior, nreSettings=nreSettings, obs=x0,
                       livepoints=means)
 
     # # wrap NRE for Polychord
-    # poly_NRE = NRE_Poly(nre=trained_NRE.mre_2d, x_0=x_0)
+    # poly_NRE = NRE_Poly(nre=trained_NRE.mre_2d, x0=x0)
     # polychordSet = PolyChordSettings(nDims=poly_NRE.nDims, nDerived=poly_NRE.nDerived)
     # polychordSet.nlive = n_training_samples
     # try:
