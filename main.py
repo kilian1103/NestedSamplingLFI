@@ -19,7 +19,8 @@ def execute():
                         filemode="w")
     logger = logging.getLogger()
     logger.info('Started')
-    nreSettings = NRE_Settings(base_path="swyft_data/")
+    root = "swyft_data"  # filepath
+    nreSettings = NRE_Settings(base_path=root)
     nreSettings.n_training_samples = 10_00
     nreSettings.n_weighted_samples = 10_000
     nreSettings.trainmode = True
@@ -91,7 +92,7 @@ def execute():
     labeler = {f"means[{i}]": fr"$\mu_{i}$" for i in range(nParam)}
     swyft.corner(predictions, tuple(f"means[{i}]" for i in range(nParam)), labeler=labeler, bins=200, smooth=3);
     plt.suptitle("NRE parameter estimation")
-    plt.savefig(fname="swyft_data/firstNRE.pdf")
+    plt.savefig(fname=f"{nreSettings.base_path}/firstNRE.pdf")
     logProb_0 = trainer.infer(network, x0, C)
     logger.info(f"log probability of theta_0 using NRE is: {float(logProb_0.logratios):.3f}")
 
@@ -131,16 +132,16 @@ def execute():
                                                  samplertype="Metropolis")
     logger.info(output)
 
-    deadpoints = np.load(file="posterior_samples.npy")
-    weights = np.load(file="weights.npy")
-    deadpoints_birthlogL = np.load(file="logL_birth.npy")
-    deadpoints_logL = np.load(file="logL.npy")
+    deadpoints = np.load(file=f"{nreSettings.base_path}/posterior_samples.npy")
+    weights = np.load(file=f"{nreSettings.base_path}/weights.npy")
+    deadpoints_birthlogL = np.load(file=f"{nreSettings.base_path}/logL_birth.npy")
+    deadpoints_logL = np.load(file=f"{nreSettings.base_path}/logL.npy")
     nested = NestedSamples(data=deadpoints, weights=weights, logL_birth=deadpoints_birthlogL,
-                           logL=deadpoints_logL)
+                           logL=deadpoints_logL, root=nreSettings.base_path)
     plt.figure()
     nested.plot_2d([0, 1])
     plt.suptitle("NRE NS enhanced samples")
-    plt.savefig(fname="swyft_data/afterNS.pdf")
+    plt.savefig(fname=f"{nreSettings.base_path}/afterNS.pdf")
 
     # add datapoint to NRE
 

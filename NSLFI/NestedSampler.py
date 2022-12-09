@@ -4,7 +4,8 @@ import scipy.special
 from NSLFI.MCMCSampler import Sampler
 
 
-def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samplertype, rounds=0, iter=2000):
+def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samplertype, rounds=0, iter=2000,
+                    root="."):
     if rounds == 0:
         # standard NS run
         # initialisation
@@ -92,11 +93,11 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
             deadpoints_logL.append(minlogLike)
             deadpoints_birthlogL.append(livepoints_birthlogL[index])
             weights.append(np.mean(logX_current) - np.log(nlive))
-        np.save(file="weights", arr=np.array(weights))
-        np.save(file="posterior_samples", arr=np.array(deadpoints))
-        np.save(file="logL", arr=np.array(deadpoints_logL))
-        np.save(file="logL_birth", arr=np.array(deadpoints_birthlogL))
-        np.save(file="newPoints", arr=np.array(newPoints))
+        np.save(file=f"{root}/weights", arr=np.array(weights))
+        np.save(file=f"{root}/posterior_samples", arr=np.array(deadpoints))
+        np.save(file=f"{root}/logL", arr=np.array(deadpoints_logL))
+        np.save(file=f"{root}/logL_birth", arr=np.array(deadpoints_birthlogL))
+        np.save(file=f"{root}/newPoints", arr=np.array(newPoints))
         print(f"Algorithm terminated after {iteration} iterations!")
         return {"log Z mean": np.mean(logZ_total),
                 "log Z std": np.std(logZ_total)}
@@ -124,8 +125,8 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
                 deadpoints.append(proposal_sample)
                 deadpoints_birthlogL.append(medianlogLike)
                 deadpoints_logL.append(float(logLikelihood(proposal_sample)))
-            np.save(file=f"posterior_samples_rounds_{rd}", arr=np.array(deadpoints))
-            np.save(file=f"logL_rounds_{rd}", arr=np.array(deadpoints_logL))
-            np.save(file=f"logL_birth_rounds_{rd}", arr=np.array(deadpoints_birthlogL))
+            np.save(file=f"{root}/posterior_samples_rounds_{rd}", arr=np.array(deadpoints))
+            np.save(file=f"{root}/logL_rounds_{rd}", arr=np.array(deadpoints_logL))
+            np.save(file=f"{root}/logL_birth_rounds_{rd}", arr=np.array(deadpoints_birthlogL))
             livepoints = np.array(deadpoints.copy())
         return {"log Z mean": 0, "log Z std": 0}
