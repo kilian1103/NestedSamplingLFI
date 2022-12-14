@@ -93,9 +93,9 @@ def execute():
     # get posterior samples
     means = theta_prior.rvs(size=(nreSettings.n_weighted_samples, nParam))
     B = swyft.Samples(means=means)
-    x_0 = swyft.Sample(x=x0)
+    x0 = swyft.Sample(x=x0)
     C = swyft.Sample(means=x0)
-    predictions = trainer.infer(network, x_0, B)
+    predictions = trainer.infer(network, x0, B)
     # plot initial NRE
 
     plt.figure()
