@@ -139,7 +139,7 @@ def execute():
     output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                  livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
                                                  stop_criterion=1e-3,
-                                                 samplertype="Metropolis", root=root)
+                                                 samplertype="Metropolis", root=nreSettings.base_path)
     logger.info(output)
 
     deadpoints = np.load(file=f"{nreSettings.base_path}/posterior_samples.npy")
