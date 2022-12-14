@@ -3,6 +3,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.stats as stats
 import swyft
 from anesthetic import NestedSamples
 from scipy.stats import multivariate_normal
@@ -28,14 +29,29 @@ def execute():
     nreSettings.n_training_samples = 10_00
     nreSettings.n_weighted_samples = 10_000
     nreSettings.trainmode = True
+
     # NRE model path
     checkpoint = "lightning_logs/version_7/checkpoints/epoch=19-step=80.ckpt"
+
     # define forward model dimensions
     nParam = 2
     nData = 3
 
+    # true parameters of simulator
+    cov = 0.01 * np.eye(nData)
+    mu = 0.5 * np.ones(nParam)
+    F = np.eye(nData, nParam)
+    x0 = multivariate_normal.rvs(F @ mu, cov)
+
     # NS rounds 0 is default
     rounds = 0
+
+    # uniform prior for theta_i
+    loc = 0
+    scale = 2
+    theta_prior = stats.uniform(loc=loc, scale=scale)
+    # wrap prior for NS sampling procedure
+    prior = {f"theta_{i}": theta_prior for i in range(nParam)}
 
     class Simulator(swyft.Simulator):
         def __init__(self):
