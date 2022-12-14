@@ -3,7 +3,6 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.stats as stats
 import swyft
 from anesthetic import NestedSamples
 from scipy.stats import multivariate_normal
@@ -37,19 +36,6 @@ def execute():
 
     # NS rounds 0 is default
     rounds = 0
-
-    # true parameters of simulator
-    cov = 0.01 * np.eye(nData)
-    mu = 0.5 * np.ones(nParam)
-    F = np.eye(nData, nParam)
-    x0 = multivariate_normal.rvs(F @ mu, cov)
-
-    # uniform prior for theta_i
-    loc = 0
-    scale = 1
-    theta_prior = stats.uniform(loc=loc, scale=scale)
-    # wrap prior for NS procedure
-    prior = {f"theta_{i}": theta_prior for i in range(nParam)}
 
     class Simulator(swyft.Simulator):
         def __init__(self):
@@ -145,21 +131,34 @@ def execute():
                                                  stop_criterion=1e-3,
                                                  samplertype="Metropolis", root=nreSettings.base_path, rounds=rounds)
     logger.info(output)
+    if rounds == 0:
+        deadpoints = np.load(file=f"{nreSettings.base_path}/posterior_samples.npy")
+        weights = np.load(file=f"{nreSettings.base_path}/weights.npy")
+        deadpoints_birthlogL = np.load(file=f"{nreSettings.base_path}/logL_birth.npy")
+        deadpoints_logL = np.load(file=f"{nreSettings.base_path}/logL.npy")
+        nested = NestedSamples(data=deadpoints, weights=weights, logL_birth=deadpoints_birthlogL,
+                               logL=deadpoints_logL, root=nreSettings.base_path)
+        plt.figure()
+        nested.plot_2d([0, 1])
+        plt.suptitle("NRE NS enhanced samples")
+        plt.savefig(fname=f"{nreSettings.base_path}/afterNS.pdf")
+    else:
+        firstRoundPoints = means
+        secondRoundPoints = np.load(file=f"{root}/posterior_samples_rounds_0.npy")
+        thirdRoundPoints = np.load(file=f"{root}/posterior_samples_rounds_1.npy")
 
-    deadpoints = np.load(file=f"{nreSettings.base_path}/posterior_samples.npy")
-    weights = np.load(file=f"{nreSettings.base_path}/weights.npy")
-    deadpoints_birthlogL = np.load(file=f"{nreSettings.base_path}/logL_birth.npy")
-    deadpoints_logL = np.load(file=f"{nreSettings.base_path}/logL.npy")
-    nested = NestedSamples(data=deadpoints, weights=weights, logL_birth=deadpoints_birthlogL,
-                           logL=deadpoints_logL, root=nreSettings.base_path)
-    plt.figure()
-    nested.plot_2d([0, 1])
-    plt.suptitle("NRE NS enhanced samples")
-    plt.savefig(fname=f"{nreSettings.base_path}/afterNS.pdf")
-
-    # add datapoint to NRE
-
-    # retrain NRE
+        plt.figure()
+        plt.scatter(firstRoundPoints[:, 0], firstRoundPoints[:, 1], c="b", label="Round 1", s=3)
+        plt.scatter(secondRoundPoints[:, 0], secondRoundPoints[:, 1], c="r", label="Round 2", s=3)
+        plt.scatter(thirdRoundPoints[:, 0], thirdRoundPoints[:, 1], c="y", label="Round 3", s=3)
+        plt.legend()
+        plt.xlabel(r"$\theta_1$")
+        plt.ylabel(r"$\theta_2$")
+        plt.vlines(x=0.5, ymin=loc, ymax=scale, colors="cyan")
+        plt.hlines(y=0.5, xmin=loc, xmax=scale, colors="cyan")
+        plt.title(r"Log-weights contours using NS rounds, $\mathcal{L} > "
+                  r"\mathcal{L}_{\mathrm{median}}$")
+        plt.savefig(f"{root}/NS_rounds.pdf")
 
     logger.info("Done")
 
