@@ -29,7 +29,8 @@ def execute():
     nreSettings.n_training_samples = 10_00
     nreSettings.n_weighted_samples = 10_000
     nreSettings.trainmode = True
-
+    # NRE model path
+    checkpoint = "lightning_logs/version_7/checkpoints/epoch=19-step=80.ckpt"
     # define forward model dimensions
     nParam = 2
     nData = 3
@@ -87,7 +88,7 @@ def execute():
     # load NRE from file
     else:
         checkpoint_path = os.path.join(nreSettings.base_path,
-                                       "lightning_logs/version_7/checkpoints/epoch=19-step=80.ckpt")
+                                       checkpoint)
         network = network.load_from_checkpoint(checkpoint_path)
 
     # get posterior samples
