@@ -48,7 +48,7 @@ def execute():
 
     # uniform prior for theta_i
     loc = 0
-    scale = 2
+    scale = 1
     theta_prior = stats.uniform(loc=loc, scale=scale)
     # wrap prior for NS sampling procedure
     prior = {f"theta_{i}": theta_prior for i in range(nParam)}
