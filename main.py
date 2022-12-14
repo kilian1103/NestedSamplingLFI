@@ -20,6 +20,11 @@ def execute():
     logger = logging.getLogger()
     logger.info('Started')
     root = "swyft_data"  # filepath
+    # try creating new root folder for data storage
+    try:
+        os.makedirs(root)
+    except OSError:
+        logger.info("root folder already exists!")
     nreSettings = NRE_Settings(base_path=root)
     nreSettings.n_training_samples = 10_00
     nreSettings.n_weighted_samples = 10_000
@@ -35,7 +40,12 @@ def execute():
     F = np.eye(nData, nParam)
     x0 = multivariate_normal.rvs(F @ mu, cov)
 
-    prior = {f"theta_{i}": stats.uniform(loc=0, scale=1) for i in range(nParam)}
+    # uniform prior for theta_i
+    loc = 0
+    scale = 1
+    theta_prior = stats.uniform(loc=loc, scale=scale)
+    # wrap prior for NS procedure
+    prior = {f"theta_{i}": theta_prior for i in range(nParam)}
 
     class Simulator(swyft.Simulator):
         def __init__(self):
@@ -43,7 +53,7 @@ def execute():
             self.transform_samples = swyft.to_numpy32
 
         def build(self, graph):
-            means = graph.node('means', lambda: np.random.rand(nParam))
+            means = graph.node('means', lambda: theta_prior.rvs(size=nParam))
             x = graph.node('x',
                            lambda means: multivariate_normal.rvs(F @ means, cov),
                            means)
@@ -81,7 +91,7 @@ def execute():
         network = network.load_from_checkpoint(checkpoint_path)
 
     # get posterior samples
-    means = np.random.rand(nreSettings.n_weighted_samples, nParam)
+    means = theta_prior.rvs(size=(nreSettings.n_weighted_samples, nParam))
     B = swyft.Samples(means=means)
     x_0 = swyft.Sample(x=x0)
     C = swyft.Sample(means=x0)
@@ -129,7 +139,7 @@ def execute():
     output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                  livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
                                                  stop_criterion=1e-3,
-                                                 samplertype="Metropolis")
+                                                 samplertype="Metropolis", root=root)
     logger.info(output)
 
     deadpoints = np.load(file=f"{nreSettings.base_path}/posterior_samples.npy")
