@@ -35,6 +35,9 @@ def execute():
     nParam = 2
     nData = 3
 
+    # NS rounds 0 is default
+    rounds = 0
+
     # true parameters of simulator
     cov = 0.01 * np.eye(nData)
     mu = 0.5 * np.ones(nParam)
@@ -140,7 +143,7 @@ def execute():
     output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                  livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
                                                  stop_criterion=1e-3,
-                                                 samplertype="Metropolis", root=nreSettings.base_path)
+                                                 samplertype="Metropolis", root=nreSettings.base_path, rounds=rounds)
     logger.info(output)
 
     deadpoints = np.load(file=f"{nreSettings.base_path}/posterior_samples.npy")
