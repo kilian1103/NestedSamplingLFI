@@ -21,9 +21,10 @@ class Metropolis(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any, ):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, livepoints, nrepeat=5) -> np.ndarray:
+    def sample(self, minlogLike, livepoints, livelikes, nrepeat=5) -> np.ndarray:
         cov = np.cov(livepoints.T)
-        random_index = np.random.randint(0, len(livepoints))
+        i = np.arange(len(livelikes))[livelikes > minlogLike]
+        random_index = np.random.choice(i)
         current_sample = livepoints[random_index].copy()
         lower = np.zeros(self.ndim)
         upper = np.zeros(self.ndim)

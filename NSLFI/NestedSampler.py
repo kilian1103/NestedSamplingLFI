@@ -58,7 +58,8 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
             logZ_previous = logZ_total.copy()
 
             # find new sample satisfying likelihood constraint
-            proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike)
+            proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
+                                             livelikes=logLikelihoods)
             newPoints.append(proposal_sample)
 
             # replace lowest likelihood sample with proposal sample
@@ -118,9 +119,8 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
             medianlogLike = np.median(logLikelihoods)
             for it in range(iter):
                 # find new sample satisfying likelihood constraint
-                proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike)
-                while float(logLikelihood(proposal_sample)) < medianlogLike:
-                    proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike)
+                proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike,
+                                                 livelikes=logLikelihoods)
                 # add new sample to deadpoints
                 deadpoints.append(proposal_sample)
                 deadpoints_birthlogL.append(medianlogLike)
