@@ -74,8 +74,8 @@ class Slice(Sampler):
             lower[i] = low
             upper[i] = up
         # choose randomly existing livepoint satisfying likelihood constraint
-        i = np.arange(len(livelikes))[livelikes > minlogLike]
-        random_index = np.random.choice(i)
+        indices = np.arange(len(livelikes))[livelikes > minlogLike]
+        random_index = np.random.choice(indices)
         current_sample = livepoints[random_index].copy()
 
         # define temp sample to slice on
@@ -90,7 +90,7 @@ class Slice(Sampler):
             if withinPrior and withinContour:
                 # accept sample
                 current_sample = intermediate_sample.copy()
-                # slicee along new axis
+                # slice along new axis
                 x_l, x_r, idx = self._extend_1d_interval(current_sample, step_size, minlogLike)
             else:
                 # rescale bounds if point is not within contour or prior
