@@ -19,7 +19,6 @@ def test_nested_sampler_metropolis():
 
     def logLikelihood(x) -> np.ndarray:
         # Multivariate Gaussian centred at X = 0.5, y= 0.5
-        ndim = 5
 
         means = 0.5 * np.ones(shape=ndim)
         cov = 0.01 * np.eye(N=ndim)
@@ -51,7 +50,6 @@ def test_nested_sampler_rejection():
 
     def logLikelihood(x) -> np.ndarray:
         # Multivariate Gaussian centred at X = 0.5, y= 0.5
-        ndim = 2
         means = 0.5 * np.ones(shape=ndim)
         cov = 0.01 * np.eye(N=ndim)
         return multivariate_normal.logpdf(x=x, mean=means, cov=cov)
@@ -77,7 +75,7 @@ def test_nested_sampler_slice():
     """
     np.random.seed(234)
 
-    ndim = 1
+    ndim = 5
     nlive = 100
 
     def logLikelihood(x) -> np.ndarray:
