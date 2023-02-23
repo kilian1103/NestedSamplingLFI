@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Any, Dict
 
 import numpy as np
@@ -16,6 +17,10 @@ class Sampler:
 
     def getSampler(self, type):
         return self.samplers[type](prior=self.prior, logLikelihood=self.logLikelihood)
+
+    @abstractmethod
+    def sample(self, **kwargs) -> np.ndarray:
+        raise NotImplementedError("This is an abstract method, please implement an appropriate sampling class")
 
 
 class Metropolis(Sampler):
