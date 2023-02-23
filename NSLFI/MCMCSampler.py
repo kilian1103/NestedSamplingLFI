@@ -108,7 +108,7 @@ class Slice(Sampler):
 
     def _extend_1d_interval(self, current_sample, step_size, minlogLike):
         # chose random coordinate axis
-        randIdx = np.random.choice(np.arange(self.ndim))
+        randIdx = np.random.randint(low=0, high=self.ndim)
         x_l = current_sample.copy()
         x_r = current_sample.copy()
         r = np.random.uniform(0, 1)
