@@ -144,10 +144,7 @@ def execute():
                                                  stop_criterion=1e-3,
                                                  samplertype=samplerType, rounds=rounds, root=root,
                                                  iter=nreSettings.n_training_samples)
-
-    prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=['z'])
-    predictions = trainer.infer(network, obs, prior_samples)
-
+    
     def retrain_next_round(root: str, nextRoundPoints: np.ndarray):
         try:
             os.makedirs(root)
