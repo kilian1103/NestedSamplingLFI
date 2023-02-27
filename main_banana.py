@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
 import swyft
+from swyft.lightning.utils import collate_output
 
 import NSLFI.NestedSampler
 from NSLFI.NRE_Settings import NRE_Settings
@@ -18,7 +19,7 @@ def execute():
                         filemode="w")
     logger = logging.getLogger()
     logger.info('Started')
-    root = "swyft_banana_bimodal_Slice"
+    root = "swyft_banana_unimodal_Slice_30k_NRE_retrain"
     try:
         os.makedirs(root)
     except OSError:
@@ -27,11 +28,14 @@ def execute():
     nreSettings = NRE_Settings(base_path=root)
     nreSettings.n_training_samples = 30_000
     nreSettings.n_weighted_samples = 10_000
-    nreSettings.trainmode = False
+    nreSettings.trainmode = True
     # NS rounds, 0 is default NS run
-    rounds = 2
-    bimodal = True
+    rounds = 1
+    # Retrain rounds
+    retrain_rounds = 2
+    samplerType = "Slice"
     # define forward model dimensions
+    bimodal = False
     nParam = 2
     # true parameters of simulator
     obs = swyft.Sample(x=np.array(nParam * [0]))
@@ -84,7 +88,7 @@ def execute():
             #  self.logratios1 = swyft.LogRatioEstimator_1dim(num_features=2, num_params=2, varnames='z',
             #  dropout=0.2, hidden_features=128)
             self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=2, marginals=((0, 1),), varnames='z',
-                                                           dropout=0.2, hidden_features=128)
+                                                           dropout=0.2, hidden_features=128, Lmax=8)
 
         def forward(self, A, B):
             return self.logratios2(A['x'], B['z'])
@@ -99,13 +103,16 @@ def execute():
     # load NRE from file
     else:
         checkpoint_path = os.path.join(
-            f"Christoph/banana_problem_bimodal_NRE_nd_model/lightning_logs/version_0/checkpoints/epoch=9-step"
+            f"Christoph/banana_problem_unimodal_NRE_nd_model/lightning_logs/version_0/checkpoints/epoch=9-step"
             f"=3750.ckpt")
         network = network.load_from_checkpoint(checkpoint_path)
     # get posterior samples
     prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=['z'])
     predictions = trainer.infer(network, obs, prior_samples)
+    plt.figure()
     swyft.corner(predictions, ["z[0]", "z[1]"], bins=50, smooth=1)
+    plt.savefig(f"{root}/NRE_predictions.pdf")
+    plt.show()
 
     class NRE:
         def __init__(self, network: swyft.SwyftModule, trainer: swyft.SwyftTrainer, prior: Dict[str, Any],
@@ -135,29 +142,56 @@ def execute():
     output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                  livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
                                                  stop_criterion=1e-3,
-                                                 samplertype="Slice", rounds=rounds, root=root)
-    firstRoundPoints = samples["z"]
-    secondRoundPoints = np.load(file=f"{root}/posterior_samples_rounds_0.npy")
-    secondRoundPoints_birthLog = np.load(file=f"{root}/logL_birth_rounds_0.npy")[0]
-    secondRoundPoints_LogLike = np.load(file=f"{root}/logL_rounds_0.npy")
-    thirdRoundPoints = np.load(file=f"{root}/posterior_samples_rounds_1.npy")
-    thirdRoundPoints_birthLog = np.load(file=f"{root}/logL_birth_rounds_1.npy")[0]
-    thirdRoundPoints_LogLike = np.load(file=f"{root}/logL_rounds_1.npy")
+                                                 samplertype=samplerType, rounds=rounds, root=root,
+                                                 iter=nreSettings.n_training_samples)
 
-    np.median(secondRoundPoints_LogLike)
-    thirdRoundPoints_LogLike.min()
-    plt.figure()
-    plt.scatter(firstRoundPoints[:, 0], firstRoundPoints[:, 1], c="b", label="Round 0", s=3)
-    plt.scatter(secondRoundPoints[:, 0], secondRoundPoints[:, 1], c="r", label="Round 1", s=3)
-    plt.scatter(thirdRoundPoints[:, 0], thirdRoundPoints[:, 1], c="y", label="Round 2", s=3)
-    plt.legend()
-    plt.xlabel(r"$\theta_1$")
-    plt.ylabel(r"$\theta_2$")
-    # plt.vlines(x=0, ymin=-1, ymax=1, colors="cyan")
-    # plt.hlines(y=0, xmin=-1, xmax=1, colors="cyan")
-    plt.title(r"Log-weights contours using NS rounds, $\mathcal{L} > "
-              r"\mathcal{L}_{\mathrm{median}}$")
-    plt.savefig(f"{root}/NS_rounds.pdf")
+    prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=['z'])
+    predictions = trainer.infer(network, obs, prior_samples)
+
+    def retrain_next_round(root: str, nextRoundPoints: np.ndarray):
+        try:
+            os.makedirs(root)
+        except OSError:
+            logger.info("root folder already exists!")
+        out = []
+        for z in nextRoundPoints:
+            trace = dict()
+            trace["z"] = z
+            sim.graph["x"].evaluate(trace)
+            sim.graph["l"].evaluate(trace)
+            result = sim.transform_samples(trace)
+            out.append(result)
+        out = collate_output(out)
+        nextRoundSamples = swyft.Samples(out)
+
+        trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64,
+                                     enable_progress_bar=False,
+                                     default_root_dir=root)
+        dm = swyft.SwyftDataModule(nextRoundSamples, fractions=[0.8, 0.1, 0.1], num_workers=0, batch_size=64)
+        network = Network()
+        trainer.fit(network, dm)
+        # get posterior samples
+        prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=['z'])
+        predictions = trainer.infer(network, obs, prior_samples)
+        plt.figure()
+        swyft.corner(predictions, ["z[0]", "z[1]"], bins=50, smooth=1)
+        plt.savefig(f"{root}/NRE_predictions.pdf")
+        plt.show()
+        # wrap NRE object
+        trained_NRE = NRE(network=network, trainer=trainer, prior=prior, nreSettings=nreSettings, obs=obs,
+                          livepoints=nextRoundSamples["z"])
+        output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
+                                                     livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
+                                                     stop_criterion=1e-3, rounds=1,
+                                                     root=root,
+                                                     samplertype=samplerType,
+                                                     iter=nreSettings.n_training_samples)
+
+    for rd in range(1, retrain_rounds + 1):
+        nextRoundPoints = np.load(file=f"{root}/posterior_samples_rounds_0.npy")
+        newRoot = root + f"_rd_{rd}"
+        retrain_next_round(newRoot, nextRoundPoints)
+        root = newRoot
 
 
 if __name__ == '__main__':
