@@ -29,8 +29,7 @@ class Metropolis(Sampler):
 
     def sample(self, minlogLike, livepoints, livelikes, nrepeat=5) -> np.ndarray:
         cov = np.cov(livepoints.T)
-        i = np.arange(len(livelikes))[livelikes > minlogLike]
-        random_index = np.random.choice(i)
+        random_index = np.random.randint(low=0, high=len(livepoints))
         current_sample = livepoints[random_index].copy()
         lower = np.zeros(self.ndim)
         upper = np.zeros(self.ndim)
@@ -79,8 +78,7 @@ class Slice(Sampler):
             lower[i] = low
             upper[i] = up
         # choose randomly existing livepoint satisfying likelihood constraint
-        indices = np.arange(len(livelikes))[livelikes > minlogLike]
-        random_index = np.random.choice(indices)
+        random_index = np.random.randint(low=0, high=len(livepoints))
         current_sample = livepoints[random_index].copy()
 
         # define temp sample to slice on

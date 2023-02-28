@@ -117,6 +117,8 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
 
             # find new sample satisfying likelihood constraint
             medianlogLike = np.median(logLikelihoods)
+            logLikelihoods = logLikelihoods[logLikelihoods > medianlogLike]
+            livepoints = livepoints[logLikelihoods > medianlogLike]
             for it in range(iter):
                 # find new sample satisfying likelihood constraint
                 proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike,
