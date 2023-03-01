@@ -14,6 +14,7 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
         iteration = 0
         logIncrease = 10  # evidence increase factor
         nlive = livepoints.shape[0]
+        cov = np.cov(livepoints.T)
 
         logLikelihoods = logLikelihood(livepoints)
         livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
@@ -57,9 +58,12 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
             logZ_total = scipy.special.logsumexp(logZ_array, axis=0)
             logZ_previous = logZ_total.copy()
 
+            # recompute cov of livepoints
+            if iteration % nlive == 0:
+                cov = np.cov(livepoints.T)
             # find new sample satisfying likelihood constraint
             proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
-                                             livelikes=logLikelihoods)
+                                             livelikes=logLikelihoods, cov=cov)
             newPoints.append(proposal_sample)
 
             # replace lowest likelihood sample with proposal sample

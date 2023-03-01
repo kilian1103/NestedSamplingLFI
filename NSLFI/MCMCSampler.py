@@ -27,8 +27,7 @@ class Metropolis(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any, ):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, livepoints, livelikes, nrepeat=5) -> np.ndarray:
-        cov = np.cov(livepoints.T)
+    def sample(self, minlogLike, livepoints, livelikes, cov, nrepeat=5) -> np.ndarray:
         random_index = np.random.randint(low=0, high=len(livepoints))
         current_sample = livepoints[random_index].copy()
         lower = np.zeros(self.ndim)
@@ -69,7 +68,7 @@ class Slice(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, livepoints, livelikes, nrepeat=5, step_size=0.1) -> np.ndarray:
+    def sample(self, minlogLike, livepoints, livelikes, cov, nrepeat=5, step_size=0.1) -> np.ndarray:
         # uniform prior bounds
         lower = np.zeros(self.ndim)
         upper = np.zeros(self.ndim)
