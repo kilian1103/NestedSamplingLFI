@@ -15,6 +15,7 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
         logIncrease = 10  # evidence increase factor
         nlive = livepoints.shape[0]
         cov = np.cov(livepoints.T)
+        cholesky = np.linalg.cholesky(cov)
 
         logLikelihoods = logLikelihood(livepoints)
         livepoints_birthlogL = -np.inf * np.ones(nlive)  # L_birth = 0
@@ -63,7 +64,7 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
                 cov = np.cov(livepoints.T)
             # find new sample satisfying likelihood constraint
             proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
-                                             livelikes=logLikelihoods, cov=cov)
+                                             livelikes=logLikelihoods, cov=cov, cholesky=cholesky)
             newPoints.append(proposal_sample)
 
             # replace lowest likelihood sample with proposal sample
@@ -124,11 +125,12 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
             livepoints = livepoints[logLikelihoods > medianlogLike]
             logLikelihoods = logLikelihoods[logLikelihoods > medianlogLike]
             cov = np.cov(livepoints.T)
+            cholesky = np.linalg.cholesky(cov)
 
             for it in range(iter):
                 # find new sample satisfying likelihood constraint
                 proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike,
-                                                 livelikes=logLikelihoods, cov=cov)
+                                                 livelikes=logLikelihoods, cov=cov, cholesky=cholesky)
                 # add new sample to deadpoints
                 deadpoints.append(proposal_sample)
                 deadpoints_birthlogL.append(medianlogLike)

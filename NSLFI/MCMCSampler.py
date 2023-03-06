@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Any, Dict
 
 import numpy as np
-from scipy.stats import multivariate_normal, uniform
+from scipy.stats import multivariate_normal, uniform, special_ortho_group
 
 
 class Sampler:
@@ -27,7 +27,7 @@ class Metropolis(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any, ):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, livepoints, livelikes, cov, nrepeat=5) -> np.ndarray:
+    def sample(self, minlogLike, livepoints, livelikes, cov, nrepeat=5, **kwargs) -> np.ndarray:
         random_index = np.random.randint(low=0, high=len(livepoints))
         current_sample = livepoints[random_index].copy()
         lower = np.zeros(self.ndim)
@@ -68,7 +68,7 @@ class Slice(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, livepoints, livelikes, cov, nrepeat=5, step_size=0.1) -> np.ndarray:
+    def sample(self, minlogLike, livepoints, livelikes, cov, cholesky, nrepeat=5, step_size=0.1) -> np.ndarray:
         # uniform prior bounds
         lower = np.zeros(self.ndim)
         upper = np.zeros(self.ndim)
@@ -81,25 +81,33 @@ class Slice(Sampler):
         current_sample = livepoints[random_index].copy()
 
         # define temp sample to slice on
-        intermediate_sample = current_sample.copy()
-        x_l, x_r, idx = self._extend_1d_interval(intermediate_sample, step_size, minlogLike)
+        ortho_norm = special_ortho_group.rvs(dim=self.ndim)
+        x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
+                                                 minlogLike=minlogLike, ortho_norm=ortho_norm, cholesky=cholesky)
+
         for i in range(nrepeat * self.ndim):
-            x_n_new = np.random.uniform(x_l[idx], x_r[idx])
-            intermediate_sample[idx] = x_n_new
+            # sample along slice
+            u = np.random.uniform(low=0, high=1)
+            intermediate_sample = u * x_l + (1 - u) * x_r
+
             withinPrior = np.logical_and(np.greater(intermediate_sample, lower),
                                          np.less(intermediate_sample, upper)).all()
             withinContour = self.logLikelihood(intermediate_sample) > minlogLike
             if withinPrior and withinContour:
                 # accept sample
                 current_sample = intermediate_sample.copy()
-                # slice along new axis
-                x_l, x_r, idx = self._extend_1d_interval(current_sample, step_size, minlogLike)
+                # slice along new n_vector
+                x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
+                                                         minlogLike=minlogLike, ortho_norm=ortho_norm,
+                                                         cholesky=cholesky)
             else:
                 # rescale bounds if point is not within contour or prior
-                if intermediate_sample[idx] > current_sample[idx]:
-                    x_r[idx] = intermediate_sample[idx]
+                dist_proposal = np.linalg.norm(x_l - intermediate_sample)
+                dist_origin = np.linalg.norm(x_l - current_sample)
+                if dist_proposal > dist_origin:
+                    x_r = intermediate_sample
                 else:
-                    x_l[idx] = intermediate_sample[idx]
+                    x_l = intermediate_sample
 
         return current_sample
 
@@ -117,4 +125,22 @@ class Slice(Sampler):
             x_l[randIdx] -= step_size
         while self.logLikelihood(x_r) > minlogLike:
             x_r[randIdx] += step_size
+        return x_l, x_r, randIdx
+
+    def _extend_nd_interval(self, current_sample, step_size, minlogLike, ortho_norm, cholesky):
+        # chose random orthonorm axis
+        randIdx = np.random.randint(low=0, high=self.ndim)
+        n_vec = ortho_norm[randIdx]
+        n_dir = np.matmul(cholesky, n_vec)
+        x_l = current_sample.copy()
+        x_r = current_sample.copy()
+        # extend bounds along slice
+        r = np.random.uniform(0, 1)
+        x_l -= r * step_size * n_dir
+        x_r += (1 - r) * step_size * n_dir
+
+        while self.logLikelihood(x_l) > minlogLike:
+            x_l -= step_size * n_dir
+        while self.logLikelihood(x_r) > minlogLike:
+            x_r += step_size * n_dir
         return x_l, x_r, randIdx
