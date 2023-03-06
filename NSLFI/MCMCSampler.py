@@ -80,7 +80,7 @@ class Slice(Sampler):
         random_index = np.random.randint(low=0, high=len(livepoints))
         current_sample = livepoints[random_index].copy()
 
-        # define temp sample to slice on
+        # get random orthonormal basis to slice on
         ortho_norm = special_ortho_group.rvs(dim=self.ndim)
         x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
                                                  minlogLike=minlogLike, ortho_norm=ortho_norm, cholesky=cholesky)
