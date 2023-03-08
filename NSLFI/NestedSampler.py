@@ -146,17 +146,19 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: List[
             cov = np.cov(livepoints.T)
             cholesky = np.linalg.cholesky(cov)
 
-            while len(deadpoints) <= nsamples:
-                # find new sample satisfying likelihood constraint
+            while len(deadpoints) < nsamples:
+                # find new samples satisfying likelihood constraint
                 proposal_samples = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike,
                                                   livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
                                                   keep_chain=keep_chain)
+                # add new samples to deadpoints
                 while len(proposal_samples) > 0:
                     proposal_sample = proposal_samples.pop()
                     deadpoints.append(proposal_sample)
                     deadpoints_birthlogL.append(medianlogLike)
                     deadpoints_logL.append(float(logLikelihood(proposal_sample)))
-                # add new sample to deadpoints
+                    if len(deadpoints) == nsamples:
+                        break
             np.save(file=f"{root}/posterior_samples_rounds_{rd}", arr=np.array(deadpoints))
             np.save(file=f"{root}/logL_rounds_{rd}", arr=np.array(deadpoints_logL))
             np.save(file=f"{root}/logL_birth_rounds_{rd}", arr=np.array(deadpoints_birthlogL))
