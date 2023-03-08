@@ -56,7 +56,7 @@ class Rejection(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, **kwargs) -> np.ndarray:
+    def sample(self, minlogLike, **kwargs) -> List[np.ndarray]:
         lower = np.zeros(self.ndim)
         upper = np.zeros(self.ndim)
         for i, val in enumerate(self.prior.values()):
