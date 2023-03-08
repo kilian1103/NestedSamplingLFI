@@ -23,7 +23,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: List[
     :return:
     """
     if rounds == 0:
-        # standard NS run
+        # standard NS run: 1 sample in 1 sample out
         # initialisation
         logZ_previous = -np.inf * np.ones(nsim)  # Z = 0
         logX_previous = np.zeros(nsim)  # X = 1
@@ -82,7 +82,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: List[
             # find new sample satisfying likelihood constraint
             proposal_samples = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
                                               livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
-                                              keep_chain=keep_chain)
+                                              keep_chain=False)
             proposal_sample = proposal_samples.pop()
             newPoints.append(proposal_sample)
 
