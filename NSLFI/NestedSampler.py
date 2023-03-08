@@ -5,7 +5,7 @@ from NSLFI.MCMCSampler import Sampler
 
 
 def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samplertype, rounds=0, iter=2000,
-                    root="."):
+                    root=".", keep_chain=False):
     if rounds == 0:
         # standard NS run
         # initialisation
@@ -64,8 +64,9 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
                 cov = np.cov(livepoints.T)
                 cholesky = np.linalg.cholesky(cov)
             # find new sample satisfying likelihood constraint
-            proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
-                                             livelikes=logLikelihoods, cov=cov, cholesky=cholesky)
+            proposal_samples = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
+                                              livelikes=logLikelihoods, cov=cov, cholesky=cholesky)
+            proposal_sample = proposal_samples.pop()
             newPoints.append(proposal_sample)
 
             # replace lowest likelihood sample with proposal sample
@@ -130,12 +131,14 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
 
             for it in range(iter):
                 # find new sample satisfying likelihood constraint
-                proposal_sample = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike,
-                                                 livelikes=logLikelihoods, cov=cov, cholesky=cholesky)
+                proposal_samples = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike,
+                                                  livelikes=logLikelihoods, cov=cov, cholesky=cholesky)
+                while len(proposal_samples) > 0:
+                    proposal_sample = proposal_samples.pop()
+                    deadpoints.append(proposal_sample)
+                    deadpoints_birthlogL.append(medianlogLike)
+                    deadpoints_logL.append(float(logLikelihood(proposal_sample)))
                 # add new sample to deadpoints
-                deadpoints.append(proposal_sample)
-                deadpoints_birthlogL.append(medianlogLike)
-                deadpoints_logL.append(float(logLikelihood(proposal_sample)))
             np.save(file=f"{root}/posterior_samples_rounds_{rd}", arr=np.array(deadpoints))
             np.save(file=f"{root}/logL_rounds_{rd}", arr=np.array(deadpoints_logL))
             np.save(file=f"{root}/logL_birth_rounds_{rd}", arr=np.array(deadpoints_birthlogL))

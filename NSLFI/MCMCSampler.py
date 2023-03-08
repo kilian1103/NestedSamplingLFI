@@ -43,7 +43,7 @@ class Metropolis(Sampler):
             withinContour = self.logLikelihood(proposal_sample) > minlogLike
             if withinPrior and withinContour:
                 current_sample = proposal_sample.copy()
-        return current_sample
+        return [current_sample]
 
 
 class Rejection(Sampler):
@@ -61,7 +61,7 @@ class Rejection(Sampler):
             proposal_sample = uniform.rvs(loc=lower, scale=upper - lower)
             if self.logLikelihood(proposal_sample) > minlogLike:
                 break
-        return proposal_sample
+        return [proposal_sample]
 
 
 class Slice(Sampler):
@@ -109,7 +109,7 @@ class Slice(Sampler):
                 else:
                     x_l = intermediate_sample
 
-        return current_sample
+        return [current_sample]
 
     def _extend_1d_interval(self, current_sample, step_size, minlogLike):
         # chose random coordinate axis
