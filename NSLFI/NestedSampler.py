@@ -1,4 +1,4 @@
-from typing import List, Any, Dict
+from typing import Any, Dict
 
 import numpy as np
 import scipy.special
@@ -6,7 +6,7 @@ import scipy.special
 from NSLFI.MCMCSampler import Sampler
 
 
-def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: List[np.ndarray], nsim: int,
+def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: np.ndarray, nsim: int,
                     stop_criterion: float, samplertype: str, rounds=0, nsamples=2000,
                     root=".", keep_chain=False) -> Dict[str, float]:
     """
