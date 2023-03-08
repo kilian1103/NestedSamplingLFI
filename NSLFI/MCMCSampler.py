@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, special_ortho_group
@@ -27,11 +27,12 @@ class Metropolis(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any, ):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, livepoints, livelikes, cov, nrepeat=5, **kwargs) -> np.ndarray:
+    def sample(self, minlogLike, livepoints, livelikes, cov, nrepeat=5, keep_chain=False, **kwargs) -> List[np.ndarray]:
         random_index = np.random.randint(low=0, high=len(livepoints))
         current_sample = livepoints[random_index].copy()
         lower = np.zeros(self.ndim)
         upper = np.zeros(self.ndim)
+        chain = []
         for i, val in enumerate(self.prior.values()):
             low, up = val.support()
             lower[i] = low
@@ -42,8 +43,13 @@ class Metropolis(Sampler):
             withinPrior = np.logical_and(np.greater(proposal_sample, lower), np.less(proposal_sample, upper)).all()
             withinContour = self.logLikelihood(proposal_sample) > minlogLike
             if withinPrior and withinContour:
+                if keep_chain:
+                    chain.append(proposal_sample)
                 current_sample = proposal_sample.copy()
-        return [current_sample]
+        if keep_chain:
+            return chain
+        else:
+            return [current_sample]
 
 
 class Rejection(Sampler):
@@ -68,7 +74,8 @@ class Slice(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, livepoints, livelikes, cov, cholesky, nrepeat=5, step_size=0.1) -> np.ndarray:
+    def sample(self, minlogLike, livepoints, livelikes, cov, cholesky, nrepeat=5, step_size=0.1,
+               keep_chain=False) -> List[np.ndarray]:
         # uniform prior bounds
         lower = np.zeros(self.ndim)
         upper = np.zeros(self.ndim)
@@ -79,6 +86,7 @@ class Slice(Sampler):
         # choose randomly existing livepoint satisfying likelihood constraint
         random_index = np.random.randint(low=0, high=len(livepoints))
         current_sample = livepoints[random_index].copy()
+        chain = []
 
         # get random orthonormal basis to slice on
         ortho_norm = special_ortho_group.rvs(dim=self.ndim)
@@ -95,6 +103,8 @@ class Slice(Sampler):
             withinContour = self.logLikelihood(intermediate_sample) > minlogLike
             if withinPrior and withinContour:
                 # accept sample
+                if keep_chain:
+                    chain.append(intermediate_sample)
                 current_sample = intermediate_sample.copy()
                 # slice along new n_vector
                 x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
@@ -108,8 +118,10 @@ class Slice(Sampler):
                     x_r = intermediate_sample
                 else:
                     x_l = intermediate_sample
-
-        return [current_sample]
+        if keep_chain:
+            return chain
+        else:
+            return [current_sample]
 
     def _extend_1d_interval(self, current_sample, step_size, minlogLike):
         # chose random coordinate axis

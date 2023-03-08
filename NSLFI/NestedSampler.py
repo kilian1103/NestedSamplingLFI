@@ -65,7 +65,8 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
                 cholesky = np.linalg.cholesky(cov)
             # find new sample satisfying likelihood constraint
             proposal_samples = sampler.sample(livepoints=livepoints.copy(), minlogLike=minlogLike,
-                                              livelikes=logLikelihoods, cov=cov, cholesky=cholesky)
+                                              livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
+                                              keep_chain=keep_chain)
             proposal_sample = proposal_samples.pop()
             newPoints.append(proposal_sample)
 
@@ -132,7 +133,8 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
             for it in range(iter):
                 # find new sample satisfying likelihood constraint
                 proposal_samples = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike,
-                                                  livelikes=logLikelihoods, cov=cov, cholesky=cholesky)
+                                                  livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
+                                                  keep_chain=keep_chain)
                 while len(proposal_samples) > 0:
                     proposal_sample = proposal_samples.pop()
                     deadpoints.append(proposal_sample)

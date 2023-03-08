@@ -28,7 +28,8 @@ def test_nested_sampler_metropolis():
     livepoints = priors["theta_0"].rvs(size=(nlive, ndim))
 
     logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
-                           nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Metropolis")
+                           nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Metropolis",
+                           keep_chain=False, rounds=0)
     print(logZ)
     np.testing.assert_almost_equal(actual=logZ["log Z mean"], desired=0, decimal=0.2)
     os.remove("logL.npy")
@@ -88,7 +89,8 @@ def test_nested_sampler_slice():
     livepoints = priors["theta_0"].rvs(size=(nlive, ndim))
 
     logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
-                           nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Slice")
+                           nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Slice", keep_chain=False,
+                           rounds=0)
     print(logZ)
     np.testing.assert_almost_equal(actual=logZ["log Z mean"], desired=0, decimal=0.2)
     os.remove("logL.npy")
