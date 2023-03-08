@@ -19,7 +19,7 @@ class Sampler:
         return self.samplers[type](prior=self.prior, logLikelihood=self.logLikelihood)
 
     @abstractmethod
-    def sample(self, **kwargs) -> np.ndarray:
+    def sample(self, **kwargs) -> List[np.ndarray]:
         raise NotImplementedError("This is an abstract method, please implement an appropriate sampling class")
 
 
