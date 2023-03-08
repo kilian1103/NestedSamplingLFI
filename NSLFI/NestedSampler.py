@@ -1,11 +1,27 @@
+from typing import List, Any, Dict
+
 import numpy as np
 import scipy.special
 
 from NSLFI.MCMCSampler import Sampler
 
 
-def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samplertype, rounds=0, iter=2000,
-                    root=".", keep_chain=False):
+def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: List[np.ndarray], nsim: int,
+                    stop_criterion: float, samplertype: str, rounds=0, nsamples=2000,
+                    root=".", keep_chain=False) -> Dict[str, float]:
+    """
+    :param logLikelihood: loglikelihood function given parameters for obs x
+    :param prior: uniform prior distribution for parameters
+    :param livepoints: list of livepoints
+    :param nsim: number of parallel NS contractions
+    :param stop_criterion: evidence stopping criterion
+    :param samplertype: MCMC sampler type to draw new proposal samples
+    :param rounds: # of rounds of NS run, 0 = standard NS run
+    :param nsamples: number of samples to draw per round
+    :param root: root file directory to store results
+    :param keep_chain: keep intermediate MCMC chain of samples
+    :return:
+    """
     if rounds == 0:
         # standard NS run
         # initialisation
@@ -108,8 +124,8 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
         np.save(file=f"{root}/logL_birth", arr=np.array(deadpoints_birthlogL))
         np.save(file=f"{root}/newPoints", arr=np.array(newPoints))
         print(f"Algorithm terminated after {iteration} iterations!")
-        return {"log Z mean": np.mean(logZ_total),
-                "log Z std": np.std(logZ_total)}
+        return {"log Z mean": float(np.mean(logZ_total)),
+                "log Z std": float(np.std(logZ_total))}
 
     else:
         # NS run with rounds, and constant median Likelihood constraint for each round
@@ -130,7 +146,7 @@ def nested_sampling(logLikelihood, prior, livepoints, nsim, stop_criterion, samp
             cov = np.cov(livepoints.T)
             cholesky = np.linalg.cholesky(cov)
 
-            for it in range(iter):
+            while len(deadpoints) <= nsamples:
                 # find new sample satisfying likelihood constraint
                 proposal_samples = sampler.sample(livepoints=livepoints.copy(), minlogLike=medianlogLike,
                                                   livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
