@@ -64,7 +64,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
 
             # Calculate X contraction and weight
             logX_current = logX_previous + log_ti_s
-            subtraction_coeff = np.array([1, -1]).reshape(2, 1)
+            subtraction_coeff = torch.tensor([1, -1]).reshape(2, 1)
             logWeights = torch.stack([logX_previous, logX_current])
             logWeight_current = torch.tensor(scipy.special.logsumexp(a=logWeights, b=subtraction_coeff, axis=0))
             logX_previous = logX_current.clone()
@@ -80,10 +80,10 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
                 cov = torch.cov(livepoints.T)
                 cholesky = torch.linalg.cholesky(cov)
             # find new sample satisfying likelihood constraint
-            proposal_samples = sampler.sample(livepoints=livepoints.numpy().copy(), minlogLike=minlogLike,
+            proposal_samples = sampler.sample(livepoints=livepoints.clone(), minlogLike=minlogLike,
                                               livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
                                               keep_chain=False)
-            proposal_sample = torch.tensor(proposal_samples.pop())
+            proposal_sample = proposal_samples.pop()
             newPoints.append(proposal_sample)
 
             # replace lowest likelihood sample with proposal sample
@@ -159,8 +159,8 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
                     deadpoints_logL.append(float(logLikelihood(proposal_sample)))
                     if len(deadpoints) == nsamples:
                         break
-            torch.save(f=f"{root}/posterior_samples_rounds_{rd}", obj=torch.tensor(deadpoints))
+            torch.save(f=f"{root}/posterior_samples_rounds_{rd}", obj=torch.stack(deadpoints))
             torch.save(f=f"{root}/logL_rounds_{rd}", obj=torch.tensor(deadpoints_logL))
             torch.save(f=f"{root}/logL_birth_rounds_{rd}", obj=torch.tensor(deadpoints_birthlogL))
-            livepoints = torch.tensor(deadpoints.clone())
+            livepoints = torch.stack(deadpoints.copy())
         return {"log Z mean": 0, "log Z std": 0}
