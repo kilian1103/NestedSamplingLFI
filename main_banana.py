@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
 import swyft
-from swyft.lightning.utils import collate_output
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from swyft import collate_output
 
 import NSLFI.NestedSampler
 from NSLFI.NRE_Settings import NRE_Settings
@@ -19,7 +20,8 @@ def execute():
                         filemode="w")
     logger = logging.getLogger()
     logger.info('Started')
-    root = "swyft_banana_unimodal_Slice_30k_NRE_retrain"
+    dropout = 0.3
+    root = "swyft_banana_bimodal_Slice_30k_NRE_early_stopping_dropout_0.3"
     try:
         os.makedirs(root)
     except OSError:
@@ -33,9 +35,10 @@ def execute():
     rounds = 1
     # Retrain rounds
     retrain_rounds = 2
+    keep_chain = True
     samplerType = "Slice"
     # define forward model dimensions
-    bimodal = False
+    bimodal = True
     nParam = 2
     # true parameters of simulator
     obs = swyft.Sample(x=np.array(nParam * [0]))
@@ -88,14 +91,16 @@ def execute():
             #  self.logratios1 = swyft.LogRatioEstimator_1dim(num_features=2, num_params=2, varnames='z',
             #  dropout=0.2, hidden_features=128)
             self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=2, marginals=((0, 1),), varnames='z',
-                                                           dropout=0.2, hidden_features=128, Lmax=8)
+                                                           dropout=dropout, hidden_features=128, Lmax=8)
 
         def forward(self, A, B):
             return self.logratios2(A['x'], B['z'])
 
     network = Network()
+    # network = torch.compile(network)
     trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64, enable_progress_bar=False,
-                                 default_root_dir=nreSettings.base_path)
+                                 default_root_dir=nreSettings.base_path,
+                                 callbacks=[EarlyStopping(monitor="val_loss", mode="min")])
     # train MRE
     if nreSettings.trainmode is True:
         trainer.fit(network, dm)
@@ -144,7 +149,7 @@ def execute():
                                                  stop_criterion=1e-3,
                                                  samplertype=samplerType, rounds=rounds, root=root,
                                                  iter=nreSettings.n_training_samples)
-    
+
     def retrain_next_round(root: str, nextRoundPoints: np.ndarray):
         try:
             os.makedirs(root)
@@ -166,6 +171,7 @@ def execute():
                                      default_root_dir=root)
         dm = swyft.SwyftDataModule(nextRoundSamples, fractions=[0.8, 0.1, 0.1], num_workers=0, batch_size=64)
         network = Network()
+        # network = torch.compile(network)
         trainer.fit(network, dm)
         # get posterior samples
         prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=['z'])
