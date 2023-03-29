@@ -156,7 +156,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
                     proposal_sample = proposal_samples.pop()
                     deadpoints.append(proposal_sample)
                     deadpoints_birthlogL.append(medianlogLike)
-                    deadpoints_logL.append(float(logLikelihood(proposal_sample)))
+                    deadpoints_logL.append(logLikelihood(proposal_sample))
                     if len(deadpoints) == nsamples:
                         break
             torch.save(f=f"{root}/posterior_samples_rounds_{rd}", obj=torch.stack(deadpoints))
