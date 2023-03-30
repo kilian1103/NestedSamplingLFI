@@ -7,7 +7,6 @@ import torch
 from NSLFI.MCMCSamplerTorch import Sampler
 
 
-@profile
 def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch.tensor, nsim: int,
                     stop_criterion: float, samplertype: str, rounds=0, nsamples=2000,
                     root=".", keep_chain=False) -> Dict[str, float]:
