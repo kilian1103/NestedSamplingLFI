@@ -7,6 +7,7 @@ import torch
 from NSLFI.MCMCSamplerTorch import Sampler
 
 
+@profile
 def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch.tensor, nsim: int,
                     stop_criterion: float, samplertype: str, rounds=0, nsamples=2000,
                     root=".", keep_chain=False) -> Dict[str, float]:
@@ -153,10 +154,10 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
                                                   keep_chain=keep_chain)
                 # add new samples to deadpoints
                 while len(proposal_samples) > 0:
-                    proposal_sample = proposal_samples.pop()
+                    proposal_sample, logLike = proposal_samples.pop()
                     deadpoints.append(proposal_sample)
                     deadpoints_birthlogL.append(medianlogLike)
-                    deadpoints_logL.append(logLikelihood(proposal_sample))
+                    deadpoints_logL.append(logLike)
                     if len(deadpoints) == nsamples:
                         break
             torch.save(f=f"{root}/posterior_samples_rounds_{rd}", obj=torch.stack(deadpoints))
