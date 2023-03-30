@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import torch
+from torch.distributions.multivariate_normal import MultivariateNormal
 
 from NSLFI.NestedSamplerTorch import nested_sampling
 
@@ -17,11 +18,12 @@ def test_nested_sampler_metropolis():
     ndim = 5
     nlive = 25 * ndim
 
+    means = 0.5 * torch.ones(ndim)
+    cov = 0.01 * torch.eye(ndim)
+    mvNormal = MultivariateNormal(loc=means, covariance_matrix=cov)
+
     def logLikelihood(x) -> torch.tensor:
-        # Multivariate Gaussian centred at X = 0.5, y= 0.5
-        means = 0.5 * torch.ones(ndim)
-        cov = 0.01 * torch.eye(ndim)
-        return torch.distributions.multivariate_normal.MultivariateNormal(loc=means, covariance_matrix=cov).log_prob(x)
+        return mvNormal.log_prob(x)
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
@@ -49,11 +51,12 @@ def test_nested_sampler_rejection():
     ndim = 2
     nlive = 25 * ndim
 
+    means = 0.5 * torch.ones(ndim)
+    cov = 0.01 * torch.eye(ndim)
+    mvNormal = MultivariateNormal(loc=means, covariance_matrix=cov)
+
     def logLikelihood(x) -> torch.tensor:
-        # Multivariate Gaussian centred at X = 0.5, y= 0.5
-        means = 0.5 * torch.ones(ndim)
-        cov = 0.01 * torch.eye(ndim)
-        return torch.distributions.multivariate_normal.MultivariateNormal(loc=means, covariance_matrix=cov).log_prob(x)
+        return mvNormal.log_prob(x)
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
@@ -80,11 +83,12 @@ def test_nested_sampler_slice():
     ndim = 5
     nlive = 25 * ndim
 
+    means = 0.5 * torch.ones(ndim)
+    cov = 0.01 * torch.eye(ndim)
+    mvNormal = MultivariateNormal(loc=means, covariance_matrix=cov)
+
     def logLikelihood(x) -> torch.tensor:
-        # Multivariate Gaussian centred at X = 0.5, y= 0.5
-        means = 0.5 * torch.ones(ndim)
-        cov = 0.01 * torch.eye(ndim)
-        return torch.distributions.multivariate_normal.MultivariateNormal(loc=means, covariance_matrix=cov).log_prob(x)
+        return mvNormal.log_prob(x)
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
