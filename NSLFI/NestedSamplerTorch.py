@@ -83,12 +83,12 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
             proposal_samples = sampler.sample(livepoints=livepoints.clone(), minlogLike=minlogLike,
                                               livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
                                               keep_chain=False)
-            proposal_sample = proposal_samples.pop()
+            proposal_sample, logLike = proposal_samples.pop()
             newPoints.append(proposal_sample)
 
             # replace lowest likelihood sample with proposal sample
             livepoints[index] = proposal_sample.clone()
-            logLikelihoods[index] = float(logLikelihood(proposal_sample))
+            logLikelihoods[index] = logLike
             livepoints_birthlogL[index] = minlogLike
 
             maxlogLike = logLikelihoods.max()

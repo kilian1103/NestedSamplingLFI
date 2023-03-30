@@ -33,6 +33,7 @@ class Metropolis(Sampler):
         torch.tensor]:
         random_index = torch.randint(low=0, high=len(livepoints), size=(1,))
         current_sample = livepoints[random_index].clone()
+        logLike = livelikes[random_index].clone()
         lower = torch.zeros(self.ndim)
         upper = torch.zeros(self.ndim)
         chain = []
@@ -45,15 +46,17 @@ class Metropolis(Sampler):
             proposal_sample = MultivariateNormal(loc=current_sample, covariance_matrix=cov).sample()
             withinPrior = torch.logical_and(torch.greater(proposal_sample, lower),
                                             torch.less(proposal_sample, upper)).all()
-            withinContour = self.logLikelihood(proposal_sample) > minlogLike
+            logLike_prop = self.logLikelihood(proposal_sample)
+            withinContour = logLike_prop > minlogLike
             if withinPrior and withinContour:
                 if keep_chain:
-                    chain.append(proposal_sample)
+                    chain.append((proposal_sample, logLike_prop))
                 current_sample = proposal_sample.clone()
+                logLike = logLike_prop.clone()
         if keep_chain:
             return chain
         else:
-            return [current_sample]
+            return [(current_sample, logLike)]
 
 
 class Rejection(Sampler):
@@ -69,9 +72,10 @@ class Rejection(Sampler):
             upper[i] = up
         while True:
             proposal_sample = Uniform(low=0, high=1).sample(sample_shape=(self.ndim,))
-            if self.logLikelihood(proposal_sample) > minlogLike:
+            logLike_prop = self.logLikelihood(proposal_sample)
+            if logLike_prop > minlogLike:
                 break
-        return [proposal_sample]
+        return [(proposal_sample, logLike_prop)]
 
 
 class Slice(Sampler):
@@ -90,6 +94,7 @@ class Slice(Sampler):
         # choose randomly existing livepoint satisfying likelihood constraint
         random_index = torch.randint(low=0, high=len(livepoints), size=(1,))
         current_sample = livepoints[random_index].clone()
+        logLike = livelikes[random_index].clone()
         chain = []
 
         # get random orthonormal basis to slice on
@@ -104,12 +109,14 @@ class Slice(Sampler):
 
             withinPrior = torch.logical_and(torch.greater(intermediate_sample, lower),
                                             torch.less(intermediate_sample, upper)).all()
-            withinContour = self.logLikelihood(intermediate_sample) > minlogLike
+            logLike_prop = self.logLikelihood(intermediate_sample)
+            withinContour = logLike_prop > minlogLike
             if withinPrior and withinContour:
                 # accept sample
                 if keep_chain:
-                    chain.append(intermediate_sample)
+                    chain.append((intermediate_sample, logLike_prop))
                 current_sample = intermediate_sample.clone()
+                logLike = logLike_prop.clone()
                 # slice along new n_vector
                 x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
                                                          minlogLike=minlogLike, ortho_norm=ortho_norm,
@@ -125,7 +132,7 @@ class Slice(Sampler):
         if keep_chain:
             return chain
         else:
-            return [current_sample]
+            return [(current_sample, logLike)]
 
     def _extend_1d_interval(self, current_sample, step_size, minlogLike):
         # chose random coordinate axis
