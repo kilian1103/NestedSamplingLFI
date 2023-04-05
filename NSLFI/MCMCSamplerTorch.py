@@ -135,23 +135,6 @@ class Slice(Sampler):
         else:
             return [(current_sample, logLike)]
 
-    def _extend_1d_interval(self, current_sample, step_size, minlogLike) -> Tuple[
-        torch.tensor, torch.tensor, torch.tensor]:
-        # chose random coordinate axis
-        randIdx = torch.randint(low=0, high=self.ndim, size=(1,))
-        x_l = current_sample.copy()
-        x_r = current_sample.copy()
-        r = torch.rand(1)
-        # and slice along its axis
-        x_l[randIdx] -= r * step_size
-        x_r[randIdx] += (1 - r) * step_size
-
-        while self.logLikelihood(x_l) > minlogLike:
-            x_l[randIdx] -= step_size
-        while self.logLikelihood(x_r) > minlogLike:
-            x_r[randIdx] += step_size
-        return x_l, x_r, randIdx
-
     def _extend_nd_interval(self, current_sample: torch.tensor, step_size: float, minlogLike: torch.tensor,
                             ortho_norm: np.ndarray, cholesky: torch.tensor) -> Tuple[
         torch.tensor, torch.tensor, torch.tensor]:
