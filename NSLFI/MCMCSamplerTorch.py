@@ -83,7 +83,7 @@ class Slice(Sampler):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
     def sample(self, minlogLike: torch.tensor, livepoints: torch.tensor, livelikes: torch.tensor,
-               cholesky: torch.tensor, nrepeat=5, step_size=1,
+               cholesky: torch.tensor, nrepeat=5, step_size=3,
                keep_chain=False, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
         # uniform prior bounds
         lower = torch.zeros(self.ndim)
