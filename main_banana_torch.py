@@ -39,7 +39,7 @@ def execute():
     # NS rounds, 0 is default NS run
     rounds = 1
     # Retrain rounds
-    retrain_rounds = 0
+    retrain_rounds = 2
     keep_chain = True
     samplerType = "Slice"
     # define forward model dimensions
