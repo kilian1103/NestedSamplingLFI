@@ -6,10 +6,13 @@ import numpy as np
 import scipy.stats as stats
 import swyft
 import torch
+from pytorch_lightning import loggers as pl_loggers
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output
 
 import NSLFI.NestedSamplerTorch
+import wandb
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.Swyft_NRE_Wrapper import NRE
 
@@ -23,20 +26,20 @@ def execute():
     logger = logging.getLogger()
     logger.info('Started')
     dropout = 0.3
-    root = "swyft_torch_test_slice"
+    root = "swyft_torch_slice_fast"
     try:
         os.makedirs(root)
     except OSError:
         logger.info("root folder already exists!")
 
     nreSettings = NRE_Settings(base_path=root)
-    nreSettings.n_training_samples = 1_000
+    nreSettings.n_training_samples = 30_000
     nreSettings.n_weighted_samples = 10_000
-    nreSettings.trainmode = False
+    nreSettings.trainmode = True
     # NS rounds, 0 is default NS run
     rounds = 1
     # Retrain rounds
-    retrain_rounds = 0
+    retrain_rounds = 2
     keep_chain = True
     samplerType = "Slice"
     # define forward model dimensions
@@ -100,9 +103,19 @@ def execute():
 
     network = Network()
     # network = torch.compile(network)
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="NSNRE", sync_tensorboard=True)
+    early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0., patience=3, mode='min')
+    lr_monitor = LearningRateMonitor(logging_interval='step')
+    checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
+                                          filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
+    tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
+
     trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64, enable_progress_bar=False,
-                                 default_root_dir=nreSettings.base_path,
-                                 callbacks=[EarlyStopping(monitor="val_loss", mode="min")])
+                                 default_root_dir=nreSettings.base_path, logger=tb_logger,
+                                 callbacks=[early_stopping_callback, lr_monitor,
+                                            checkpoint_callback])
     # train MRE
     if nreSettings.trainmode is True:
         trainer.fit(network, dm)
@@ -148,7 +161,9 @@ def execute():
 
         trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64,
                                      enable_progress_bar=False,
-                                     default_root_dir=root)
+                                     default_root_dir=nreSettings.base_path, logger=tb_logger,
+                                     callbacks=[early_stopping_callback, lr_monitor,
+                                                checkpoint_callback])
         dm = swyft.SwyftDataModule(nextRoundSamples, fractions=[0.8, 0.1, 0.1], num_workers=0, batch_size=64)
         network = Network()
         # network = torch.compile(network)
@@ -172,6 +187,9 @@ def execute():
                                                           keep_chain=keep_chain)
 
     for rd in range(1, retrain_rounds + 1):
+        wandb.init(
+            # set the wandb project where this run will be logged
+            project=f"NSNRE_rd_{rd}", sync_tensorboard=True)
         nextRoundPoints = torch.load(f=f"{root}/posterior_samples_rounds_0")
         newRoot = root + f"_rd_{rd}"
         retrain_next_round(newRoot, nextRoundPoints)
