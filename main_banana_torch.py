@@ -30,13 +30,13 @@ def execute():
         logger.info("root folder already exists!")
 
     nreSettings = NRE_Settings(base_path=root)
-    nreSettings.n_training_samples = 30_000
+    nreSettings.n_training_samples = 1_000
     nreSettings.n_weighted_samples = 10_000
-    nreSettings.trainmode = True
+    nreSettings.trainmode = False
     # NS rounds, 0 is default NS run
     rounds = 1
     # Retrain rounds
-    retrain_rounds = 2
+    retrain_rounds = 0
     keep_chain = True
     samplerType = "Slice"
     # define forward model dimensions
@@ -110,7 +110,7 @@ def execute():
     # load NRE from file
     else:
         checkpoint_path = os.path.join(
-            f"swyft_torch_test/lightning_logs/version_15/checkpoints/epoch=9-step=3750.ckpt")
+            f"swyft_torch_test_slice/lightning_logs/version_16795008/checkpoints/epoch=6-step=2625.ckpt")
         network = network.load_from_checkpoint(checkpoint_path)
     # get posterior samples
     prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=['z'])
@@ -121,28 +121,25 @@ def execute():
     plt.show()
 
     class NRE:
-        def __init__(self, network: swyft.SwyftModule, trainer: swyft.SwyftTrainer, prior: Dict[str, Any],
+        def __init__(self, network: swyft.SwyftModule, prior: Dict[str, Any],
                      nreSettings: NRE_Settings, obs: swyft.Sample, livepoints: torch.tensor):
-            self.trainer = trainer
-            self.network = network
+            self.network = network.eval()
             self.livepoints = livepoints
             self.prior = prior
             self.nre_settings = nreSettings
-            self.obs = obs
+            self.obs = {"x": torch.tensor(obs["x"]).type(torch.float64).unsqueeze(0)}
 
         def logLikelihood(self, proposal_sample: torch.tensor):
             # check if list of datapoints or single datapoint
             if proposal_sample.ndim == 1:
-                proposal_sample = swyft.Sample(z=proposal_sample)
-                prediction = self.trainer.infer(self.network, self.obs, proposal_sample)
+                prediction = self.network(self.obs, {"z": proposal_sample.type(torch.float64)})
                 return prediction.logratios
             else:
-                proposal_sample = swyft.Samples(z=proposal_sample)
-                prediction = self.trainer.infer(self.network, self.obs, proposal_sample)
+                prediction = self.network(self.obs, {"z": proposal_sample.type(torch.float64)})
                 return prediction.logratios[:, 0]
 
     # wrap NRE object
-    trained_NRE = NRE(network=network, trainer=trainer, prior=prior, nreSettings=nreSettings, obs=obs,
+    trained_NRE = NRE(network=network, prior=prior, nreSettings=nreSettings, obs=obs,
                       livepoints=torch.tensor(samples["z"]))
 
     output = NSLFI.NestedSamplerTorch.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
@@ -182,7 +179,7 @@ def execute():
         plt.savefig(f"{root}/NRE_predictions.pdf")
         plt.show()
         # wrap NRE object
-        trained_NRE = NRE(network=network, trainer=trainer, prior=prior, nreSettings=nreSettings, obs=obs,
+        trained_NRE = NRE(network=network, prior=prior, nreSettings=nreSettings, obs=obs,
                           livepoints=torch.tensor(nextRoundSamples["z"]))
         output = NSLFI.NestedSamplerTorch.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                           livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
