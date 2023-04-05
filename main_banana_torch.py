@@ -39,7 +39,7 @@ def execute():
     # NS rounds, 0 is default NS run
     rounds = 1
     # Retrain rounds
-    retrain_rounds = 2
+    retrain_rounds = 0
     keep_chain = True
     samplerType = "Slice"
     # define forward model dimensions
@@ -105,7 +105,7 @@ def execute():
     # network = torch.compile(network)
     wandb.init(
         # set the wandb project where this run will be logged
-        project="NSNRE", sync_tensorboard=True)
+        project="NSNRE", name="round_0", sync_tensorboard=True)
     early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0., patience=3, mode='min')
     lr_monitor = LearningRateMonitor(logging_interval='step')
     checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
@@ -125,6 +125,7 @@ def execute():
         checkpoint_path = os.path.join(
             f"swyft_torch_test_slice/lightning_logs/version_16795008/checkpoints/epoch=6-step=2625.ckpt")
         network = network.load_from_checkpoint(checkpoint_path)
+    wandb.finish()
     # get posterior samples
     prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=['z'])
     predictions = trainer.infer(network, obs, prior_samples)
@@ -187,13 +188,15 @@ def execute():
                                                           keep_chain=keep_chain)
 
     for rd in range(1, retrain_rounds + 1):
+        logger.info("retraining round: " + str(rd))
         wandb.init(
             # set the wandb project where this run will be logged
-            project=f"NSNRE_rd_{rd}", sync_tensorboard=True)
+            project="NSNRE", name=f"round_{rd}", sync_tensorboard=True)
         nextRoundPoints = torch.load(f=f"{root}/posterior_samples_rounds_0")
         newRoot = root + f"_rd_{rd}"
         retrain_next_round(newRoot, nextRoundPoints)
         root = newRoot
+        wandb.finish()
 
 
 if __name__ == '__main__':
