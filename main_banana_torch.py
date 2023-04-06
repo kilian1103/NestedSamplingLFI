@@ -6,13 +6,13 @@ import numpy as np
 import scipy.stats as stats
 import swyft
 import torch
-import wandb
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output
 
 import NSLFI.NestedSamplerTorch
+import wandb
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.Swyft_NRE_Wrapper import NRE
 
@@ -113,7 +113,7 @@ def execute():
                                           filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
 
-    trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64, enable_progress_bar=False,
+    trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64, enable_progress_bar=True,
                                  default_root_dir=nreSettings.base_path, logger=tb_logger,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
@@ -167,7 +167,7 @@ def execute():
                                               filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
         tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
         trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64,
-                                     enable_progress_bar=False,
+                                     enable_progress_bar=True,
                                      default_root_dir=nreSettings.base_path, logger=tb_logger,
                                      callbacks=[early_stopping_callback, lr_monitor,
                                                 checkpoint_callback])
