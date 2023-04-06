@@ -137,12 +137,13 @@ def execute():
     # wrap NRE object
     trained_NRE = NRE(network=network, prior=prior, nreSettings=nreSettings, obs=obs,
                       livepoints=torch.tensor(samples["z"]))
-
-    output = NSLFI.NestedSamplerTorch.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
-                                                      livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
-                                                      stop_criterion=1e-3,
-                                                      samplertype=samplerType, rounds=rounds, root=root,
-                                                      nsamples=nreSettings.n_training_samples, keep_chain=keep_chain)
+    with torch.no_grad():
+        output = NSLFI.NestedSamplerTorch.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
+                                                          livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
+                                                          stop_criterion=1e-3,
+                                                          samplertype=samplerType, rounds=rounds, root=root,
+                                                          nsamples=nreSettings.n_training_samples,
+                                                          keep_chain=keep_chain)
 
     def retrain_next_round(root: str, nextRoundPoints: torch.tensor):
         try:
@@ -179,13 +180,14 @@ def execute():
         # wrap NRE object
         trained_NRE = NRE(network=network, prior=prior, nreSettings=nreSettings, obs=obs,
                           livepoints=torch.tensor(nextRoundSamples["z"]))
-        output = NSLFI.NestedSamplerTorch.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
-                                                          livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
-                                                          stop_criterion=1e-3, rounds=1,
-                                                          root=root,
-                                                          samplertype=samplerType,
-                                                          nsamples=nreSettings.n_training_samples,
-                                                          keep_chain=keep_chain)
+        with torch.no_grad():
+            output = NSLFI.NestedSamplerTorch.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
+                                                              livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
+                                                              stop_criterion=1e-3, rounds=1,
+                                                              root=root,
+                                                              samplertype=samplerType,
+                                                              nsamples=nreSettings.n_training_samples,
+                                                              keep_chain=keep_chain)
 
     for rd in range(1, retrain_rounds + 1):
         logger.info("retraining round: " + str(rd))
