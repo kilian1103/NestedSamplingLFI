@@ -6,13 +6,13 @@ import numpy as np
 import scipy.stats as stats
 import swyft
 import torch
+import wandb
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output
 
 import NSLFI.NestedSamplerTorch
-import wandb
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.Swyft_NRE_Wrapper import NRE
 
@@ -161,6 +161,7 @@ def execute():
             out.append(result)
         out = collate_output(out)
         nextRoundSamples = swyft.Samples(out)
+        early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0., patience=3, mode='min')
         lr_monitor = LearningRateMonitor(logging_interval='step')
         checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
                                               filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
