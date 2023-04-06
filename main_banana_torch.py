@@ -113,7 +113,7 @@ def execute():
                                           filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
 
-    trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64, enable_progress_bar=True,
+    trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=20, precision=64, enable_progress_bar=True,
                                  default_root_dir=nreSettings.base_path, logger=tb_logger,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
@@ -166,7 +166,7 @@ def execute():
         checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
                                               filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
         tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
-        trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64,
+        trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=20, precision=64,
                                      enable_progress_bar=True,
                                      default_root_dir=nreSettings.base_path, logger=tb_logger,
                                      callbacks=[early_stopping_callback, lr_monitor,
