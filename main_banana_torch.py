@@ -36,6 +36,7 @@ def execute():
     nreSettings.n_training_samples = 30_000
     nreSettings.n_weighted_samples = 10_000
     nreSettings.trainmode = True
+    wandb_project_name = "NSNRE"
     # NS rounds, 0 is default NS run
     rounds = 1
     # Retrain rounds
@@ -105,7 +106,7 @@ def execute():
     # network = torch.compile(network)
     wandb.init(
         # set the wandb project where this run will be logged
-        project="NSNRE", name="round_0", sync_tensorboard=True)
+        project=wandb_project_name, name="round_0", sync_tensorboard=True)
     early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0., patience=3, mode='min')
     lr_monitor = LearningRateMonitor(logging_interval='step')
     checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
@@ -160,7 +161,10 @@ def execute():
             out.append(result)
         out = collate_output(out)
         nextRoundSamples = swyft.Samples(out)
-
+        lr_monitor = LearningRateMonitor(logging_interval='step')
+        checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
+                                              filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
+        tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
         trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=10, precision=64,
                                      enable_progress_bar=False,
                                      default_root_dir=nreSettings.base_path, logger=tb_logger,
@@ -193,7 +197,7 @@ def execute():
         logger.info("retraining round: " + str(rd))
         wandb.init(
             # set the wandb project where this run will be logged
-            project="NSNRE", name=f"round_{rd}", sync_tensorboard=True)
+            project=wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
         nextRoundPoints = torch.load(f=f"{root}/posterior_samples_rounds_0")
         newRoot = root + f"_rd_{rd}"
         retrain_next_round(newRoot, nextRoundPoints)
