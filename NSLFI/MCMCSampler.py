@@ -85,7 +85,9 @@ class Slice(Sampler):
     def sample(self, minlogLike: torch.tensor, livepoints: torch.tensor, livelikes: torch.tensor,
                cholesky: torch.tensor, nrepeat=5, step_size=2,
                keep_chain=False, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
-        # uniform prior bounds
+
+        chain = []  # list of accepted samples
+        # set up prior bounds for checking if sample is within prior
         lower = torch.zeros(self.ndim)
         upper = torch.zeros(self.ndim)
         for i, val in enumerate(self.prior.values()):
@@ -96,7 +98,6 @@ class Slice(Sampler):
         random_index = torch.randint(low=0, high=len(livepoints), size=(1,))
         current_sample = livepoints[random_index].clone()
         logLike = livelikes[random_index].clone()
-        chain = []
 
         # get random orthonormal basis to slice on
         ortho_norm = special_ortho_group.rvs(dim=self.ndim)
