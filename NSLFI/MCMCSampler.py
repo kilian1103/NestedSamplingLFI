@@ -1,12 +1,13 @@
 from abc import abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
-from scipy.stats import multivariate_normal, uniform, special_ortho_group
+import torch
+from scipy.stats import special_ortho_group
+from torch.distributions import MultivariateNormal, Uniform
 
 
 class Sampler:
-
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         self.prior = prior
         self.logLikelihood = logLikelihood
@@ -15,77 +16,86 @@ class Sampler:
                          "Rejection": Rejection,
                          "Slice": Slice}
 
-    def getSampler(self, type):
+    def getSampler(self, type: str):
         return self.samplers[type](prior=self.prior, logLikelihood=self.logLikelihood)
 
-    @abstractmethod
-    def sample(self, **kwargs) -> List[np.ndarray]:
-        raise NotImplementedError("This is an abstract method, please implement an appropriate sampling class")
+
+@abstractmethod
+def sample(self, **kwargs) -> List[torch.tensor]:
+    raise NotImplementedError("This is an abstract method, please implement an appropriate sampling class")
 
 
 class Metropolis(Sampler):
-    def __init__(self, prior: Dict[str, Any], logLikelihood: Any, ):
+    def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, livepoints, livelikes, cov, nrepeat=5, keep_chain=False, **kwargs) -> List[np.ndarray]:
-        random_index = np.random.randint(low=0, high=len(livepoints))
-        current_sample = livepoints[random_index].copy()
-        lower = np.zeros(self.ndim)
-        upper = np.zeros(self.ndim)
+    def sample(self, minlogLike: torch.tensor, livepoints: torch.tensor, livelikes: torch.tensor, cov: torch.tensor,
+               nrepeat=5, keep_chain=False, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
+        random_index = torch.randint(low=0, high=len(livepoints), size=(1,))
+        current_sample = livepoints[random_index].clone()
+        logLike = livelikes[random_index].clone()
+        lower = torch.zeros(self.ndim)
+        upper = torch.zeros(self.ndim)
         chain = []
         for i, val in enumerate(self.prior.values()):
-            low, up = val.support()
+            low, up = val.low, val.high
             lower[i] = low
             upper[i] = up
 
         for i in range(nrepeat * self.ndim):
-            proposal_sample = multivariate_normal.rvs(mean=current_sample, cov=cov)
-            withinPrior = np.logical_and(np.greater(proposal_sample, lower), np.less(proposal_sample, upper)).all()
-            withinContour = self.logLikelihood(proposal_sample) > minlogLike
+            proposal_sample = MultivariateNormal(loc=current_sample, covariance_matrix=cov).sample()
+            withinPrior = torch.logical_and(torch.greater(proposal_sample, lower),
+                                            torch.less(proposal_sample, upper)).all()
+            logLike_prop = self.logLikelihood(proposal_sample)
+            withinContour = logLike_prop > minlogLike
             if withinPrior and withinContour:
                 if keep_chain:
-                    chain.append(proposal_sample)
-                current_sample = proposal_sample.copy()
+                    chain.append((proposal_sample, logLike_prop))
+                current_sample = proposal_sample.clone()
+                logLike = logLike_prop.clone()
         if keep_chain:
             return chain
         else:
-            return [current_sample]
+            return [(current_sample, logLike)]
 
 
 class Rejection(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, **kwargs) -> List[np.ndarray]:
-        lower = np.zeros(self.ndim)
-        upper = np.zeros(self.ndim)
+    def sample(self, minlogLike: torch.tensor, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
+        lower = torch.zeros(self.ndim)
+        upper = torch.zeros(self.ndim)
         for i, val in enumerate(self.prior.values()):
-            low, up = val.support()
+            low, up = val.low, val.high
             lower[i] = low
             upper[i] = up
         while True:
-            proposal_sample = uniform.rvs(loc=lower, scale=upper - lower)
-            if self.logLikelihood(proposal_sample) > minlogLike:
+            proposal_sample = Uniform(low=0, high=1).sample(sample_shape=(self.ndim,))
+            logLike_prop = self.logLikelihood(proposal_sample)
+            if logLike_prop > minlogLike:
                 break
-        return [proposal_sample]
+        return [(proposal_sample, logLike_prop)]
 
 
 class Slice(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike, livepoints, livelikes, cov, cholesky, nrepeat=5, step_size=0.1,
-               keep_chain=False) -> List[np.ndarray]:
+    def sample(self, minlogLike: torch.tensor, livepoints: torch.tensor, livelikes: torch.tensor,
+               cholesky: torch.tensor, nrepeat=5, step_size=2,
+               keep_chain=False, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
         # uniform prior bounds
-        lower = np.zeros(self.ndim)
-        upper = np.zeros(self.ndim)
+        lower = torch.zeros(self.ndim)
+        upper = torch.zeros(self.ndim)
         for i, val in enumerate(self.prior.values()):
-            low, up = val.support()
+            low, up = val.low, val.high
             lower[i] = low
             upper[i] = up
         # choose randomly existing livepoint satisfying likelihood constraint
-        random_index = np.random.randint(low=0, high=len(livepoints))
-        current_sample = livepoints[random_index].copy()
+        random_index = torch.randint(low=0, high=len(livepoints), size=(1,))
+        current_sample = livepoints[random_index].clone()
+        logLike = livelikes[random_index].clone()
         chain = []
 
         # get random orthonormal basis to slice on
@@ -95,25 +105,27 @@ class Slice(Sampler):
 
         for i in range(nrepeat * self.ndim):
             # sample along slice
-            u = np.random.uniform(low=0, high=1)
+            u = torch.rand(1)
             intermediate_sample = u * x_l + (1 - u) * x_r
 
-            withinPrior = np.logical_and(np.greater(intermediate_sample, lower),
-                                         np.less(intermediate_sample, upper)).all()
-            withinContour = self.logLikelihood(intermediate_sample) > minlogLike
+            withinPrior = torch.logical_and(torch.greater(intermediate_sample, lower),
+                                            torch.less(intermediate_sample, upper)).all()
+            logLike_prop = self.logLikelihood(intermediate_sample)
+            withinContour = logLike_prop > minlogLike
             if withinPrior and withinContour:
                 # accept sample
                 if keep_chain:
-                    chain.append(intermediate_sample)
-                current_sample = intermediate_sample.copy()
+                    chain.append((intermediate_sample, logLike_prop))
+                current_sample = intermediate_sample.clone()
+                logLike = logLike_prop.clone()
                 # slice along new n_vector
                 x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
                                                          minlogLike=minlogLike, ortho_norm=ortho_norm,
                                                          cholesky=cholesky)
             else:
                 # rescale bounds if point is not within contour or prior
-                dist_proposal = np.linalg.norm(x_l - intermediate_sample)
-                dist_origin = np.linalg.norm(x_l - current_sample)
+                dist_proposal = torch.linalg.norm(x_l - intermediate_sample)
+                dist_origin = torch.linalg.norm(x_l - current_sample)
                 if dist_proposal > dist_origin:
                     x_r = intermediate_sample
                 else:
@@ -121,33 +133,19 @@ class Slice(Sampler):
         if keep_chain:
             return chain
         else:
-            return [current_sample]
+            return [(current_sample, logLike)]
 
-    def _extend_1d_interval(self, current_sample, step_size, minlogLike):
-        # chose random coordinate axis
-        randIdx = np.random.randint(low=0, high=self.ndim)
-        x_l = current_sample.copy()
-        x_r = current_sample.copy()
-        r = np.random.uniform(0, 1)
-        # and slice along its axis
-        x_l[randIdx] -= r * step_size
-        x_r[randIdx] += (1 - r) * step_size
-
-        while self.logLikelihood(x_l) > minlogLike:
-            x_l[randIdx] -= step_size
-        while self.logLikelihood(x_r) > minlogLike:
-            x_r[randIdx] += step_size
-        return x_l, x_r, randIdx
-
-    def _extend_nd_interval(self, current_sample, step_size, minlogLike, ortho_norm, cholesky):
+    def _extend_nd_interval(self, current_sample: torch.tensor, step_size: float, minlogLike: torch.tensor,
+                            ortho_norm: np.ndarray, cholesky: torch.tensor) -> Tuple[
+        torch.tensor, torch.tensor, torch.tensor]:
         # chose random orthonorm axis
-        randIdx = np.random.randint(low=0, high=self.ndim)
-        n_vec = ortho_norm[randIdx]
-        n_dir = np.matmul(cholesky, n_vec)
-        x_l = current_sample.copy()
-        x_r = current_sample.copy()
+        randIdx = torch.randint(low=0, high=self.ndim, size=(1,))
+        n_vec = torch.tensor(ortho_norm[randIdx])
+        n_dir = torch.matmul(cholesky, n_vec)
+        x_l = current_sample.clone()
+        x_r = current_sample.clone()
         # extend bounds along slice
-        r = np.random.uniform(0, 1)
+        r = torch.rand(1)
         x_l -= r * step_size * n_dir
         x_r += (1 - r) * step_size * n_dir
 
