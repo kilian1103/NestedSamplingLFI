@@ -127,9 +127,9 @@ class Slice(Sampler):
                 dist_proposal = torch.linalg.norm(x_l - intermediate_sample)
                 dist_origin = torch.linalg.norm(x_l - current_sample)
                 if dist_proposal > dist_origin:
-                    x_r = intermediate_sample
+                    x_r = intermediate_sample.clone()
                 else:
-                    x_l = intermediate_sample
+                    x_l = intermediate_sample.clone()
         if keep_chain:
             return chain
         else:

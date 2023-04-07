@@ -42,7 +42,6 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
         deadpoints_logL = []
         deadpoints_birthlogL = []
         weights = []
-        newPoints = []
 
         sampler = Sampler(prior=prior, logLikelihood=logLikelihood).getSampler(
             samplertype)
@@ -84,7 +83,6 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
                                               livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
                                               keep_chain=False)
             proposal_sample, logLike = proposal_samples.pop()
-            newPoints.append(proposal_sample)
 
             # replace lowest likelihood sample with proposal sample
             livepoints[index] = proposal_sample.clone()
@@ -122,7 +120,6 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
         torch.save(f=f"{root}/posterior_samples", obj=torch.stack(deadpoints))
         torch.save(f=f"{root}/logL", obj=torch.tensor(deadpoints_logL))
         torch.save(f=f"{root}/logL_birth", obj=torch.tensor(deadpoints_birthlogL))
-        torch.save(f=f"{root}/newPoints", obj=torch.stack(newPoints))
         print(f"Algorithm terminated after {iteration} iterations!")
         return {"log Z mean": float(torch.mean(torch.tensor(logZ_total))),
                 "log Z std": float(torch.std(torch.tensor(logZ_total)))}

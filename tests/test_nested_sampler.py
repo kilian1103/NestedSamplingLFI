@@ -35,7 +35,6 @@ def test_nested_sampler_metropolis():
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")
     os.remove("logL_birth")
-    os.remove("newPoints")
     os.remove("posterior_samples")
     os.remove("weights")
 
@@ -67,7 +66,6 @@ def test_nested_sampler_rejection():
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")
     os.remove("logL_birth")
-    os.remove("newPoints")
     os.remove("posterior_samples")
     os.remove("weights")
 
@@ -100,6 +98,5 @@ def test_nested_sampler_slice():
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")
     os.remove("logL_birth")
-    os.remove("newPoints")
     os.remove("posterior_samples")
     os.remove("weights")
