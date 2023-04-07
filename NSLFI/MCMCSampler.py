@@ -125,9 +125,8 @@ class Slice(Sampler):
                                                          cholesky=cholesky)
             else:
                 # rescale bounds if point is not within contour or prior
-                dist_proposal = torch.linalg.norm(x_l - intermediate_sample)
-                dist_origin = torch.linalg.norm(x_l - current_sample)
-                if dist_proposal > dist_origin:
+                # dot product for angle check between vectors
+                if torch.dot((intermediate_sample - current_sample).squeeze(), (x_r - current_sample).squeeze()) > 0:
                     x_r = intermediate_sample.clone()
                 else:
                     x_l = intermediate_sample.clone()
