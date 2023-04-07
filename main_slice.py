@@ -9,7 +9,8 @@ from NSLFI.NestedSampler import nested_sampling
 def main():
     torch.random.manual_seed(234)
     np.random.seed(234)
-
+    samplerType = "Slice"
+    # samplerType = "Metropolis"
     logZs = []
     logZsErr = []
     maxDim = 20
@@ -28,7 +29,7 @@ def main():
         livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
 
         logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
-                               nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Slice",
+                               nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype=samplerType,
                                keep_chain=False,
                                rounds=0)
         logZs.append(logZ["log Z mean"])
@@ -37,11 +38,11 @@ def main():
     plt.figure()
     plt.plot([x for x in range(2, maxDim + 1)], logZs)
     plt.errorbar([x for x in range(2, maxDim + 1)], logZs, yerr=logZsErr, fmt='o')
-    plt.title("Slice sampler evidences for Gaussian likelihood with uniform prior")
+    plt.title(f"{samplerType} sampler evidences for Gaussian likelihood with uniform prior")
     plt.xlabel("Dimension")
     plt.ylabel("log Z")
     plt.show()
-    plt.savefig("slice_gaussian.pdf")
+    plt.savefig(f"{samplerType}_gaussian.pdf")
 
 
 if __name__ == "__main__":
