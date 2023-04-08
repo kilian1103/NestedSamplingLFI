@@ -105,17 +105,17 @@ class Slice(Sampler):
         for i in range(nrepeat * self.ndim):
             # sample along slice
             u = torch.rand(1)
-            intermediate_sample = u * x_l + (1 - u) * x_r
+            proposal_sample = u * x_l + (1 - u) * x_r
 
-            withinPrior = torch.logical_and(torch.greater(intermediate_sample, lower),
-                                            torch.less(intermediate_sample, upper)).all()
-            logLike_prop = self.logLikelihood(intermediate_sample)
+            withinPrior = torch.logical_and(torch.greater(proposal_sample, lower),
+                                            torch.less(proposal_sample, upper)).all()
+            logLike_prop = self.logLikelihood(proposal_sample)
             withinContour = logLike_prop > minlogLike
             if withinPrior and withinContour:
                 # accept sample
                 if keep_chain:
-                    chain.append((intermediate_sample, logLike_prop))
-                current_sample = intermediate_sample.clone()
+                    chain.append((proposal_sample, logLike_prop))
+                current_sample = proposal_sample.clone()
                 logLike = logLike_prop.clone()
                 # slice along new n_vector
                 x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
@@ -124,10 +124,10 @@ class Slice(Sampler):
             else:
                 # rescale bounds if point is not within contour or prior
                 # dot product for angle check between vectors
-                if torch.dot((intermediate_sample - current_sample).squeeze(), (x_r - current_sample).squeeze()) > 0:
-                    x_r = intermediate_sample.clone()
+                if torch.dot((proposal_sample - current_sample).squeeze(), (x_r - current_sample).squeeze()) > 0:
+                    x_r = proposal_sample.clone()
                 else:
-                    x_l = intermediate_sample.clone()
+                    x_l = proposal_sample.clone()
         if keep_chain:
             return chain
         else:
