@@ -97,9 +97,9 @@ def execute():
     class Network(swyft.SwyftModule):
         def __init__(self):
             super().__init__()
-            #  self.logratios1 = swyft.LogRatioEstimator_1dim(num_features=2, num_params=2, varnames='z',
+            #  self.logratios1 = swyft.LogRatioEstimator_1dim(num_features=2, num_params=2, varnames=targetkey,
             #  dropout=0.2, hidden_features=128)
-            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=2, marginals=((0, 1),), varnames='z',
+            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=2, marginals=((0, 1),), varnames=targetkey,
                                                            dropout=dropout, hidden_features=128, Lmax=8)
 
         def forward(self, A, B):
@@ -131,7 +131,7 @@ def execute():
         network = network.load_from_checkpoint(checkpoint_path)
     wandb.finish()
     # get posterior samples
-    prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=['z'])
+    prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[targetkey])
     predictions = trainer.infer(network, obs, prior_samples)
     plt.figure()
     swyft.corner(predictions, ["z[0]", "z[1]"], bins=50, smooth=1)
