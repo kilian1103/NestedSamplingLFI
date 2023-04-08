@@ -13,4 +13,8 @@ class NRE_Settings:
         self.observation_filename = f"{self.base_path}/observation.npy"
         self.obsKey = "x"
         self.targetKey = "z"
+        self.num_features = 2
         self.dropout = 0.3
+        self.early_stopping_patience = 3
+        self.max_epochs = 20
+        self.NRE_num_retrain_rounds = 3

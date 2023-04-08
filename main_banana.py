@@ -34,7 +34,7 @@ def execute():
     nreSettings = NRE_Settings(base_path=root)
     nreSettings.n_training_samples = 30_000
     nreSettings.n_weighted_samples = 10_000
-    nreSettings.trainmode = True
+    nreSettings.trainmode = False
     obskey = nreSettings.obsKey
     targetkey = nreSettings.targetKey
     dropout = nreSettings.dropout
@@ -43,12 +43,12 @@ def execute():
     # NS rounds, 0 is default NS run
     rounds = 1
     # Retrain rounds
-    retrain_rounds = 2
+    retrain_rounds = nreSettings.NRE_num_retrain_rounds
     keep_chain = True
     samplerType = "Slice"
     # define forward model dimensions
     bimodal = False
-    nParam = 2
+    nParam = nreSettings.num_features
     # true parameters of simulator
     obs = swyft.Sample(x=np.array(nParam * [0]))
     # uniform prior for theta_i
@@ -99,7 +99,9 @@ def execute():
             super().__init__()
             #  self.logratios1 = swyft.LogRatioEstimator_1dim(num_features=2, num_params=2, varnames=targetkey,
             #  dropout=0.2, hidden_features=128)
-            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=2, marginals=((0, 1),), varnames=targetkey,
+            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=nreSettings.num_features, marginals=(
+                tuple(dim for dim in range(nreSettings.num_features)),),
+                                                           varnames=targetkey,
                                                            dropout=dropout, hidden_features=128, Lmax=8)
 
         def forward(self, A, B):
@@ -110,13 +112,15 @@ def execute():
     wandb.init(
         # set the wandb project where this run will be logged
         project=wandb_project_name, name="round_0", sync_tensorboard=True)
-    early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0., patience=3, mode='min')
+    early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
+                                            patience=nreSettings.early_stopping_patience, mode='min')
     lr_monitor = LearningRateMonitor(logging_interval='step')
     checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
                                           filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
 
-    trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=20, precision=64, enable_progress_bar=True,
+    trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
+                                 precision=64, enable_progress_bar=True,
                                  default_root_dir=nreSettings.base_path, logger=tb_logger,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
@@ -164,12 +168,14 @@ def execute():
             out.append(result)
         out = collate_output(out)
         nextRoundSamples = swyft.Samples(out)
-        early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0., patience=3, mode='min')
+        early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
+                                                patience=nreSettings.early_stopping_patience, mode='min')
         lr_monitor = LearningRateMonitor(logging_interval='step')
         checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
                                               filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
         tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
-        trainer = swyft.SwyftTrainer(accelerator='cpu', devices=1, max_epochs=20, precision=64,
+        trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
+                                     precision=64,
                                      enable_progress_bar=True,
                                      default_root_dir=nreSettings.base_path, logger=tb_logger,
                                      callbacks=[early_stopping_callback, lr_monitor,
