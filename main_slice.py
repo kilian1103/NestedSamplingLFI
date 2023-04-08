@@ -41,9 +41,7 @@ def main():
     plt.title(f"{samplerType} sampler evidences for Gaussian likelihood with uniform prior")
     plt.xlabel("Dimension")
     plt.ylabel("log Z")
-    plt.show()
     plt.savefig(f"{samplerType}_gaussian.pdf")
 
-
-if __name__ == "__main__":
-    main()
+    if __name__ == "__main__":
+        main()
