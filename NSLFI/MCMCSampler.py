@@ -18,10 +18,9 @@ class Sampler:
     def getSampler(self, type: str):
         return self.samplers[type](prior=self.prior, logLikelihood=self.logLikelihood)
 
-
-@abstractmethod
-def sample(self, **kwargs) -> List[torch.tensor]:
-    raise NotImplementedError("This is an abstract method, please implement an appropriate sampling class")
+    @abstractmethod
+    def sample(self, **kwargs) -> List[torch.tensor]:
+        raise NotImplementedError("This is an abstract method, please implement an appropriate sampling class")
 
 
 class Metropolis(Sampler):
