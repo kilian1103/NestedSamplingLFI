@@ -11,12 +11,14 @@ class Sampler:
         self.prior = prior
         self.logLikelihood = logLikelihood
         self.ndim = len(prior)
-        self.samplers = {"Metropolis": Metropolis,
-                         "Rejection": Rejection,
-                         "Slice": Slice}
+        self._samplers = {"Metropolis": Metropolis,
+                          "Rejection": Rejection,
+                          "Slice": Slice}
+        self.lower = torch.tensor([val.low for val in self.prior.values()])
+        self.upper = torch.tensor([val.high for val in self.prior.values()])
 
     def getSampler(self, type: str):
-        return self.samplers[type](prior=self.prior, logLikelihood=self.logLikelihood)
+        return self._samplers[type](prior=self.prior, logLikelihood=self.logLikelihood)
 
     @abstractmethod
     def sample(self, **kwargs) -> List[torch.tensor]:
@@ -32,18 +34,11 @@ class Metropolis(Sampler):
         random_index = torch.randint(low=0, high=len(livepoints), size=(1,))
         current_sample = livepoints[random_index].clone()
         logLike = livelikes[random_index].clone()
-        lower = torch.zeros(self.ndim)
-        upper = torch.zeros(self.ndim)
         chain = []
-        for i, val in enumerate(self.prior.values()):
-            low, up = val.low, val.high
-            lower[i] = low
-            upper[i] = up
-
         for i in range(nrepeat * self.ndim):
             proposal_sample = MultivariateNormal(loc=current_sample, covariance_matrix=cov).sample()
-            withinPrior = torch.logical_and(torch.greater(proposal_sample, lower),
-                                            torch.less(proposal_sample, upper)).all()
+            withinPrior = torch.logical_and(torch.greater(proposal_sample, self.lower),
+                                            torch.less(proposal_sample, self.upper)).all()
             logLike_prop = self.logLikelihood(proposal_sample)
             withinContour = logLike_prop > minlogLike
             if withinPrior and withinContour:
@@ -62,12 +57,6 @@ class Rejection(Sampler):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
     def sample(self, minlogLike: torch.tensor, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
-        lower = torch.zeros(self.ndim)
-        upper = torch.zeros(self.ndim)
-        for i, val in enumerate(self.prior.values()):
-            low, up = val.low, val.high
-            lower[i] = low
-            upper[i] = up
         while True:
             proposal_sample = Uniform(low=0, high=1).sample(sample_shape=(self.ndim,))
             logLike_prop = self.logLikelihood(proposal_sample)
@@ -86,12 +75,6 @@ class Slice(Sampler):
 
         chain = []  # list of accepted samples
         # set up prior bounds for checking if sample is within prior
-        lower = torch.zeros(self.ndim)
-        upper = torch.zeros(self.ndim)
-        for i, val in enumerate(self.prior.values()):
-            low, up = val.low, val.high
-            lower[i] = low
-            upper[i] = up
         # choose randomly existing livepoint satisfying likelihood constraint
         random_index = torch.randint(low=0, high=len(livepoints), size=(1,))
         current_sample = livepoints[random_index].clone()
@@ -107,8 +90,8 @@ class Slice(Sampler):
             u = torch.rand(1)
             proposal_sample = u * x_l + (1 - u) * x_r
 
-            withinPrior = torch.logical_and(torch.greater(proposal_sample, lower),
-                                            torch.less(proposal_sample, upper)).all()
+            withinPrior = torch.logical_and(torch.greater(proposal_sample, self.lower),
+                                            torch.less(proposal_sample, self.upper)).all()
             logLike_prop = self.logLikelihood(proposal_sample)
             withinContour = logLike_prop > minlogLike
             if withinPrior and withinContour:
