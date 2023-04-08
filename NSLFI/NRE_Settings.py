@@ -11,3 +11,6 @@ class NRE_Settings:
         self.n_weighted_samples = 10_000
         self.base_path = base_path
         self.observation_filename = f"{self.base_path}/observation.npy"
+        self.obsKey = "x"
+        self.targetKey = "z"
+        self.dropout = 0.3

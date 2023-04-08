@@ -6,13 +6,13 @@ import numpy as np
 import scipy.stats as stats
 import swyft
 import torch
-import wandb
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output
 
 import NSLFI.NestedSampler
+import wandb
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.Swyft_NRE_Wrapper import NRE
 
@@ -25,7 +25,6 @@ def execute():
                         filemode="w")
     logger = logging.getLogger()
     logger.info('Started')
-    dropout = 0.3
     root = "swyft_torch_slice_fast"
     try:
         os.makedirs(root)
@@ -36,6 +35,10 @@ def execute():
     nreSettings.n_training_samples = 30_000
     nreSettings.n_weighted_samples = 10_000
     nreSettings.trainmode = True
+    obskey = nreSettings.obsKey
+    targetkey = nreSettings.targetKey
+    dropout = nreSettings.dropout
+
     wandb_project_name = "NSNRE"
     # NS rounds, 0 is default NS run
     rounds = 1
@@ -76,15 +79,15 @@ def execute():
             return z
 
         def build(self, graph):
-            z = graph.node("z", self.z_sampler)
-            x = graph.node("x", lambda z: self.f(z) + np.random.randn(2), z)
+            z = graph.node(targetkey, self.z_sampler)
+            x = graph.node(obskey, lambda z: self.f(z) + np.random.randn(2), z)
             l = graph.node("l", lambda z: -stats.norm.logpdf(self.f(z)).sum(),
                            z)  # return -ln p(x=0|z) for cross-checks
 
     sim = Simulator(bounds_z=None, bimodal=bimodal)
     samples = sim.sample(nreSettings.n_training_samples)
     dm = swyft.SwyftDataModule(samples, fractions=[0.8, 0.1, 0.1], num_workers=0, batch_size=64)
-    plt.tricontour(samples['z'][:, 0], samples['z'][:, 1], samples['l'] - samples['l'].min(), levels=[0, 1, 4])
+    plt.tricontour(samples[targetkey][:, 0], samples[obskey][:, 1], samples['l'] - samples['l'].min(), levels=[0, 1, 4])
     if bimodal:
         plt.ylim(-0.55, 0.55)
     else:
@@ -100,7 +103,7 @@ def execute():
                                                            dropout=dropout, hidden_features=128, Lmax=8)
 
         def forward(self, A, B):
-            return self.logratios2(A['x'], B['z'])
+            return self.logratios2(A[obskey], B[targetkey])
 
     network = Network()
     # network = torch.compile(network)
@@ -137,14 +140,14 @@ def execute():
 
     # wrap NRE object
     trained_NRE = NRE(network=network, prior=prior, nreSettings=nreSettings, obs=obs,
-                      livepoints=torch.tensor(samples["z"]))
+                      livepoints=torch.tensor(samples[targetkey]))
     with torch.no_grad():
-        output = NSLFI.NestedSamplerTorch.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
-                                                          livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
-                                                          stop_criterion=1e-3,
-                                                          samplertype=samplerType, rounds=rounds, root=root,
-                                                          nsamples=nreSettings.n_training_samples,
-                                                          keep_chain=keep_chain)
+        output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
+                                                     livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
+                                                     stop_criterion=1e-3,
+                                                     samplertype=samplerType, rounds=rounds, root=root,
+                                                     nsamples=nreSettings.n_training_samples,
+                                                     keep_chain=keep_chain)
 
     def retrain_next_round(root: str, nextRoundPoints: torch.tensor):
         try:
@@ -154,8 +157,8 @@ def execute():
         out = []
         for z in nextRoundPoints.numpy().squeeze():
             trace = dict()
-            trace["z"] = z
-            sim.graph["x"].evaluate(trace)
+            trace[targetkey] = z
+            sim.graph[obskey].evaluate(trace)
             sim.graph["l"].evaluate(trace)
             result = sim.transform_samples(trace)
             out.append(result)
@@ -176,7 +179,7 @@ def execute():
         # network = torch.compile(network)
         trainer.fit(network, dm)
         # get posterior samples
-        prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=['z'])
+        prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[targetkey])
         predictions = trainer.infer(network, obs, prior_samples)
         plt.figure()
         swyft.corner(predictions, ["z[0]", "z[1]"], bins=50, smooth=1)
@@ -184,15 +187,15 @@ def execute():
         plt.show()
         # wrap NRE object
         trained_NRE = NRE(network=network, prior=prior, nreSettings=nreSettings, obs=obs,
-                          livepoints=torch.tensor(nextRoundSamples["z"]))
+                          livepoints=torch.tensor(nextRoundSamples[targetkey]))
         with torch.no_grad():
-            output = NSLFI.NestedSamplerTorch.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
-                                                              livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
-                                                              stop_criterion=1e-3, rounds=1,
-                                                              root=root,
-                                                              samplertype=samplerType,
-                                                              nsamples=nreSettings.n_training_samples,
-                                                              keep_chain=keep_chain)
+            output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
+                                                         livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
+                                                         stop_criterion=1e-3, rounds=1,
+                                                         root=root,
+                                                         samplertype=samplerType,
+                                                         nsamples=nreSettings.n_training_samples,
+                                                         keep_chain=keep_chain)
 
     for rd in range(1, retrain_rounds + 1):
         logger.info("retraining round: " + str(rd))
