@@ -111,7 +111,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
             deadpoints_logL.append(logLikelihood)
             deadpoints_birthlogL.append(deadpoint_birthlogL)
             weights.append(torch.mean(logX_current) - torch.log(nlive))
-        torch.save(f=f"{root}/weights", obj=torch.tensor(weights))
+        torch.save(f=f"{root}/weights", obj=torch.stack(weights))
         torch.save(f=f"{root}/posterior_samples", obj=torch.stack(deadpoints))
         torch.save(f=f"{root}/logL", obj=torch.stack(deadpoints_logL))
         torch.save(f=f"{root}/logL_birth", obj=torch.stack(deadpoints_birthlogL))
