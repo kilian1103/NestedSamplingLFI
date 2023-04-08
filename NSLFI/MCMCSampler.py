@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from typing import Any, Dict, List, Tuple
 
-import numpy as np
 import torch
 from scipy.stats import special_ortho_group
 from torch.distributions import MultivariateNormal, Uniform
@@ -100,7 +99,7 @@ class Slice(Sampler):
         logLike = livelikes[random_index].clone()
 
         # get random orthonormal basis to slice on
-        ortho_norm = special_ortho_group.rvs(dim=self.ndim)
+        ortho_norm = torch.tensor(special_ortho_group.rvs(dim=self.ndim))
         x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
                                                  minlogLike=minlogLike, ortho_norm=ortho_norm, cholesky=cholesky)
 
@@ -136,11 +135,11 @@ class Slice(Sampler):
             return [(current_sample, logLike)]
 
     def _extend_nd_interval(self, current_sample: torch.tensor, step_size: float, minlogLike: torch.tensor,
-                            ortho_norm: np.ndarray, cholesky: torch.tensor) -> Tuple[
+                            ortho_norm: torch.tensor, cholesky: torch.tensor) -> Tuple[
         torch.tensor, torch.tensor, torch.tensor]:
         # chose random orthonorm axis
         randIdx = torch.randint(low=0, high=self.ndim, size=(1,))
-        n_vec = torch.tensor(ortho_norm[randIdx])
+        n_vec = ortho_norm[randIdx].squeeze()
         n_dir = torch.matmul(cholesky, n_vec)
         x_l = current_sample.clone()
         x_r = current_sample.clone()
