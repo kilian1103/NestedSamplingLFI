@@ -103,23 +103,18 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
         logZ_total = scipy.special.logsumexp(logZ_array, axis=0)
 
         # convert surviving livepoints to deadpoints
-        livepoints = livepoints.tolist()
-        logLikelihoods = logLikelihoods.tolist()
-        while len(logLikelihoods) > 0:
-            minlogLike = min(logLikelihoods)
-            index = logLikelihoods.index(minlogLike)
-
-            deadpoint = torch.tensor(livepoints.pop(index))
-            logLikelihoods.pop(index)
-
+        samples = list(zip(livepoints, logLikelihoods, livepoints_birthlogL))
+        samples.sort(key=lambda x: x[1], reverse=True)  # sort after logL
+        while len(samples) > 0:
+            deadpoint, logLikelihood, deadpoint_birthlogL = samples.pop()
             deadpoints.append(deadpoint)
-            deadpoints_logL.append(minlogLike)
-            deadpoints_birthlogL.append(livepoints_birthlogL[index])
+            deadpoints_logL.append(logLikelihood)
+            deadpoints_birthlogL.append(deadpoint_birthlogL)
             weights.append(torch.mean(logX_current) - torch.log(nlive))
         torch.save(f=f"{root}/weights", obj=torch.tensor(weights))
         torch.save(f=f"{root}/posterior_samples", obj=torch.stack(deadpoints))
-        torch.save(f=f"{root}/logL", obj=torch.tensor(deadpoints_logL))
-        torch.save(f=f"{root}/logL_birth", obj=torch.tensor(deadpoints_birthlogL))
+        torch.save(f=f"{root}/logL", obj=torch.stack(deadpoints_logL))
+        torch.save(f=f"{root}/logL_birth", obj=torch.stack(deadpoints_birthlogL))
         print(f"Algorithm terminated after {iteration} iterations!")
         return {"log Z mean": float(torch.mean(torch.tensor(logZ_total))),
                 "log Z std": float(torch.std(torch.tensor(logZ_total)))}
