@@ -30,8 +30,7 @@ def main():
 
         logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
                                nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype=samplerType,
-                               keep_chain=False,
-                               rounds=0)
+                               keep_chain=False, round_mode=False)
         logZs.append(logZ["log Z mean"])
         logZsErr.append(logZ["log Z std"])
 
@@ -43,5 +42,6 @@ def main():
     plt.ylabel("log Z")
     plt.savefig(f"{samplerType}_gaussian.pdf")
 
-    if __name__ == "__main__":
-        main()
+
+if __name__ == "__main__":
+    main()
