@@ -1,11 +1,11 @@
 class NRE_Settings:
-    def __init__(self, base_path):
+    def __init__(self):
         """NRE initialisation.
 
         Settings for the (M)NRE algorithm
 
         """
-        self.base_path = base_path
+        self.root = "swyft_torch_slice_fast"
         self.n_training_samples = 10_000
         self.n_weighted_samples = 10_000
         self.datamodule_fractions = [0.8, 0.1, 0.1]
@@ -19,7 +19,7 @@ class NRE_Settings:
         self.max_epochs = 20
         self.NRE_num_retrain_rounds = 2
         self.wandb_project_name = "NSNRE_REEFACTOR"
-        self.observation_filename = f"{self.base_path}/observation.npy"
+        self.observation_filename = f"{self.root}/observation.npy"
         self.ns_sampler = "Slice"
         self.ns_round_mode = True
         self.ns_num_rounds = 1

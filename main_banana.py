@@ -25,13 +25,12 @@ def execute():
                         filemode="w")
     logger = logging.getLogger()
     logger.info('Started')
-    root = "swyft_torch_slice_fast"
+    nreSettings = NRE_Settings()
+    root = nreSettings.root
     try:
         os.makedirs(root)
     except OSError:
         logger.info("root folder already exists!")
-
-    nreSettings = NRE_Settings(base_path=root)
     nreSettings.n_training_samples = 30_000
     nreSettings.n_weighted_samples = 10_000
     nreSettings.trainmode = True
