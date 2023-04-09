@@ -8,7 +8,7 @@ from NSLFI.MCMCSampler import Sampler
 
 
 def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch.tensor, nsim: int,
-                    stop_criterion: float, samplertype: str, rounds=0, nsamples=2000,
+                    stop_criterion: float, samplertype: str, round_mode=False, num_rounds=3, nsamples=2000,
                     root=".", keep_chain=False) -> Dict[str, float]:
     """
     :param logLikelihood: loglikelihood function given parameters for obs x
@@ -17,13 +17,14 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
     :param nsim: number of parallel NS contractions
     :param stop_criterion: evidence stopping criterion
     :param samplertype: MCMC sampler type to draw new proposal samples
-    :param rounds: # of rounds of NS run, 0 = standard NS run
+    :param rounds: boolean to choose if standard NS run or NS run with multiple rounds  (default: False)
+    :param num_rounds: number of rounds to run NS (default: 3) if rounds set to True
     :param nsamples: number of samples to draw per round
     :param root: root file directory to store results
     :param keep_chain: keep intermediate MCMC chain of samples
     :return:
     """
-    if rounds == 0:
+    if not round_mode:
         # standard NS run: 1 sample in 1 sample out
         # initialisation
         logZ_previous = -torch.inf * torch.ones(nsim)  # Z = 0
@@ -122,7 +123,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
 
     else:
         # NS run with rounds, and constant median Likelihood constraint for each round
-        for rd in range(rounds):
+        for rd in range(num_rounds):
             logLikelihoods = logLikelihood(livepoints)
 
             # dynamic storage -> lists

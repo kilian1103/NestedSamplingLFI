@@ -30,7 +30,7 @@ def test_nested_sampler_metropolis():
 
     logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
                            nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Metropolis",
-                           keep_chain=False, rounds=0)
+                           keep_chain=False)
     print(logZ)
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")
@@ -92,8 +92,7 @@ def test_nested_sampler_slice():
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
 
     logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
-                           nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Slice", keep_chain=False,
-                           rounds=0)
+                           nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Slice", keep_chain=False)
     print(logZ)
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")

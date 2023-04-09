@@ -42,9 +42,9 @@ def execute():
     retrain_rounds = nreSettings.NRE_num_retrain_rounds
 
     # NS settings, 0 is default NS run
-    rounds = 1
-    keep_chain = True
-    samplerType = "Slice"
+    round_mode = nreSettings.ns_round_mode
+    keep_chain = nreSettings.ns_keep_chain
+    samplerType = nreSettings.ns_sampler
 
     # define forward model settings
     nParam = nreSettings.num_features
@@ -148,8 +148,9 @@ def execute():
     with torch.no_grad():
         output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                      livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
-                                                     stop_criterion=1e-3,
-                                                     samplertype=samplerType, rounds=rounds, root=root,
+                                                     stop_criterion=nreSettings.ns_stopping_criterion,
+                                                     samplertype=samplerType, round_mode=round_mode,
+                                                     num_rounds=retrain_rounds, root=root,
                                                      nsamples=nreSettings.n_training_samples,
                                                      keep_chain=keep_chain)
 
@@ -198,7 +199,9 @@ def execute():
         with torch.no_grad():
             output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                          livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
-                                                         stop_criterion=1e-3, rounds=1,
+                                                         stop_criterion=nreSettings.ns_stopping_criterion,
+                                                         round_mode=round_mode,
+                                                         num_rounds=retrain_rounds,
                                                          root=root,
                                                          samplertype=samplerType,
                                                          nsamples=nreSettings.n_training_samples,

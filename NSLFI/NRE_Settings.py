@@ -18,5 +18,10 @@ class NRE_Settings:
         self.early_stopping_patience = 3
         self.max_epochs = 20
         self.NRE_num_retrain_rounds = 3
-        self.wandb_project_name = "NSNRE"
+        self.wandb_project_name = "NSNRE_REEFACTOR"
         self.observation_filename = f"{self.base_path}/observation.npy"
+        self.ns_sampler = "Slice"
+        self.ns_round_mode = False
+        self.ns_num_rounds = 3
+        self.ns_keep_chain = True
+        self.ns_stopping_criterion = 1e-3
