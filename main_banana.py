@@ -34,22 +34,22 @@ def execute():
     nreSettings = NRE_Settings(base_path=root)
     nreSettings.n_training_samples = 30_000
     nreSettings.n_weighted_samples = 10_000
-    nreSettings.trainmode = False
+    nreSettings.trainmode = True
     obskey = nreSettings.obsKey
     targetkey = nreSettings.targetKey
     dropout = nreSettings.dropout
-
-    wandb_project_name = "NSNRE"
-    # NS rounds, 0 is default NS run
-    rounds = 1
-    # Retrain rounds
+    wandb_project_name = nreSettings.wandb_project_name
     retrain_rounds = nreSettings.NRE_num_retrain_rounds
+
+    # NS settings, 0 is default NS run
+    rounds = 1
     keep_chain = True
     samplerType = "Slice"
-    # define forward model dimensions
-    bimodal = False
+
+    # define forward model settings
     nParam = nreSettings.num_features
-    # true parameters of simulator
+    bimodal = False
+    # observatioon for simulator
     obs = swyft.Sample(x=np.array(nParam * [0]))
     # uniform prior for theta_i
     lower = -1
@@ -86,7 +86,7 @@ def execute():
 
     sim = Simulator(bounds_z=None, bimodal=bimodal)
     samples = sim.sample(nreSettings.n_training_samples)
-    dm = swyft.SwyftDataModule(samples, fractions=[0.8, 0.1, 0.1], num_workers=0, batch_size=64)
+    dm = swyft.SwyftDataModule(samples, fractions=nreSettings.datamodule_fractions, num_workers=0, batch_size=64)
     plt.tricontour(samples[targetkey][:, 0], samples[obskey][:, 1], samples['l'] - samples['l'].min(), levels=[0, 1, 4])
     if bimodal:
         plt.ylim(-0.55, 0.55)
@@ -180,7 +180,8 @@ def execute():
                                      default_root_dir=nreSettings.base_path, logger=tb_logger,
                                      callbacks=[early_stopping_callback, lr_monitor,
                                                 checkpoint_callback])
-        dm = swyft.SwyftDataModule(nextRoundSamples, fractions=[0.8, 0.1, 0.1], num_workers=0, batch_size=64)
+        dm = swyft.SwyftDataModule(nextRoundSamples, fractions=nreSettings.datamodule_fractions, num_workers=0,
+                                   batch_size=64)
         network = Network()
         # network = torch.compile(network)
         trainer.fit(network, dm)
