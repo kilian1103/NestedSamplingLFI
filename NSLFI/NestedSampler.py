@@ -153,8 +153,8 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: torch
                     deadpoints_logL.append(logLike)
                     if len(deadpoints) == nsamples:
                         break
-            torch.save(f=f"{root}/posterior_samples_rounds_{rd}", obj=torch.stack(deadpoints))
+            torch.save(f=f"{root}/posterior_samples_rounds_{rd}", obj=torch.stack(deadpoints).squeeze())
             torch.save(f=f"{root}/logL_rounds_{rd}", obj=torch.tensor(deadpoints_logL))
             torch.save(f=f"{root}/logL_birth_rounds_{rd}", obj=torch.tensor(deadpoints_birthlogL))
-            livepoints = torch.stack(deadpoints.copy())
+            livepoints = torch.stack(deadpoints.copy()).squeeze()
         return {"log Z mean": 0, "log Z std": 0}
