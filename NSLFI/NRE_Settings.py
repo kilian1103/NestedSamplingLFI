@@ -17,7 +17,7 @@ class NRE_Settings:
         self.dropout = 0.3
         self.early_stopping_patience = 3
         self.max_epochs = 20
-        self.NRE_num_retrain_rounds = 3
+        self.NRE_num_retrain_rounds = 2
         self.wandb_project_name = "NSNRE_REEFACTOR"
         self.observation_filename = f"{self.base_path}/observation.npy"
         self.ns_sampler = "Slice"
