@@ -21,7 +21,7 @@ class NRE_Settings:
         self.wandb_project_name = "NSNRE_REEFACTOR"
         self.observation_filename = f"{self.base_path}/observation.npy"
         self.ns_sampler = "Slice"
-        self.ns_round_mode = False
+        self.ns_round_mode = True
         self.ns_num_rounds = 1
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3
