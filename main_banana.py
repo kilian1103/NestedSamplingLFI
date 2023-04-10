@@ -142,8 +142,7 @@ def execute():
     plt.show()
 
     # wrap NRE object
-    trained_NRE = NRE(network=network, prior=prior, nreSettings=nreSettings, obs=obs,
-                      livepoints=torch.tensor(samples[targetkey]))
+    trained_NRE = NRE(network=network, nreSettings=nreSettings, obs=obs)
     with torch.no_grad():
         output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                      livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
@@ -193,8 +192,7 @@ def execute():
         plt.savefig(f"{root}/NRE_predictions.pdf")
         plt.show()
         # wrap NRE object
-        trained_NRE = NRE(network=network, prior=prior, nreSettings=nreSettings, obs=obs,
-                          livepoints=torch.tensor(nextRoundSamples[targetkey]))
+        trained_NRE = NRE(network=network, nreSettings=nreSettings, obs=obs)
         with torch.no_grad():
             output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                          livepoints=trained_NRE.livepoints, prior=prior, nsim=100,

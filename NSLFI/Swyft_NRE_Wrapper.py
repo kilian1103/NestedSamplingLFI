@@ -1,5 +1,3 @@
-from typing import Dict, Any
-
 import swyft
 import torch
 
@@ -7,11 +5,8 @@ from NSLFI.NRE_Settings import NRE_Settings
 
 
 class NRE:
-    def __init__(self, network: swyft.SwyftModule, prior: Dict[str, Any],
-                 nreSettings: NRE_Settings, obs: swyft.Sample, livepoints: torch.tensor):
+    def __init__(self, network: swyft.SwyftModule, nreSettings: NRE_Settings, obs: swyft.Sample):
         self.network = network.eval()
-        self.livepoints = livepoints
-        self.prior = prior
         self.nre_settings = nreSettings
         self.obs = {
             self.nre_settings.obsKey: torch.tensor(obs[self.nre_settings.obsKey]).type(torch.float64).unsqueeze(0)}
