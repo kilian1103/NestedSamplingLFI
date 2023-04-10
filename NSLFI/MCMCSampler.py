@@ -74,7 +74,6 @@ class Slice(Sampler):
                keep_chain=False, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
 
         chain = []  # list of accepted samples
-        # set up prior bounds for checking if sample is within prior
         # choose randomly existing livepoint satisfying likelihood constraint
         random_index = torch.randint(low=0, high=len(livepoints), size=(1,))
         current_sample = livepoints[random_index].clone()
