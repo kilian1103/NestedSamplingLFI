@@ -60,14 +60,14 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: Tenso
             deadpoints_birthlogL.append(livepoints_birthlogL[index].clone())
 
             # sample t's
-            ti_s = torch.tensor(np.random.power(a=nlive, size=nsim))
+            ti_s = torch.as_tensor(np.random.power(a=nlive, size=nsim))
             log_ti_s = torch.log(ti_s)
 
             # Calculate X contraction and weight
             logX_current = logX_previous + log_ti_s
             subtraction_coeff = torch.tensor([1, -1]).reshape(2, 1)
             logWeights = torch.stack([logX_previous, logX_current])
-            logWeight_current = torch.tensor(scipy.special.logsumexp(a=logWeights, b=subtraction_coeff, axis=0))
+            logWeight_current = torch.as_tensor(scipy.special.logsumexp(a=logWeights, b=subtraction_coeff, axis=0))
             logX_previous = logX_current.clone()
             weights.append(torch.mean(logWeight_current))
 
@@ -102,7 +102,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: Tenso
         finallogLikesum = torch.logsumexp(logLikelihoods, axis=0)
         logZ_current = -torch.log(nlive) + finallogLikesum + logX_current
         logZ_array = torch.stack([logZ_previous, logZ_current])
-        logZ_total = scipy.special.logsumexp(logZ_array, axis=0)
+        logZ_total = torch.as_tensor(scipy.special.logsumexp(logZ_array, axis=0))
 
         # convert surviving livepoints to deadpoints
         samples = list(zip(livepoints, logLikelihoods, livepoints_birthlogL))
@@ -119,8 +119,8 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: Tenso
         torch.save(f=f"{root}/logL", obj=torch.stack(deadpoints_logL))
         torch.save(f=f"{root}/logL_birth", obj=torch.stack(deadpoints_birthlogL))
         print(f"Algorithm terminated after {iteration} iterations!")
-        return {"log Z mean": float(torch.mean(torch.tensor(logZ_total))),
-                "log Z std": float(torch.std(torch.tensor(logZ_total)))}
+        return {"log Z mean": float(torch.mean(logZ_total)),
+                "log Z std": float(torch.std(logZ_total))}
 
     else:
         # NS run with rounds, and constant median Likelihood constraint for each round

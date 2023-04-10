@@ -81,7 +81,7 @@ class Slice(Sampler):
         logLike = livelikes[random_index].clone()
 
         # get random orthonormal basis to slice on
-        ortho_norm = torch.tensor(special_ortho_group.rvs(dim=self.ndim))
+        ortho_norm = torch.as_tensor(special_ortho_group.rvs(dim=self.ndim))
         x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
                                                  minlogLike=minlogLike, ortho_norm=ortho_norm, cholesky=cholesky)
 
