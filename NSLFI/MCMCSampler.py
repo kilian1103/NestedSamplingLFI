@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Tuple
 
 import torch
 from scipy.stats import special_ortho_group
+from torch import Tensor
 from torch.distributions import MultivariateNormal, Uniform
 
 
@@ -21,7 +22,7 @@ class Sampler:
         return self._samplers[type](prior=self.prior, logLikelihood=self.logLikelihood)
 
     @abstractmethod
-    def sample(self, **kwargs) -> List[torch.tensor]:
+    def sample(self, **kwargs) -> List[Tuple[Tensor, Tensor]]:
         raise NotImplementedError("This is an abstract method, please implement an appropriate sampling class")
 
 
@@ -29,8 +30,8 @@ class Metropolis(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike: torch.tensor, livepoints: torch.tensor, livelikes: torch.tensor, cov: torch.tensor,
-               nrepeat=5, keep_chain=False, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
+    def sample(self, minlogLike: Tensor, livepoints: Tensor, livelikes: Tensor, cov: Tensor,
+               nrepeat=5, keep_chain=False, **kwargs) -> List[Tuple[Tensor, Tensor]]:
         random_index = torch.randint(low=0, high=len(livepoints), size=(1,))
         current_sample = livepoints[random_index].clone()
         logLike = livelikes[random_index].clone()
@@ -56,7 +57,7 @@ class Rejection(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike: torch.tensor, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
+    def sample(self, minlogLike: Tensor, **kwargs) -> List[Tuple[Tensor, Tensor]]:
         while True:
             proposal_sample = Uniform(low=0, high=1).sample(sample_shape=(self.ndim,))
             logLike_prop = self.logLikelihood(proposal_sample)
@@ -69,9 +70,9 @@ class Slice(Sampler):
     def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
-    def sample(self, minlogLike: torch.tensor, livepoints: torch.tensor, livelikes: torch.tensor,
-               cholesky: torch.tensor, nrepeat=5, step_size=2,
-               keep_chain=False, **kwargs) -> List[Tuple[torch.tensor, torch.tensor]]:
+    def sample(self, minlogLike: Tensor, livepoints: Tensor, livelikes: Tensor,
+               cholesky: Tensor, nrepeat=5, step_size=2,
+               keep_chain=False, **kwargs) -> List[Tuple[Tensor, Tensor]]:
 
         chain = []  # list of accepted samples
         # choose randomly existing livepoint satisfying likelihood constraint
@@ -115,9 +116,8 @@ class Slice(Sampler):
         else:
             return [(current_sample, logLike)]
 
-    def _extend_nd_interval(self, current_sample: torch.tensor, step_size: float, minlogLike: torch.tensor,
-                            ortho_norm: torch.tensor, cholesky: torch.tensor) -> Tuple[
-        torch.tensor, torch.tensor, torch.tensor]:
+    def _extend_nd_interval(self, current_sample: Tensor, step_size: float, minlogLike: Tensor, ortho_norm: Tensor,
+                            cholesky: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         # chose random orthonorm axis
         randIdx = torch.randint(low=0, high=self.ndim, size=(1,))
         n_vec = ortho_norm[randIdx].squeeze()

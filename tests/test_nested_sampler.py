@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import torch
+from torch import Tensor
 from torch.distributions.multivariate_normal import MultivariateNormal
 
 from NSLFI.NestedSampler import nested_sampling
@@ -22,7 +23,7 @@ def test_nested_sampler_metropolis():
     cov = 0.01 * torch.eye(ndim)
     mvNormal = MultivariateNormal(loc=means, covariance_matrix=cov)
 
-    def logLikelihood(x) -> torch.tensor:
+    def logLikelihood(x) -> Tensor:
         return mvNormal.log_prob(x)
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
@@ -54,7 +55,7 @@ def test_nested_sampler_rejection():
     cov = 0.01 * torch.eye(ndim)
     mvNormal = MultivariateNormal(loc=means, covariance_matrix=cov)
 
-    def logLikelihood(x) -> torch.tensor:
+    def logLikelihood(x) -> Tensor:
         return mvNormal.log_prob(x)
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
@@ -85,7 +86,7 @@ def test_nested_sampler_slice():
     cov = 0.01 * torch.eye(ndim)
     mvNormal = MultivariateNormal(loc=means, covariance_matrix=cov)
 
-    def logLikelihood(x) -> torch.tensor:
+    def logLikelihood(x) -> Tensor:
         return mvNormal.log_prob(x)
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
