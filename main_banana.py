@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import swyft
 import torch
+import wandb
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -12,11 +13,10 @@ from swyft import collate_output
 from torch import Tensor
 
 import NSLFI.NestedSampler
-import wandb
+from NSLFI.NRE_NS_Wrapper import NRE
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_Simulator import Simulator
-from NSLFI.Swyft_NRE_Wrapper import NRE
 
 
 # from NSLFI.Swyft_NRE_Wrapper import NRE
