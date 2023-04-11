@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import swyft
 import torch
-import wandb
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -13,6 +12,7 @@ from swyft import collate_output
 from torch import Tensor
 
 import NSLFI.NestedSampler
+import wandb
 from NSLFI.NRE_NS_Wrapper import NRE
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
@@ -61,61 +61,7 @@ def execute():
     prior = {f"theta_{i}": theta_prior for i in range(nParam)}
 
     sim = Simulator(bounds_z=None, bimodal=bimodal, nreSettings=nreSettings)
-    samples = sim.sample(nreSettings.n_training_samples)
-    dm = swyft.SwyftDataModule(samples, fractions=nreSettings.datamodule_fractions, num_workers=0, batch_size=64)
-    plt.tricontour(samples[targetkey][:, 0], samples[obskey][:, 1], samples['l'] - samples['l'].min(), levels=[0, 1, 4])
-    if bimodal:
-        plt.ylim(-0.55, 0.55)
-    else:
-        plt.xlim(-0.5, 0.5)
-        plt.ylim(-0.8, 0.1)
-
-    network = Network(nreSettings)
-    # network = torch.compile(network)
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project=wandb_project_name, name="round_0", sync_tensorboard=True)
-    early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
-                                            patience=nreSettings.early_stopping_patience, mode='min')
-    lr_monitor = LearningRateMonitor(logging_interval='step')
-    checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
-                                          filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
-
-    trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
-                                 precision=64, enable_progress_bar=True,
-                                 default_root_dir=nreSettings.root, logger=tb_logger,
-                                 callbacks=[early_stopping_callback, lr_monitor,
-                                            checkpoint_callback])
-    # train MRE
-    if nreSettings.trainmode is True:
-        trainer.fit(network, dm)
-
-    # load NRE from file
-    else:
-        checkpoint_path = os.path.join(
-            f"swyft_torch_test_slice/lightning_logs/version_16795008/checkpoints/epoch=6-step=2625.ckpt")
-        network = network.load_from_checkpoint(checkpoint_path)
-    wandb.finish()
-    network_storage["round_0"] = network
-    # get posterior samples
-    prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[targetkey])
-    predictions = trainer.infer(network, obs, prior_samples)
-    plt.figure()
-    swyft.corner(predictions, ["z[0]", "z[1]"], bins=50, smooth=1)
-    plt.savefig(f"{root}/NRE_predictions.pdf")
-    plt.show()
-
-    # wrap NRE object
-    trained_NRE = NRE(network=network, nreSettings=nreSettings, obs=obs, livepoints=torch.as_tensor(samples[targetkey]))
-    with torch.no_grad():
-        output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
-                                                     livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
-                                                     stop_criterion=nreSettings.ns_stopping_criterion,
-                                                     samplertype=samplerType, round_mode=round_mode,
-                                                     num_rounds=retrain_rounds, root=root,
-                                                     nsamples=nreSettings.n_training_samples,
-                                                     keep_chain=keep_chain)
+    samples = torch.as_tensor(sim.sample(nreSettings.n_training_samples, targets=[targetkey])[targetkey])
 
     def retrain_next_round(root: str, nextRoundPoints: Tensor) -> Network:
         try:
@@ -163,24 +109,25 @@ def execute():
                                                          livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
                                                          stop_criterion=nreSettings.ns_stopping_criterion,
                                                          round_mode=round_mode,
-                                                         num_rounds=retrain_rounds,
+                                                         num_rounds=nreSettings.ns_num_rounds,
                                                          root=root,
                                                          samplertype=samplerType,
                                                          nsamples=nreSettings.n_training_samples,
                                                          keep_chain=keep_chain)
         return network
 
-    for rd in range(1, retrain_rounds + 1):
+    for rd in range(0, retrain_rounds + 1):
         logger.info("retraining round: " + str(rd))
         wandb.init(
             # set the wandb project where this run will be logged
             project=wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
-        nextRoundPoints = torch.load(f=f"{root}/posterior_samples_rounds_0")
-        newRoot = root + f"_rd_{rd}"
-        network = retrain_next_round(newRoot, nextRoundPoints)
+        network = retrain_next_round(root=root, nextRoundPoints=samples)
         network_storage[f"round_{rd}"] = network
-        root = newRoot
         wandb.finish()
+        nextSamples = torch.load(f=f"{root}/posterior_samples_rounds_0")
+        newRoot = root + f"_rd_{rd + 1}"
+        root = newRoot
+        samples = nextSamples
 
 
 if __name__ == '__main__':
