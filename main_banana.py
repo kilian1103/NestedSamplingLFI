@@ -28,17 +28,17 @@ def execute():
 
     network_storage = dict()
     # uniform prior for theta_i
-    lower = nreSettings.sim_prior_lower
-    upper = nreSettings.sim_prior_upper
-    theta_prior = torch.distributions.uniform.Uniform(low=lower, high=lower + upper)
+    theta_prior = torch.distributions.uniform.Uniform(low=nreSettings.sim_prior_lower,
+                                                      high=nreSettings.sim_prior_lower + nreSettings.sim_prior_upper)
     # wrap prior for NS sampling procedure
     prior = {f"theta_{i}": theta_prior for i in range(nreSettings.num_features)}
 
-    # define forward model settings
-    bimodal = False
     # observation for simulator
     obs = swyft.Sample(x=np.array(nreSettings.num_features * [0]))
+    # define forward model settings
+    bimodal = False
     sim = Simulator(bounds_z=None, bimodal=bimodal, nreSettings=nreSettings)
+    # generate samples using simulator
     samples = torch.as_tensor(
         sim.sample(nreSettings.n_training_samples, targets=[nreSettings.targetKey])[nreSettings.targetKey])
 
