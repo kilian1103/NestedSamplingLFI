@@ -3,17 +3,19 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.stats as stats
 import swyft
 import torch
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output
+from torch import Tensor
 
 import NSLFI.NestedSampler
 import wandb
+from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
+from NSLFI.NRE_Simulator import Simulator
 from NSLFI.Swyft_NRE_Wrapper import NRE
 
 
@@ -39,6 +41,7 @@ def execute():
     dropout = nreSettings.dropout
     wandb_project_name = nreSettings.wandb_project_name
     retrain_rounds = nreSettings.NRE_num_retrain_rounds
+    network_storage = dict()
 
     # NS settings, 0 is default NS run
     round_mode = nreSettings.ns_round_mode
@@ -51,39 +54,13 @@ def execute():
     # observatioon for simulator
     obs = swyft.Sample(x=np.array(nParam * [0]))
     # uniform prior for theta_i
-    lower = -1
-    upper = 2
+    lower = nreSettings.sim_prior_lower
+    upper = nreSettings.sim_prior_upper
     theta_prior = torch.distributions.uniform.Uniform(low=lower, high=lower + upper)
     # wrap prior for NS sampling procedure
     prior = {f"theta_{i}": theta_prior for i in range(nParam)}
 
-    class Simulator(swyft.Simulator):
-        def __init__(self, bounds_z=None, bimodal=bimodal):
-            super().__init__()
-            self.z_sampler = swyft.RectBoundSampler(
-                [stats.uniform(lower, upper),
-                 stats.uniform(lower, upper),
-                 ],
-                bounds=bounds_z
-            )
-            self.bimodal = bimodal
-
-        def f(self, z):
-            if self.bimodal:
-                if z[0] < 0:
-                    z = np.array([z[0] + 0.5, z[1] - 0.5])
-                else:
-                    z = np.array([z[0] - 0.5, -z[1] - 0.5])
-            z = 10 * np.array([z[0], 10 * z[1] + 100 * z[0] ** 2])
-            return z
-
-        def build(self, graph):
-            z = graph.node(targetkey, self.z_sampler)
-            x = graph.node(obskey, lambda z: self.f(z) + np.random.randn(2), z)
-            l = graph.node("l", lambda z: -stats.norm.logpdf(self.f(z)).sum(),
-                           z)  # return -ln p(x=0|z) for cross-checks
-
-    sim = Simulator(bounds_z=None, bimodal=bimodal)
+    sim = Simulator(bounds_z=None, bimodal=bimodal, nreSettings=nreSettings)
     samples = sim.sample(nreSettings.n_training_samples)
     dm = swyft.SwyftDataModule(samples, fractions=nreSettings.datamodule_fractions, num_workers=0, batch_size=64)
     plt.tricontour(samples[targetkey][:, 0], samples[obskey][:, 1], samples['l'] - samples['l'].min(), levels=[0, 1, 4])
@@ -93,20 +70,7 @@ def execute():
         plt.xlim(-0.5, 0.5)
         plt.ylim(-0.8, 0.1)
 
-    class Network(swyft.SwyftModule):
-        def __init__(self):
-            super().__init__()
-            #  self.logratios1 = swyft.LogRatioEstimator_1dim(num_features=2, num_params=2, varnames=targetkey,
-            #  dropout=0.2, hidden_features=128)
-            self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=nreSettings.num_features, marginals=(
-                tuple(dim for dim in range(nreSettings.num_features)),),
-                                                           varnames=targetkey,
-                                                           dropout=dropout, hidden_features=128, Lmax=8)
-
-        def forward(self, A, B):
-            return self.logratios2(A[obskey], B[targetkey])
-
-    network = Network()
+    network = Network(nreSettings)
     # network = torch.compile(network)
     wandb.init(
         # set the wandb project where this run will be logged
@@ -120,7 +84,7 @@ def execute():
 
     trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
                                  precision=64, enable_progress_bar=True,
-                                 default_root_dir=nreSettings.base_path, logger=tb_logger,
+                                 default_root_dir=nreSettings.root, logger=tb_logger,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
     # train MRE
@@ -133,6 +97,7 @@ def execute():
             f"swyft_torch_test_slice/lightning_logs/version_16795008/checkpoints/epoch=6-step=2625.ckpt")
         network = network.load_from_checkpoint(checkpoint_path)
     wandb.finish()
+    network_storage["round_0"] = network
     # get posterior samples
     prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[targetkey])
     predictions = trainer.infer(network, obs, prior_samples)
@@ -142,7 +107,7 @@ def execute():
     plt.show()
 
     # wrap NRE object
-    trained_NRE = NRE(network=network, nreSettings=nreSettings, obs=obs)
+    trained_NRE = NRE(network=network, nreSettings=nreSettings, obs=obs, livepoints=torch.as_tensor(samples[targetkey]))
     with torch.no_grad():
         output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                      livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
@@ -152,7 +117,7 @@ def execute():
                                                      nsamples=nreSettings.n_training_samples,
                                                      keep_chain=keep_chain)
 
-    def retrain_next_round(root: str, nextRoundPoints: torch.tensor):
+    def retrain_next_round(root: str, nextRoundPoints: Tensor) -> Network:
         try:
             os.makedirs(root)
         except OSError:
@@ -176,12 +141,12 @@ def execute():
         trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
                                      precision=64,
                                      enable_progress_bar=True,
-                                     default_root_dir=nreSettings.base_path, logger=tb_logger,
+                                     default_root_dir=nreSettings.root, logger=tb_logger,
                                      callbacks=[early_stopping_callback, lr_monitor,
                                                 checkpoint_callback])
         dm = swyft.SwyftDataModule(nextRoundSamples, fractions=nreSettings.datamodule_fractions, num_workers=0,
                                    batch_size=64)
-        network = Network()
+        network = Network(nreSettings=nreSettings)
         # network = torch.compile(network)
         trainer.fit(network, dm)
         # get posterior samples
@@ -192,7 +157,7 @@ def execute():
         plt.savefig(f"{root}/NRE_predictions.pdf")
         plt.show()
         # wrap NRE object
-        trained_NRE = NRE(network=network, nreSettings=nreSettings, obs=obs)
+        trained_NRE = NRE(network=network, nreSettings=nreSettings, obs=obs, livepoints=nextRoundPoints)
         with torch.no_grad():
             output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
                                                          livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
@@ -203,6 +168,7 @@ def execute():
                                                          samplertype=samplerType,
                                                          nsamples=nreSettings.n_training_samples,
                                                          keep_chain=keep_chain)
+        return network
 
     for rd in range(1, retrain_rounds + 1):
         logger.info("retraining round: " + str(rd))
@@ -211,7 +177,8 @@ def execute():
             project=wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
         nextRoundPoints = torch.load(f=f"{root}/posterior_samples_rounds_0")
         newRoot = root + f"_rd_{rd}"
-        retrain_next_round(newRoot, nextRoundPoints)
+        network = retrain_next_round(newRoot, nextRoundPoints)
+        network_storage[f"round_{rd}"] = network
         root = newRoot
         wandb.finish()
 

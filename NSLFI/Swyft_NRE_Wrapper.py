@@ -6,9 +6,10 @@ from NSLFI.NRE_Settings import NRE_Settings
 
 
 class NRE:
-    def __init__(self, network: swyft.SwyftModule, nreSettings: NRE_Settings, obs: swyft.Sample):
+    def __init__(self, network: swyft.SwyftModule, nreSettings: NRE_Settings, obs: swyft.Sample, livepoints: Tensor):
         self.network = network.eval()
         self.nre_settings = nreSettings
+        self.livepoints = livepoints
         self.obs = {
             self.nre_settings.obsKey: torch.tensor(obs[self.nre_settings.obsKey]).type(torch.float64).unsqueeze(0)}
 
