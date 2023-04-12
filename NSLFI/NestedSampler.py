@@ -32,7 +32,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: Tenso
         logX_previous = torch.zeros(nsim)  # X = 1
         iteration = 0
         logIncrease = 10  # evidence increase factor
-        nlive = torch.tensor(livepoints.shape[0])
+        nlive = torch.as_tensor(livepoints.shape[0])
         cov = torch.cov(livepoints.T)
         cholesky = torch.linalg.cholesky(cov)
 
@@ -47,7 +47,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: Tenso
 
         sampler = Sampler(prior=prior, logLikelihood=logLikelihood).getSampler(
             samplertype)
-        while logIncrease > torch.log(torch.tensor(stop_criterion)):
+        while logIncrease > torch.log(torch.as_tensor(stop_criterion)):
             iteration += 1
             # identifying lowest likelihood point
             minlogLike = logLikelihoods.min()
@@ -155,7 +155,7 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: Tenso
                     if len(deadpoints) == nsamples:
                         break
             torch.save(f=f"{root}/posterior_samples_rounds_{rd}", obj=torch.stack(deadpoints).squeeze())
-            torch.save(f=f"{root}/logL_rounds_{rd}", obj=torch.tensor(deadpoints_logL))
-            torch.save(f=f"{root}/logL_birth_rounds_{rd}", obj=torch.tensor(deadpoints_birthlogL))
+            torch.save(f=f"{root}/logL_rounds_{rd}", obj=torch.as_tensor(deadpoints_logL))
+            torch.save(f=f"{root}/logL_birth_rounds_{rd}", obj=torch.as_tensor(deadpoints_birthlogL))
             livepoints = torch.stack(deadpoints.copy()).squeeze()
         return {"log Z mean": 0, "log Z std": 0}
