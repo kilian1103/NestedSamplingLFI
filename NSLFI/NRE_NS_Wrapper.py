@@ -2,13 +2,13 @@ import swyft
 import torch
 from torch import Tensor
 
-from NSLFI.NRE_Settings import NRE_Settings
+from NSLFI.NRE_Network import Network
 
 
 class NRE:
-    def __init__(self, network: swyft.SwyftModule, nreSettings: NRE_Settings, obs: swyft.Sample, livepoints: Tensor):
+    def __init__(self, network: Network, obs: swyft.Sample, livepoints: Tensor):
         self.network = network.eval()
-        self.nre_settings = nreSettings
+        self.nre_settings = self.network.nreSettings
         self.livepoints = livepoints
         self.obs = {
             self.nre_settings.obsKey: torch.tensor(obs[self.nre_settings.obsKey]).type(torch.float64).unsqueeze(0)}

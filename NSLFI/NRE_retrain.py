@@ -69,7 +69,7 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
     plt.savefig(f"{root}/NRE_predictions.pdf")
     plt.show()
     # wrap NRE object
-    trained_NRE = NRE(network=network, nreSettings=nreSettings, obs=obs, livepoints=nextRoundPoints)
+    trained_NRE = NRE(network=network, obs=obs, livepoints=nextRoundPoints)
     logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
     with torch.no_grad():
         output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
