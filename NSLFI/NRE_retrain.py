@@ -1,6 +1,6 @@
 import os
 from logging import Logger
-from typing import Dict, Any
+from typing import Dict
 
 import matplotlib.pyplot as plt
 import swyft
@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output
 from torch import Tensor
+from torch.distributions import Uniform
 
 import NSLFI.NestedSampler
 from NSLFI.NRE_NS_Wrapper import NRE
@@ -19,7 +20,7 @@ from NSLFI.NRE_Simulator import Simulator
 
 
 def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Settings, sim: Simulator,
-                       prior: Dict[str, Any],
+                       prior: Dict[str, Uniform],
                        logger: Logger, obs: swyft.Sample) -> Network:
     try:
         os.makedirs(root)

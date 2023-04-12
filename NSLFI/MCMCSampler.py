@@ -8,7 +8,7 @@ from torch.distributions import MultivariateNormal, Uniform
 
 
 class Sampler:
-    def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
+    def __init__(self, prior: Dict[str, Uniform], logLikelihood: Any):
         self.prior = prior
         self.logLikelihood = logLikelihood
         self.ndim = len(prior)
@@ -27,7 +27,7 @@ class Sampler:
 
 
 class Metropolis(Sampler):
-    def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
+    def __init__(self, prior: Dict[str, Uniform], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
     def sample(self, minlogLike: Tensor, livepoints: Tensor, livelikes: Tensor, cov: Tensor,
@@ -54,7 +54,7 @@ class Metropolis(Sampler):
 
 
 class Rejection(Sampler):
-    def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
+    def __init__(self, prior: Dict[str, Uniform], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
     def sample(self, minlogLike: Tensor, **kwargs) -> List[Tuple[Tensor, Tensor]]:
@@ -67,7 +67,7 @@ class Rejection(Sampler):
 
 
 class Slice(Sampler):
-    def __init__(self, prior: Dict[str, Any], logLikelihood: Any):
+    def __init__(self, prior: Dict[str, Uniform], logLikelihood: Any):
         super().__init__(prior=prior, logLikelihood=logLikelihood)
 
     def sample(self, minlogLike: Tensor, livepoints: Tensor, livelikes: Tensor,

@@ -4,11 +4,12 @@ import numpy as np
 import scipy.special
 import torch
 from torch import Tensor
+from torch.distributions import Uniform
 
 from NSLFI.MCMCSampler import Sampler
 
 
-def nested_sampling(logLikelihood: Any, prior: Dict[str, Any], livepoints: Tensor, nsim: int,
+def nested_sampling(logLikelihood: Any, prior: Dict[str, Uniform], livepoints: Tensor, nsim: int,
                     stop_criterion: float, samplertype: str, round_mode=False, num_rounds=3, nsamples=2000,
                     root=".", keep_chain=False) -> Dict[str, float]:
     """
