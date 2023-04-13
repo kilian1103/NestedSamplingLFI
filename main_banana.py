@@ -15,11 +15,11 @@ from NSLFI.NRE_retrain import retrain_next_round
 def execute():
     np.random.seed(234)
     torch.manual_seed(234)
-    logging.basicConfig(filename="myLFI.log", level=logging.INFO,
+    nreSettings = NRE_Settings()
+    logging.basicConfig(filename=nreSettings.logger_name, level=logging.INFO,
                         filemode="w")
     logger = logging.getLogger()
     logger.info('Started')
-    nreSettings = NRE_Settings()
     root = nreSettings.root
     try:
         os.makedirs(root)
