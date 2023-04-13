@@ -6,6 +6,7 @@ class NRE_Settings:
 
         """
         self.root = "swyft_torch_slice_fast"
+        self.wandb_project_name = "NSNRE"
         self.n_training_samples = 30_000
         self.n_weighted_samples = 10_000
         self.datamodule_fractions = [0.8, 0.1, 0.1]
@@ -18,7 +19,6 @@ class NRE_Settings:
         self.early_stopping_patience = 3
         self.max_epochs = 20
         self.NRE_num_retrain_rounds = 2
-        self.wandb_project_name = "NSNRE"
         self.ns_sampler = "Slice"
         self.ns_round_mode = True
         self.ns_num_rounds = 1
