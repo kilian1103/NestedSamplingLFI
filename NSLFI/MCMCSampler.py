@@ -81,11 +81,19 @@ class Slice(Sampler):
         logLike = livelikes[random_index].clone()
 
         # get random orthonormal basis to slice on
-        ortho_norm = torch.as_tensor(special_ortho_group.rvs(dim=self.ndim))
-        x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
-                                                 minlogLike=minlogLike, ortho_norm=ortho_norm, cholesky=cholesky)
+        ortho_norm = torch.as_tensor(special_ortho_group.rvs(dim=self.ndim, size=nrepeat)).reshape(nrepeat * self.ndim,
+                                                                                                   self.ndim)
+        norm_it = 0  # ortho_norm iterator variable
+        accepted = True  # boolean to track state of sampling
+        x_l, x_r = None, None  # initialization of bounds
 
-        for i in range(nrepeat * self.ndim):
+        for _ in range(nrepeat * self.ndim):
+            if accepted:
+                # slice along new n_vector
+                x_l, x_r = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
+                                                    minlogLike=minlogLike, cholesky=cholesky,
+                                                    n_vec=ortho_norm[norm_it])
+                norm_it += 1
             # sample along slice
             u = torch.rand(1)
             proposal_sample = u * x_l + (1 - u) * x_r
@@ -96,17 +104,15 @@ class Slice(Sampler):
             withinContour = logLike_prop > minlogLike
             if withinPrior and withinContour:
                 # accept sample
+                accepted = True
                 if keep_chain:
                     chain.append((proposal_sample, logLike_prop))
                 current_sample = proposal_sample.clone()
                 logLike = logLike_prop.clone()
-                # slice along new n_vector
-                x_l, x_r, idx = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
-                                                         minlogLike=minlogLike, ortho_norm=ortho_norm,
-                                                         cholesky=cholesky)
             else:
                 # rescale bounds if point is not within contour or prior
                 # dot product for angle check between vectors
+                accepted = False
                 if torch.dot((proposal_sample - current_sample).squeeze(), (x_r - current_sample).squeeze()) > 0:
                     x_r = proposal_sample.clone()
                 else:
@@ -116,12 +122,9 @@ class Slice(Sampler):
         else:
             return [(current_sample, logLike)]
 
-    def _extend_nd_interval(self, current_sample: Tensor, step_size: float, minlogLike: Tensor, ortho_norm: Tensor,
-                            cholesky: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
-        # chose random orthonorm axis
-        randIdx = torch.randint(low=0, high=self.ndim, size=(1,))
-        n_vec = ortho_norm[randIdx].squeeze()
-        n_dir = torch.matmul(cholesky, n_vec)
+    def _extend_nd_interval(self, current_sample: Tensor, step_size: float, minlogLike: Tensor, n_vec: Tensor,
+                            cholesky: Tensor) -> Tuple[Tensor, Tensor]:
+        n_dir = torch.matmul(cholesky, n_vec)  # check if cholesky not transpose of cholsky
         x_l = current_sample.clone()
         x_r = current_sample.clone()
         # extend bounds along slice
@@ -133,4 +136,4 @@ class Slice(Sampler):
             x_l -= step_size * n_dir
         while self.logLikelihood(x_r) > minlogLike:
             x_r += step_size * n_dir
-        return x_l, x_r, randIdx
+        return x_l, x_r
