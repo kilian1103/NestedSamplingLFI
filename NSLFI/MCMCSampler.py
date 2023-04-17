@@ -124,7 +124,7 @@ class Slice(Sampler):
 
     def _extend_nd_interval(self, current_sample: Tensor, step_size: float, minlogLike: Tensor, n_vec: Tensor,
                             cholesky: Tensor) -> Tuple[Tensor, Tensor]:
-        n_dir = torch.matmul(cholesky, n_vec)  # check if cholesky not transpose of cholsky
+        n_dir = torch.matmul(cholesky, n_vec)
         x_l = current_sample.clone()
         x_r = current_sample.clone()
         # extend bounds along slice
