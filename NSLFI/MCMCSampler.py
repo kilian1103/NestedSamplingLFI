@@ -83,17 +83,18 @@ class Slice(Sampler):
         # get random orthonormal basis to slice on
         ortho_norm = torch.as_tensor(special_ortho_group.rvs(dim=self.ndim, size=nrepeat)).reshape(nrepeat * self.ndim,
                                                                                                    self.ndim)
-        norm_it = 0  # ortho_norm iterator variable
         accepted = True  # boolean to track state of sampling
         x_l, x_r = None, None  # initialization of bounds
+        num_accepted = 0  # number of accepted slice samples
 
-        for _ in range(nrepeat * self.ndim):
+        while num_accepted < nrepeat * self.ndim:
             if accepted:
                 # slice along new n_vector
                 x_l, x_r = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
                                                     minlogLike=minlogLike, cholesky=cholesky,
-                                                    n_vec=ortho_norm[norm_it])
-                norm_it += 1
+                                                    n_vec=ortho_norm[num_accepted])
+                num_accepted += 1
+
             # sample along slice
             u = torch.rand(1)
             proposal_sample = u * x_l + (1 - u) * x_r

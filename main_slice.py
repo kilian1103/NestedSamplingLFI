@@ -14,7 +14,7 @@ def main():
     # samplerType = "Metropolis"
     logZs = []
     logZsErr = []
-    maxDim = 20  # number of dimensions to test
+    maxDim = 10  # number of dimensions to test
     for n in range(2, maxDim + 1):
         # problem parameter
         ndim = n
