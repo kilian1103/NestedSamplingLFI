@@ -136,8 +136,8 @@ def nested_sampling(logLikelihood: Any, prior: Dict[str, Uniform], livepoints: T
             sampler = Sampler(prior=prior, logLikelihood=logLikelihood).getSampler(samplertype)
 
             # find new sample satisfying likelihood constraint
-            medianlogLike = torch.median(logLikelihoods)
-            medianlogLikeSample = livepoints[logLikelihoods == medianlogLike]
+            medianlogLike, idx = torch.median(logLikelihoods, dim=-1)
+            medianlogLikeSample = livepoints[idx]
             livepoints = livepoints[logLikelihoods > medianlogLike]
             logLikelihoods = logLikelihoods[logLikelihoods > medianlogLike]
             cov = torch.cov(livepoints.T)
