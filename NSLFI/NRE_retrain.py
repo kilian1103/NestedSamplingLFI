@@ -1,5 +1,5 @@
+import logging
 import os
-from logging import Logger
 from typing import Dict
 
 import matplotlib.pyplot as plt
@@ -12,16 +12,17 @@ from swyft import collate_output
 from torch import Tensor
 from torch.distributions import Uniform
 
-import NSLFI.NestedSampler
 from NSLFI.NRE_NS_Wrapper import NRE
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_Simulator import Simulator
+from NSLFI.NestedSamplerBounds import NestedSamplerBounds
 
 
-def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Settings, sim: Simulator,
-                       prior: Dict[str, Uniform],
-                       logger: Logger, obs: swyft.Sample) -> Network:
+def retrain_next_round_and_generate_new_samples(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Settings,
+                                                sim: Simulator, prior: Dict[str, Uniform],
+                                                obs: swyft.Sample) -> Network:
+    logger = logging.getLogger(nreSettings.logger_name)
     try:
         os.makedirs(root)
     except OSError:
@@ -69,16 +70,13 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
     plt.savefig(f"{root}/NRE_predictions.pdf")
     plt.show()
     # wrap NRE object
-    trained_NRE = NRE(network=network, obs=obs, livepoints=nextRoundPoints)
+    trained_NRE = NRE(network=network, obs=obs)
     logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
     with torch.no_grad():
-        output = NSLFI.NestedSampler.nested_sampling(logLikelihood=trained_NRE.logLikelihood,
-                                                     livepoints=trained_NRE.livepoints, prior=prior, nsim=100,
-                                                     stop_criterion=nreSettings.ns_stopping_criterion,
-                                                     round_mode=nreSettings.ns_round_mode,
-                                                     num_rounds=nreSettings.ns_num_rounds,
-                                                     root=root,
-                                                     samplertype=nreSettings.ns_sampler,
-                                                     nsamples=nreSettings.n_training_samples,
-                                                     keep_chain=nreSettings.ns_keep_chain)
+        nestedSampler = NestedSamplerBounds(logLikelihood=trained_NRE.logLikelihood, livepoints=nextRoundPoints,
+                                            prior=prior, root=root, samplertype=nreSettings.ns_sampler)
+        output = nestedSampler.nested_sampling(stop_criterion=nreSettings.ns_stopping_criterion,
+                                               nsamples=nreSettings.n_training_samples,
+                                               keep_chain=nreSettings.ns_keep_chain,
+                                               median_mode=nreSettings.ns_median_mode)
     return network

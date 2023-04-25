@@ -21,9 +21,8 @@ class NRE_Settings:
         self.max_epochs = 20
         self.NRE_num_retrain_rounds = 2
         self.ns_sampler = "Slice"
-        self.ns_round_mode = True
-        self.ns_num_rounds = 1
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3
+        self.ns_median_mode = True
         self.sim_prior_lower = -1
         self.sim_prior_upper = 2
