@@ -78,5 +78,6 @@ def retrain_next_round_and_generate_new_samples(root: str, nextRoundPoints: Tens
         output = nestedSampler.nested_sampling(stop_criterion=nreSettings.ns_stopping_criterion,
                                                nsamples=nreSettings.n_training_samples,
                                                keep_chain=nreSettings.ns_keep_chain,
-                                               median_mode=nreSettings.ns_median_mode)
+                                               median_mode=nreSettings.ns_median_mode,
+                                               boundarySample=nreSettings.ns_boundary_sample)
     return network
