@@ -23,14 +23,15 @@ def test_nested_sampler_metropolis():
     cov = 0.01 * torch.eye(ndim)
     mvNormal = MultivariateNormal(loc=means, covariance_matrix=cov)
 
-    def logLikelihood(x) -> Tensor:
+    def logLikelihood(x: Tensor) -> Tensor:
         return mvNormal.log_prob(x)
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
-    nestedSampler = NestedSampler(logLikelihood=logLikelihood, prior=priors, livepoints=livepoints)
+    nestedSampler = NestedSampler(logLikelihood=logLikelihood, prior=priors, livepoints=livepoints,
+                                  samplertype="Metropolis")
     logZ = nestedSampler.nested_sampling(
-        nsim=100, stop_criterion=1e-3, samplertype="Metropolis")
+        nsim=100, stop_criterion=1e-3)
     print(logZ)
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")
@@ -54,15 +55,16 @@ def test_nested_sampler_rejection():
     cov = 0.01 * torch.eye(ndim)
     mvNormal = MultivariateNormal(loc=means, covariance_matrix=cov)
 
-    def logLikelihood(x) -> Tensor:
+    def logLikelihood(x: Tensor) -> Tensor:
         return mvNormal.log_prob(x)
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
 
-    nestedSampler = NestedSampler(logLikelihood=logLikelihood, prior=priors, livepoints=livepoints)
+    nestedSampler = NestedSampler(logLikelihood=logLikelihood, prior=priors, livepoints=livepoints,
+                                  samplertype="Rejection")
     logZ = nestedSampler.nested_sampling(
-        nsim=100, stop_criterion=1e-3, samplertype="Rejection")
+        nsim=100, stop_criterion=1e-3)
     print(logZ)
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")
@@ -86,15 +88,15 @@ def test_nested_sampler_slice():
     cov = 0.01 * torch.eye(ndim)
     mvNormal = MultivariateNormal(loc=means, covariance_matrix=cov)
 
-    def logLikelihood(x) -> Tensor:
+    def logLikelihood(x: Tensor) -> Tensor:
         return mvNormal.log_prob(x)
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
 
-    nestedSampler = NestedSampler(logLikelihood=logLikelihood, prior=priors, livepoints=livepoints)
+    nestedSampler = NestedSampler(logLikelihood=logLikelihood, prior=priors, livepoints=livepoints, samplertype="Slice")
     logZ = nestedSampler.nested_sampling(
-        nsim=100, stop_criterion=1e-3, samplertype="Slice")
+        nsim=100, stop_criterion=1e-3)
     print(logZ)
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")

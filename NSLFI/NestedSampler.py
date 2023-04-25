@@ -10,7 +10,7 @@ from NSLFI.MCMCSampler import Sampler
 
 
 class NestedSampler:
-    def __init__(self, logLikelihood: Any, prior: Dict[str, Uniform], livepoints: Tensor, root="."):
+    def __init__(self, logLikelihood: Any, prior: Dict[str, Uniform], livepoints: Tensor, samplertype: str, root="."):
         """
         :param logLikelihood: loglikelihood function given parameters for obs x
         :param prior: uniform prior distribution for parameters
@@ -20,8 +20,11 @@ class NestedSampler:
         self.logLikelihood = logLikelihood
         self.livepoints = livepoints
         self.root = root
+        self.samplertype = samplertype
+        self.sampler = Sampler(prior=self.prior, logLikelihood=self.logLikelihood).getSampler(
+            self.samplertype)
 
-    def nested_sampling(self, nsim: int, stop_criterion: float, samplertype: str) -> Dict[str, float]:
+    def nested_sampling(self, nsim: int, stop_criterion: float) -> Dict[str, float]:
         """
         :param nsim: number of parallel NS contractions
         :param stop_criterion: evidence stopping criterion
@@ -47,8 +50,6 @@ class NestedSampler:
         deadpoints_birthlogL = []
         weights = []
 
-        sampler = Sampler(prior=self.prior, logLikelihood=self.logLikelihood).getSampler(
-            samplertype)
         while logIncrease > torch.log(torch.as_tensor(stop_criterion)):
             iteration += 1
             # identifying lowest likelihood point
@@ -83,9 +84,9 @@ class NestedSampler:
                 cov = torch.cov(self.livepoints.T)
                 cholesky = torch.linalg.cholesky(cov)
             # find new sample satisfying likelihood constraint
-            proposal_samples = sampler.sample(livepoints=self.livepoints.clone(), minlogLike=minlogLike,
-                                              livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
-                                              keep_chain=False)
+            proposal_samples = self.sampler.sample(livepoints=self.livepoints.clone(), minlogLike=minlogLike,
+                                                   livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
+                                                   keep_chain=False)
             proposal_sample, logLike = proposal_samples.pop()
 
             # replace lowest likelihood sample with proposal sample
