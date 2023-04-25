@@ -5,7 +5,7 @@ import torch
 from torch import Tensor
 from torch.distributions.multivariate_normal import MultivariateNormal
 
-from NSLFI.NestedSampler import nested_sampling
+from NSLFI.NestedSampler import NestedSampler
 
 
 def test_nested_sampler_metropolis():
@@ -28,10 +28,9 @@ def test_nested_sampler_metropolis():
 
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
-
-    logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
-                           nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Metropolis",
-                           keep_chain=False)
+    nestedSampler = NestedSampler(logLikelihood=logLikelihood, prior=priors, livepoints=livepoints)
+    logZ = nestedSampler.nested_sampling(
+        nsim=100, stop_criterion=1e-3, samplertype="Metropolis")
     print(logZ)
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")
@@ -61,8 +60,9 @@ def test_nested_sampler_rejection():
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
 
-    logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
-                           nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Rejection")
+    nestedSampler = NestedSampler(logLikelihood=logLikelihood, prior=priors, livepoints=livepoints)
+    logZ = nestedSampler.nested_sampling(
+        nsim=100, stop_criterion=1e-3, samplertype="Rejection")
     print(logZ)
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")
@@ -92,8 +92,9 @@ def test_nested_sampler_slice():
     priors = {f"theta_{i}": torch.distributions.uniform.Uniform(low=0, high=1) for i in range(ndim)}
     livepoints = priors["theta_0"].sample(sample_shape=(nlive, ndim)).type(torch.float64)
 
-    logZ = nested_sampling(logLikelihood=logLikelihood, prior=priors,
-                           nsim=100, stop_criterion=1e-3, livepoints=livepoints, samplertype="Slice", keep_chain=False)
+    nestedSampler = NestedSampler(logLikelihood=logLikelihood, prior=priors, livepoints=livepoints)
+    logZ = nestedSampler.nested_sampling(
+        nsim=100, stop_criterion=1e-3, samplertype="Slice")
     print(logZ)
     torch.testing.assert_close(actual=logZ["log Z mean"], expected=0., atol=0.3, rtol=0.2)
     os.remove("logL")
