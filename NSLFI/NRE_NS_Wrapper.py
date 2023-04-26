@@ -15,8 +15,6 @@ class NRE:
     def logLikelihood(self, proposal_sample: Tensor) -> Tensor:
         # check if list of datapoints or single datapoint
         if proposal_sample.ndim == 1:
-            prediction = self.network(self.obs, {self.nre_settings.targetKey: proposal_sample.type(torch.float64)})
-            return prediction.logratios
-        else:
-            prediction = self.network(self.obs, {self.nre_settings.targetKey: proposal_sample.type(torch.float64)})
-            return prediction.logratios[:, 0]
+            proposal_sample = proposal_sample.unsqueeze(0)
+        prediction = self.network(self.obs, {self.nre_settings.targetKey: proposal_sample.type(torch.float64)})
+        return prediction.logratios[:, 0]
