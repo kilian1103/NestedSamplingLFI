@@ -54,11 +54,13 @@ def execute():
         network_storage[f"round_{rd}"] = network
         root_storage[f"round_{rd}"] = root
         wandb.finish()
+
+        boundarySample = torch.load(f=f"{root}/boundary_sample")
+        logger.info(f"Current rd: {rd} root: {root}")
+        logger.info(f"Current rd: {rd} boundary sample: {boundarySample}")
+        # nreSettings.ns_boundary_sample = boundarySample #code when boundary sample is used
+        # nreSettings.ns_median_mode = False
         nextSamples = torch.load(f=f"{root}/posterior_samples")
-        # if rd > 0:
-        #     intersect_samples(network_storage=network_storage,
-        #                       root_storage=root_storage, nreSettings=nreSettings,
-        #                       obs=obs, rd=rd)
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
         samples = nextSamples

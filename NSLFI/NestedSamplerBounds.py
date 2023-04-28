@@ -29,7 +29,6 @@ class NestedSamplerBounds(NestedSampler):
             boundarySampleLogLike, idx = torch.median(logLikelihoods, dim=-1)
             boundarySample = self.livepoints[idx]
         else:
-            boundarySample = boundarySample
             boundarySampleLogLike = self.logLikelihood(boundarySample)
 
         self.livepoints = self.livepoints[logLikelihoods > boundarySampleLogLike]
@@ -54,7 +53,13 @@ class NestedSamplerBounds(NestedSampler):
         torch.save(f=f"{self.root}/posterior_samples", obj=torch.stack(deadpoints).squeeze())
         torch.save(f=f"{self.root}/logL", obj=torch.as_tensor(deadpoints_logL))
         torch.save(f=f"{self.root}/logL_birth", obj=torch.as_tensor(deadpoints_birthlogL))
-        torch.save(f=f"{self.root}/boundary_sample_loglike", obj=boundarySampleLogLike)
-        torch.save(f=f"{self.root}/boundary_sample", obj=boundarySample)
+        if median_mode:
+            torch.save(f=f"{self.root}/boundary_sample_loglike", obj=boundarySampleLogLike)
+            torch.save(f=f"{self.root}/boundary_sample", obj=boundarySample)
+        else:
+            boundarySampleLogLike, idx = torch.median(torch.as_tensor(deadpoints_logL), dim=-1)
+            boundarySample = deadpoints[idx]
+            torch.save(f=f"{self.root}/boundary_sample_loglike", obj=boundarySampleLogLike)
+            torch.save(f=f"{self.root}/boundary_sample", obj=boundarySample)
 
         return {"log Z mean": 0, "log Z std": 0}
