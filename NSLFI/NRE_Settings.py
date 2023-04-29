@@ -7,7 +7,7 @@ class NRE_Settings:
         """
         self.root = "swyft_torch_slice_fast"
         self.wandb_project_name = "NSNRE"
-        self.logger_name = "myLFI.log"
+        self.logger_name = f"{self.root}.log"
         self.n_training_samples = 30_000
         self.n_weighted_samples = 10_000
         self.datamodule_fractions = [0.8, 0.1, 0.1]
