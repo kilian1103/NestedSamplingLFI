@@ -4,8 +4,10 @@ import os
 import numpy as np
 import swyft
 import torch
-
 import wandb
+
+from NSLFI.NRE_Intersector import intersect_samples
+from NSLFI.NRE_Post_Analysis import plot_NRE_posterior
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_Simulator import Simulator
 from NSLFI.NRE_retrain import retrain_next_round_and_generate_new_samples
@@ -55,6 +57,10 @@ def execute():
         root_storage[f"round_{rd}"] = root
         wandb.finish()
 
+        if rd >= 1:
+            intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
+                              network_storage=network_storage, rd=rd)
+
         boundarySample = torch.load(f=f"{root}/boundary_sample")
         logger.info(f"Current rd: {rd} root: {root}")
         logger.info(f"Current rd: {rd} boundary sample: {boundarySample}")
@@ -64,6 +70,8 @@ def execute():
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
         samples = nextSamples
+    # plot triangle plot
+    plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)
 
 
 if __name__ == '__main__':
