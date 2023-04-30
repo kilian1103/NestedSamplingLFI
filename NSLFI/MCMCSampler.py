@@ -93,7 +93,6 @@ class Slice(Sampler):
                 x_l, x_r = self._extend_nd_interval(current_sample=current_sample, step_size=step_size,
                                                     minlogLike=minlogLike, cholesky=cholesky,
                                                     n_vec=ortho_norm[num_accepted])
-                num_accepted += 1
 
             # sample along slice
             u = torch.rand(1)
@@ -106,6 +105,7 @@ class Slice(Sampler):
             if withinPrior and withinContour:
                 # accept sample
                 accepted = True
+                num_accepted += 1
                 if keep_chain:
                     chain.append((proposal_sample, logLike_prop))
                 current_sample = proposal_sample.clone()
