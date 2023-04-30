@@ -14,8 +14,13 @@ class NestedSamplerBounds(NestedSampler):
 
     def nested_sampling(self, stop_criterion: float, boundarySample: Tensor, nsamples=2000, keep_chain=True) -> Dict[
         str, float]:
-
-        # NS run with rounds, and constant median Likelihood constraint for each round
+        """A Nested Sampler that uses a truncation boundary to sample from the likelihood.
+        :param stop_criterion: placeholder: float
+        :param boundarySample: sample that defines the truncation boundary: Tensor
+        :param nsamples: number of samples to be drawn: int
+        :param keep_chain: keep the chain of samples that led to the final sample: True/False
+        :return:
+        """
 
         logLikelihoods = self.logLikelihood(self.livepoints)
 
