@@ -12,8 +12,8 @@ class NestedSamplerBounds(NestedSampler):
         super().__init__(logLikelihood=logLikelihood, prior=prior, livepoints=livepoints, samplertype=samplertype,
                          root=root)
 
-    def nested_sampling(self, stop_criterion: float, nsamples=2000, keep_chain=True, median_mode=True,
-                        boundarySample=None) -> Dict[str, float]:
+    def nested_sampling(self, stop_criterion: float, boundarySample: Tensor, nsamples=2000, keep_chain=True) -> Dict[
+        str, float]:
 
         # NS run with rounds, and constant median Likelihood constraint for each round
 
@@ -25,11 +25,7 @@ class NestedSamplerBounds(NestedSampler):
         deadpoints_birthlogL = []
 
         # define truncation boundary criterion
-        if median_mode:
-            boundarySampleLogLike, idx = torch.median(logLikelihoods, dim=-1)
-            boundarySample = self.livepoints[idx]
-        else:
-            boundarySampleLogLike = self.logLikelihood(boundarySample)
+        boundarySampleLogLike = self.logLikelihood(boundarySample)
 
         self.livepoints = self.livepoints[logLikelihoods > boundarySampleLogLike]
         logLikelihoods = logLikelihoods[logLikelihoods > boundarySampleLogLike]
@@ -53,13 +49,4 @@ class NestedSamplerBounds(NestedSampler):
         torch.save(f=f"{self.root}/posterior_samples", obj=torch.stack(deadpoints).squeeze())
         torch.save(f=f"{self.root}/logL", obj=torch.as_tensor(deadpoints_logL))
         torch.save(f=f"{self.root}/logL_birth", obj=torch.as_tensor(deadpoints_birthlogL))
-        if median_mode:
-            torch.save(f=f"{self.root}/boundary_sample_loglike", obj=boundarySampleLogLike)
-            torch.save(f=f"{self.root}/boundary_sample", obj=boundarySample)
-        else:
-            boundarySampleLogLike, idx = torch.median(torch.as_tensor(deadpoints_logL), dim=-1)
-            boundarySample = deadpoints[idx]
-            torch.save(f=f"{self.root}/boundary_sample_loglike", obj=boundarySampleLogLike)
-            torch.save(f=f"{self.root}/boundary_sample", obj=boundarySample)
-
         return {"log Z mean": 0, "log Z std": 0}

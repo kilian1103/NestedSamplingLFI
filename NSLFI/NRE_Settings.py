@@ -23,7 +23,5 @@ class NRE_Settings:
         self.ns_sampler = "Slice"
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3
-        self.ns_median_mode = True
-        self.ns_boundary_sample = None
         self.sim_prior_lower = -1
         self.sim_prior_upper = 2

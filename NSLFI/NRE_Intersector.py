@@ -23,6 +23,7 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any]
     """
     logger = logging.getLogger(nreSettings.logger_name)
     logger.info(f"intersecting samples using NRE {rd - 1} and {rd}")
+
     # load NREs
     previous_NRE = network_storage[f"round_{rd - 1}"]
     previous_NRE_wrapped = NRE(previous_NRE, obs)
@@ -30,21 +31,22 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any]
 
     current_NRE = network_storage[f"round_{rd}"]
     current_NRE_wrapped = NRE(current_NRE, obs)
-    current_root = root_storage[f"round_{rd - 1}"]
+    current_root = root_storage[f"round_{rd}"]
 
     # load samples
     previous_samples = torch.load(f=f"{previous_root}/posterior_samples")
-    previous_boundary = torch.load(f=f"{previous_root}/boundary_sample")
-    previous_boundary_logL = torch.load(f=f"{previous_root}/boundary_sample_loglike")
-
     current_samples = torch.load(f=f"{current_root}/posterior_samples")
 
-    # evaluate new contour using previous boundary sample
-    current_boundary_logL = current_NRE_wrapped.logLikelihood(previous_boundary)
+    # get boundary sample
+    previous_boundary_sample = torch.load(f=f"{previous_root}/boundary_sample")
 
-    # count how many are within contour
-    current_logLs_with_previous_samples = current_NRE_wrapped.logLikelihood(previous_samples)
-    previous_logLs_with_current_samples = previous_NRE_wrapped.logLikelihood(current_samples)
+    with torch.no_grad():
+        # evaluate new contour using previous boundary sample
+        previous_boundary_logL = previous_NRE_wrapped.logLikelihood(previous_boundary_sample)
+        current_boundary_logL = current_NRE_wrapped.logLikelihood(previous_boundary_sample)
+        # count how many are within contour
+        current_logLs_with_previous_samples = current_NRE_wrapped.logLikelihood(previous_samples)
+        previous_logLs_with_current_samples = previous_NRE_wrapped.logLikelihood(current_samples)
 
     intersection_samples_A = current_logLs_with_previous_samples[
         current_logLs_with_previous_samples > current_boundary_logL]
