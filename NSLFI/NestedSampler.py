@@ -15,6 +15,8 @@ class NestedSampler:
         :param logLikelihood: loglikelihood function given parameters for obs x
         :param prior: uniform prior distribution for parameters
         :param livepoints: list of livepoints
+        :param samplertype: type of MC sampler to use
+        :param root: root directory to store results
         """
         self.prior = prior
         self.logLikelihood = logLikelihood
@@ -29,8 +31,7 @@ class NestedSampler:
         """
         :param nsim: number of parallel NS contractions
         :param stop_criterion: evidence stopping criterion
-        :param root: root file directory to store results
-        :return:
+        :return: dictionary of logZ and logZerr
         """
         # standard NS run: 1 sample in 1 sample out
         # initialisation
