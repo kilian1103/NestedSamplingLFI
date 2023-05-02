@@ -19,6 +19,7 @@ class NestedSampler:
         self.prior = prior
         self.logLikelihood = logLikelihood
         self.livepoints = livepoints
+        self.logLikelihoods = self.logLikelihood(self.livepoints)
         self.root = root
         self.samplertype = samplertype
         self.sampler = Sampler(prior=self.prior, logLikelihood=self.logLikelihood).getSampler(
@@ -41,7 +42,6 @@ class NestedSampler:
         cov = torch.cov(self.livepoints.T)
         cholesky = torch.linalg.cholesky(cov)
 
-        logLikelihoods = self.logLikelihood(self.livepoints)
         livepoints_birthlogL = -torch.inf * torch.ones(nlive)  # L_birth = 0
 
         # dynamic storage -> lists
@@ -53,8 +53,8 @@ class NestedSampler:
         while logIncrease > torch.log(torch.as_tensor(stop_criterion)):
             iteration += 1
             # identifying lowest likelihood point
-            minlogLike = logLikelihoods.min()
-            index = logLikelihoods.argmin()
+            minlogLike = self.logLikelihoods.min()
+            index = self.logLikelihoods.argmin()
 
             # save deadpoint and its loglike
             deadpoint = self.livepoints[index].clone()
@@ -85,16 +85,16 @@ class NestedSampler:
                 cholesky = torch.linalg.cholesky(cov)
             # find new sample satisfying likelihood constraint
             proposal_samples = self.sampler.sample(livepoints=self.livepoints.clone(), minlogLike=minlogLike,
-                                                   livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
+                                                   livelikes=self.logLikelihoods, cov=cov, cholesky=cholesky,
                                                    keep_chain=False)
             proposal_sample, logLike = proposal_samples.pop()
 
             # replace lowest likelihood sample with proposal sample
             self.livepoints[index] = proposal_sample.clone()
-            logLikelihoods[index] = logLike
+            self.logLikelihoods[index] = logLike
             livepoints_birthlogL[index] = minlogLike
 
-            maxlogLike = logLikelihoods.max()
+            maxlogLike = self.logLikelihoods.max()
             logIncrease_array = logWeight_current + maxlogLike - logZ_total
             logIncrease = logIncrease_array.max()
             if iteration % 500 == 0:
@@ -102,13 +102,13 @@ class NestedSampler:
                 print("current iteration: ", iteration)
 
         # final <L>*dX sum calculation
-        finallogLikesum = torch.logsumexp(logLikelihoods, axis=0)
+        finallogLikesum = torch.logsumexp(self.logLikelihoods, axis=0)
         logZ_current = -torch.log(nlive) + finallogLikesum + logX_current
         logZ_array = torch.stack([logZ_previous, logZ_current])
         logZ_total = torch.as_tensor(scipy.special.logsumexp(logZ_array, axis=0))
 
         # convert surviving livepoints to deadpoints
-        samples = list(zip(self.livepoints, logLikelihoods, livepoints_birthlogL))
+        samples = list(zip(self.livepoints, self.logLikelihoods, livepoints_birthlogL))
         samples.sort(key=lambda x: x[1], reverse=True)  # sort after logL
         mean_last_shell_weight = torch.mean(logX_current) - torch.log(nlive)
         while len(samples) > 0:

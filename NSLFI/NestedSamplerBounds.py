@@ -22,8 +22,6 @@ class NestedSamplerBounds(NestedSampler):
         :return:
         """
 
-        logLikelihoods = self.logLikelihood(self.livepoints)
-
         # dynamic storage -> lists
         deadpoints = []
         deadpoints_logL = []
@@ -32,8 +30,8 @@ class NestedSamplerBounds(NestedSampler):
         # define truncation boundary criterion
         boundarySampleLogLike = self.logLikelihood(boundarySample)
 
-        self.livepoints = self.livepoints[logLikelihoods > boundarySampleLogLike]
-        logLikelihoods = logLikelihoods[logLikelihoods > boundarySampleLogLike]
+        self.livepoints = self.livepoints[self.logLikelihoods > boundarySampleLogLike]
+        self.logLikelihoods = self.logLikelihoods[self.logLikelihoods > boundarySampleLogLike]
         cov = torch.cov(self.livepoints.T)
         cholesky = torch.linalg.cholesky(cov)
 
@@ -41,7 +39,7 @@ class NestedSamplerBounds(NestedSampler):
             # find new samples satisfying likelihood constraint
             proposal_samples = self.sampler.sample(livepoints=self.livepoints.clone(),
                                                    minlogLike=boundarySampleLogLike,
-                                                   livelikes=logLikelihoods, cov=cov, cholesky=cholesky,
+                                                   livelikes=self.logLikelihoods, cov=cov, cholesky=cholesky,
                                                    keep_chain=keep_chain)
             # add new samples to deadpoints
             while len(proposal_samples) > 0:
