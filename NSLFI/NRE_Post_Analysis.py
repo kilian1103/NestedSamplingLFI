@@ -12,7 +12,7 @@ def plot_NRE_posterior(root_storage, nreSettings: NRE_Settings):
         root = root_storage[f"round_{rd}"]
         samples = torch.load(f=f"{root}/posterior_samples")
         weights = torch.load(f=f"{root}/logL")
-        sample = MCSamples(samples=samples.numpy(), weights=weights.numpy(), label=f"round {rd + 1}")
+        sample = MCSamples(samples=samples.numpy(), weights=weights.numpy(), label=f"round {rd}")
         data.append(sample)
     g.triangle_plot(data, filled=True, labels=["z[0]", "z[1]"])
     root = root_storage["round_0"]
