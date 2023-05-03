@@ -18,6 +18,7 @@ class NestedSampler:
         :param livepoints: list of livepoints
         :param samplertype: type of MC sampler to use
         :param root: root directory to store results
+        :param logLs: loglikelihoods of livepoints
         """
         self.prior = prior
         self.logLikelihood = logLikelihood
