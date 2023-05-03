@@ -44,10 +44,10 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any]
         # evaluate new contour using previous boundary sample
         previous_boundary_logL = previous_NRE_wrapped.logLikelihood(previous_boundary_sample)
         current_boundary_logL = current_NRE_wrapped.logLikelihood(previous_boundary_sample)
-        # count how many are within contour
         current_logLs_with_previous_samples = current_NRE_wrapped.logLikelihood(previous_samples)
         previous_logLs_with_current_samples = previous_NRE_wrapped.logLikelihood(current_samples)
 
+    # count how many are within contour
     intersection_samples_A = current_logLs_with_previous_samples[
         current_logLs_with_previous_samples > current_boundary_logL]
     left_samples = current_logLs_with_previous_samples[current_logLs_with_previous_samples <= current_boundary_logL]
@@ -56,13 +56,15 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any]
         previous_logLs_with_current_samples > previous_boundary_logL]
     right_samples = previous_logLs_with_current_samples[previous_logLs_with_current_samples <= previous_boundary_logL]
 
-    intersection_samples = torch.cat((intersection_samples_A, intersection_samples_B))
+    logger.info(f"# of previous samples within current NRE: {len(intersection_samples_A)}")
+    logger.info(f"# of previous samples not within current NRE: {len(left_samples)}")
+    logger.info(f"# of current samples within previous NRE: {len(intersection_samples_B)}")
+    logger.info(f"# of current samples not within previous NRE: {len(right_samples)}")
 
-    logger.info(f"number of intersection samples: {len(intersection_samples)}")
-    logger.info(f"number of left samples: {len(left_samples)}")
-    logger.info(f"number of right samples: {len(right_samples)}")
-
-    torch.save(obj=intersection_samples, f=f"{current_root}/intersection_samples")  # save intersection samples
-    torch.save(obj=left_samples, f=f"{current_root}/left_samples")  # save left samples
-    torch.save(obj=right_samples, f=f"{current_root}/right_samples")  # save right samples
-    return intersection_samples, left_samples, right_samples
+    torch.save(obj=intersection_samples_A,
+               f=f"{current_root}/previous_samples_within_current_NRE")  # save intersection samples
+    torch.save(obj=intersection_samples_B,
+               f=f"{current_root}/current_samples_within_previous_NRE")  # save intersection samples
+    torch.save(obj=left_samples, f=f"{current_root}/previous_samples_not_within_current_NRE")  # save left samples
+    torch.save(obj=right_samples, f=f"{current_root}/current_samples_not_within_previous_NRE")  # save right samples
+    return intersection_samples_A, intersection_samples_B, left_samples, right_samples
