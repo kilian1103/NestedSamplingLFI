@@ -15,4 +15,5 @@ def plot_NRE_posterior(root_storage, nreSettings: NRE_Settings):
         sample = MCSamples(samples=samples.numpy(), weights=weights.numpy(), label=f"round {rd + 1}")
         data.append(sample)
     g.triangle_plot(data, filled=True, labels=["z[0]", "z[1]"])
-    g.export(f"NRE_triangle_plot.pdf")
+    root = root_storage["round_0"]
+    g.export(f"{root}/NRE_triangle_plot.pdf")

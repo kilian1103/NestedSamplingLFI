@@ -62,24 +62,35 @@ def execute():
         trained_NRE = NRE(network=network, obs=obs)
         logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
         with torch.no_grad():
-            # rd 0 generate prior samples theta_00, train NRE_0, evaluate med_0, generate new samples theta_0 > med_0
-            # rd 1 train NRE_1, generate new samples theta_1 > med_0, evaluate med_1
-            # rd 2 train NRE_2, generate new samples theta_2 > med_1, evaluate med_2
-            # rd 3 train NRE_3, generate new samples theta_3 > med_2, evaluate med_3
-            _, idx = torch.median(trained_NRE.logLikelihood(samples), dim=-1)
+            # generate samples within median countour of prior trained NRE
+            loglikes = trained_NRE.logLikelihood(samples)
+            if nreSettings.ns_nre_counting_mode and rd >= 1:
+                # use previous boundary sample to refill new NRE contour
+                previousRoot = root_storage[f"round_{rd - 1}"]
+                boundarySample = torch.load(f"{previousRoot}/boundary_sample")
+
+                nestedSampler = NestedSamplerBounds(logLikelihood=trained_NRE.logLikelihood, livepoints=samples,
+                                                    prior=prior, root=root, samplertype=nreSettings.ns_sampler,
+                                                    logLs=loglikes)
+                output = nestedSampler.nested_sampling(stop_criterion=nreSettings.ns_stopping_criterion,
+                                                       nsamples=nreSettings.n_training_samples,
+                                                       keep_chain=nreSettings.ns_keep_chain,
+                                                       boundarySample=boundarySample)
+                intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
+                                  network_storage=network_storage, rd=rd)
+                samples = torch.load(f=f"{root}/posterior_samples")
+                torch.save(obj=samples, f=f"{root}/previous_boundary_samples")
+                loglikes = trained_NRE.logLikelihood(samples)
+            _, idx = torch.median(loglikes, dim=-1)
             boundarySample = samples[idx]
             torch.save(boundarySample, f"{root}/boundary_sample")
             nestedSampler = NestedSamplerBounds(logLikelihood=trained_NRE.logLikelihood, livepoints=samples,
-                                                prior=prior, root=root, samplertype=nreSettings.ns_sampler)
+                                                prior=prior, root=root, samplertype=nreSettings.ns_sampler,
+                                                logLs=loglikes)
             output = nestedSampler.nested_sampling(stop_criterion=nreSettings.ns_stopping_criterion,
                                                    nsamples=nreSettings.n_training_samples,
                                                    keep_chain=nreSettings.ns_keep_chain,
                                                    boundarySample=boundarySample)
-
-        if rd >= 1:
-            intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
-                              network_storage=network_storage, rd=rd)
-
         nextSamples = torch.load(f=f"{root}/posterior_samples")
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
