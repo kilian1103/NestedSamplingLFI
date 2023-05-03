@@ -10,7 +10,8 @@ from NSLFI.MCMCSampler import Sampler
 
 
 class NestedSampler:
-    def __init__(self, logLikelihood: Any, prior: Dict[str, Uniform], livepoints: Tensor, samplertype: str, root="."):
+    def __init__(self, logLikelihood: Any, prior: Dict[str, Uniform], livepoints: Tensor, samplertype: str, root=".",
+                 logLs=None):
         """
         :param logLikelihood: loglikelihood function given parameters for obs x
         :param prior: uniform prior distribution for parameters
@@ -21,7 +22,10 @@ class NestedSampler:
         self.prior = prior
         self.logLikelihood = logLikelihood
         self.livepoints = livepoints
-        self.logLikelihoods = self.logLikelihood(self.livepoints)
+        if logLs is not None:
+            self.logLikelihoods = logLs
+        else:
+            self.logLikelihoods = self.logLikelihood(self.livepoints)
         self.root = root
         self.samplertype = samplertype
         self.sampler = Sampler(prior=self.prior, logLikelihood=self.logLikelihood).getSampler(

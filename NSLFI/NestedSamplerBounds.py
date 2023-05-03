@@ -8,9 +8,10 @@ from NSLFI.NestedSampler import NestedSampler
 
 
 class NestedSamplerBounds(NestedSampler):
-    def __init__(self, logLikelihood: Any, prior: Dict[str, Uniform], livepoints: Tensor, samplertype: str, root="."):
+    def __init__(self, logLikelihood: Any, prior: Dict[str, Uniform], livepoints: Tensor, samplertype: str, root=".",
+                 logLs=None):
         super().__init__(logLikelihood=logLikelihood, prior=prior, livepoints=livepoints, samplertype=samplertype,
-                         root=root)
+                         root=root, logLs=logLs)
 
     def nested_sampling(self, stop_criterion: float, boundarySample: Tensor, nsamples=2000, keep_chain=True) -> Dict[
         str, float]:
