@@ -5,7 +5,7 @@ class NRE_Settings:
         Settings for the (M)NRE algorithm
 
         """
-        self.root = "swyft_torch_slice_fast_bound_curr"
+        self.root = "swyft_torch_slice_fast"
         self.wandb_project_name = "NSNRE"
         self.activate_wandb = True
         self.logger_name = f"{self.root}.log"
