@@ -7,7 +7,7 @@ class NRE_Settings:
         """
         self.root = "swyft_torch_slice_fast_bound_curr"
         self.wandb_project_name = "NSNRE"
-        self.activate_wandb = False
+        self.activate_wandb = True
         self.logger_name = f"{self.root}.log"
         self.n_training_samples = 30_000
         self.n_weighted_samples = 10_000
