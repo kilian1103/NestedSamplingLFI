@@ -39,11 +39,12 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any]
 
     # get boundary samples
     previous_boundary_sample = torch.load(f=f"{previous_root}/boundary_sample")
-    current_boundary_sample = torch.load(f=f"{current_root}/boundary_sample")
 
     # evaluate new contour using previous boundary sample
     previous_boundary_logL = previous_NRE_wrapped.logLikelihood(previous_boundary_sample)
+
     if not nreSettings.ns_nre_use_previous_boundary_sample_for_counting:
+        current_boundary_sample = torch.load(f=f"{current_root}/boundary_sample")
         current_boundary_logL = current_NRE_wrapped.logLikelihood(current_boundary_sample)
     else:
         current_boundary_logL = current_NRE_wrapped.logLikelihood(previous_boundary_sample)
