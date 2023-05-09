@@ -75,8 +75,9 @@ def execute():
                                                        nsamples=nreSettings.n_training_samples,
                                                        keep_chain=nreSettings.ns_keep_chain,
                                                        boundarySample=boundarySample)
-                intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
-                                  network_storage=network_storage, rd=rd, boundarySample=boundarySample)
+                k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
+                                                   network_storage=network_storage, rd=rd,
+                                                   boundarySample=boundarySample)
                 samples = torch.load(f=f"{root}/posterior_samples")
                 loglikes = trained_NRE.logLikelihood(samples)
             _, idx = torch.median(loglikes, dim=-1)
@@ -90,8 +91,9 @@ def execute():
                                                    keep_chain=nreSettings.ns_keep_chain,
                                                    boundarySample=boundarySample)
             if not nreSettings.ns_nre_use_previous_boundary_sample_for_counting and rd >= 1:
-                intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
-                                  network_storage=network_storage, rd=rd, boundarySample=boundarySample)
+                k1, l1, k2, l2, n0, n1 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
+                                                           network_storage=network_storage, rd=rd,
+                                                           boundarySample=boundarySample)
 
         nextSamples = torch.load(f=f"{root}/posterior_samples")
         newRoot = root + f"_rd_{rd + 1}"
