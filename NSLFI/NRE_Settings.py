@@ -7,6 +7,7 @@ class NRE_Settings:
         """
         self.root = "swyft_torch_slice_fast_bound_curr"
         self.wandb_project_name = "NSNRE"
+        self.activate_wandb = False
         self.logger_name = f"{self.root}.log"
         self.n_training_samples = 30_000
         self.n_weighted_samples = 10_000
@@ -19,7 +20,7 @@ class NRE_Settings:
         self.dropout = 0.3
         self.early_stopping_patience = 3
         self.max_epochs = 20
-        self.NRE_num_retrain_rounds = 5
+        self.NRE_num_retrain_rounds = 2
         self.ns_sampler = "Slice"
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3

@@ -49,13 +49,13 @@ def execute():
     # retrain NRE and sample new samples with NS loop
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         logger.info("retraining round: " + str(rd))
-        wandb.init(
-            # set the wandb project where this run will be logged
-            project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
+        if nreSettings.activate_wandb:
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
         network = retrain_next_round(root=root, nextRoundPoints=samples,
                                      nreSettings=nreSettings, sim=sim,
                                      prior=prior, obs=obs)
-        wandb.finish()
         network_storage[f"round_{rd}"] = network
         root_storage[f"round_{rd}"] = root
 

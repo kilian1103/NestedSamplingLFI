@@ -4,6 +4,7 @@ from typing import Dict
 
 import matplotlib.pyplot as plt
 import swyft
+import wandb
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -56,6 +57,8 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
     logger.info("Starting training!")
     trainer.fit(network, dm)
     logger.info("Training done!")
+    if nreSettings.activate_wandb:
+        wandb.finish()
     # get posterior samples
     logger.info("Sampling from the prior using simulator!")
     prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[nreSettings.targetKey])
