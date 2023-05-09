@@ -64,11 +64,10 @@ def execute():
         with torch.no_grad():
             # generate samples within median countour of prior trained NRE
             loglikes = trained_NRE.logLikelihood(samples)
-            if nreSettings.ns_nre_counting_mode and rd >= 1:
+            if nreSettings.ns_nre_use_previous_boundary_sample_for_counting and rd >= 1:
                 # use previous boundary sample to refill new NRE contour
                 previousRoot = root_storage[f"round_{rd - 1}"]
                 boundarySample = torch.load(f"{previousRoot}/boundary_sample")
-
                 nestedSampler = NestedSamplerBounds(logLikelihood=trained_NRE.logLikelihood, livepoints=samples,
                                                     prior=prior, root=root, samplertype=nreSettings.ns_sampler,
                                                     logLs=loglikes)
@@ -79,7 +78,6 @@ def execute():
                 intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
                                   network_storage=network_storage, rd=rd)
                 samples = torch.load(f=f"{root}/posterior_samples")
-                torch.save(obj=samples, f=f"{root}/previous_boundary_samples")
                 loglikes = trained_NRE.logLikelihood(samples)
             _, idx = torch.median(loglikes, dim=-1)
             boundarySample = samples[idx]
@@ -91,6 +89,10 @@ def execute():
                                                    nsamples=nreSettings.n_training_samples,
                                                    keep_chain=nreSettings.ns_keep_chain,
                                                    boundarySample=boundarySample)
+            if not nreSettings.ns_nre_use_previous_boundary_sample_for_counting and rd >= 1:
+                intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
+                                  network_storage=network_storage, rd=rd)
+
         nextSamples = torch.load(f=f"{root}/posterior_samples")
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot

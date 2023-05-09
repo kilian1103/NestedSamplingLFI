@@ -5,7 +5,7 @@ class NRE_Settings:
         Settings for the (M)NRE algorithm
 
         """
-        self.root = "swyft_torch_slice_fast"
+        self.root = "swyft_torch_slice_fast_bound_curr"
         self.wandb_project_name = "NSNRE"
         self.logger_name = f"{self.root}.log"
         self.n_training_samples = 30_000
@@ -19,10 +19,10 @@ class NRE_Settings:
         self.dropout = 0.3
         self.early_stopping_patience = 3
         self.max_epochs = 20
-        self.NRE_num_retrain_rounds = 2
+        self.NRE_num_retrain_rounds = 5
         self.ns_sampler = "Slice"
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3
-        self.ns_nre_counting_mode = False
+        self.ns_nre_use_previous_boundary_sample_for_counting = False
         self.sim_prior_lower = -1
         self.sim_prior_upper = 2
