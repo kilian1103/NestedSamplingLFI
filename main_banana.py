@@ -80,7 +80,11 @@ def execute():
                                                    boundarySample=boundarySample)
                 samples = torch.load(f=f"{root}/posterior_samples")
                 loglikes = trained_NRE.logLikelihood(samples)
-            _, idx = torch.median(loglikes, dim=-1)
+            median_logL, idx = torch.median(loglikes, dim=-1)
+            n1 = len(loglikes[loglikes > median_logL])
+            n2 = len(loglikes[loglikes < median_logL])
+            compression = n1 / (n1 + n2)
+            logger.info(f"Median compression due to selecting new boundary sample: {compression}")
             boundarySample = samples[idx]
             torch.save(boundarySample, f"{root}/boundary_sample")
             nestedSampler = NestedSamplerBounds(logLikelihood=trained_NRE.logLikelihood, livepoints=samples,
