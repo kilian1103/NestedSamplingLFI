@@ -83,13 +83,13 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any]
         logger.info(f"k2 round {rd} samples within NRE_{rd - 1} using NRE_{rd} boundary sample: {len(k2)}")
         logger.info(f"l2 round {rd} samples outside NRE_{rd - 1} using NRE_{rd} boundary sample: {len(l2)}")
 
-    torch.save(obj=k1, f=f"{current_root}/k1")
-    torch.save(obj=l1, f=f"{current_root}/l1")
-    torch.save(obj=k2, f=f"{current_root}/k2")
-    torch.save(obj=l2, f=f"{current_root}/l2")
+    torch.save(obj=k1, f=f"{previous_root}/k1")
+    torch.save(obj=l1, f=f"{previous_root}/l1")
+    torch.save(obj=k2, f=f"{previous_root}/k2")
+    torch.save(obj=l2, f=f"{previous_root}/l2")
     if nreSettings.ns_nre_use_previous_boundary_sample_for_counting:
         return k1, l1, k2, l2
     else:
-        torch.save(obj=n1, f=f"{current_root}/n1")
-        torch.save(obj=n0, f=f"{current_root}/n0")
+        torch.save(obj=n1, f=f"{previous_root}/n1")
+        torch.save(obj=n0, f=f"{previous_root}/n0")
         return k1, l1, k2, l2, n0, n1

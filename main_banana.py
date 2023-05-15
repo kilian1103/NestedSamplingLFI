@@ -8,7 +8,7 @@ import torch
 import wandb
 from NSLFI.NRE_Intersector import intersect_samples
 from NSLFI.NRE_NS_Wrapper import NRE
-from NSLFI.NRE_Post_Analysis import plot_NRE_posterior
+from NSLFI.NRE_Post_Analysis import plot_NRE_posterior, plot_NRE_expansion_and_contraction_rate
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_Simulator import Simulator
 from NSLFI.NRE_retrain import retrain_next_round
@@ -105,6 +105,7 @@ def execute():
         samples = nextSamples
     # plot triangle plot
     plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)
+    plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
 
 
 if __name__ == '__main__':
