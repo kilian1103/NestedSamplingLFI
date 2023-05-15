@@ -43,20 +43,18 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any]
 
     if nreSettings.ns_nre_use_previous_boundary_sample_for_counting:
 
-        logger.info("Previous sample space got contracted by median, contraction factor: 0.5")
-
         previous_NRE_with_curr_samples_logLs = previous_NRE_wrapped.logLikelihood(current_samples)
         current_NRE_with_prev_samples_logLs = current_NRE_wrapped.logLikelihood(previous_samples)
 
         k1 = previous_samples[current_NRE_with_prev_samples_logLs > current_NRE_boundary_logL]
         l1 = previous_samples[current_NRE_with_prev_samples_logLs < current_NRE_boundary_logL]
-        logger.info(f"k1 prev samples within current NRE using prev NRE boundary sample: {len(k1)}")
-        logger.info(f"n1-k1 prev samples outside current NRE using prev NRE boundary sample: {len(l1)}")
+        logger.info(f"k1 round {rd - 1} samples within NRE_{rd} using NRE_{rd - 1} boundary sample: {len(k1)}")
+        logger.info(f"l1 round {rd - 1} samples outside NRE_{rd} using NRE_{rd - 1}  boundary sample: {len(l1)}")
 
         k2 = current_samples[previous_NRE_with_curr_samples_logLs > previous_NRE_boundary_logL]
         l2 = current_samples[previous_NRE_with_curr_samples_logLs < previous_NRE_boundary_logL]
-        logger.info(f"k2 curr samples within previous NRE using prev NRE boundary sample: {len(k2)}")
-        logger.info(f"l2 curr samples outside previous NRE using prev NRE boundary sample: {len(l2)}")
+        logger.info(f"k2 round {rd} samples within NRE_{rd - 1} using NRE_{rd - 1} boundary sample: {len(k2)}")
+        logger.info(f"l2 round {rd} samples outside NRE_{rd - 1} using NRE_{rd - 1} boundary sample: {len(l2)}")
 
     else:
         # use current NRE boundary sample for counting
@@ -68,22 +66,22 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any]
         n1 = previous_samples[previous_NRE_with_prev_samples_logLs > previous_NRE_boundary_logL]
         n0 = previous_samples[previous_NRE_with_prev_samples_logLs < previous_NRE_boundary_logL]
         contraction = len(n1) / (len(n0) + len(n1))  # of prev NRE contour by choosing curr NRE boundary sample
-        logger.info(f"n1 prev samples within prev NRE using curr NRE boundary sample: {len(n1)}")
-        logger.info(f"n0 prev samples outside prev NRE using curr NRE boundary sample: {len(n0)}")
-        logger.info(f"contraction factor of prev NRE area using curr NRE boundary sample: {contraction}")
+        logger.info(f"n1 round {rd - 1} samples within NRE_{rd - 1} using NRE_{rd} boundary sample: {len(n1)}")
+        logger.info(f"n0 round {rd - 1} samples outside NRE_{rd - 1} using NRE_{rd} boundary sample: {len(n0)}")
+        logger.info(f"contraction factor of NRE_{rd - 1} area using NRE_{rd} boundary sample: {contraction}")
 
         # count number of contracted space samples satisfying current NRE contour
         current_NRE_with_prev_contracted_space_samples_logLs = current_NRE_wrapped.logLikelihood(n1)
         k1 = n1[current_NRE_with_prev_contracted_space_samples_logLs > current_NRE_boundary_logL]
         l1 = n1[current_NRE_with_prev_contracted_space_samples_logLs < current_NRE_boundary_logL]
-        logger.info(f"k1 prev samples within curr NRE using curr NRE boundary sample: {len(k1)}")
-        logger.info(f"n1-k1 prev samples outside curr NRE using curr NRE boundary sample: {len(l1)}")
+        logger.info(f"k1 round {rd - 1} samples within NRE_{rd} using NRE_{rd} boundary sample: {len(k1)}")
+        logger.info(f"l1 round {rd - 1} samples outside NRE_{rd} using NRE_{rd} boundary sample: {len(l1)}")
 
         # count number of current samples satisfying previous NRE contour
         k2 = current_samples[previous_NRE_with_curr_samples_logLs > previous_NRE_boundary_logL]
         l2 = current_samples[previous_NRE_with_curr_samples_logLs < previous_NRE_boundary_logL]
-        logger.info(f"k2 curr samples within previous NRE using curr NRE boundary sample: {len(k2)}")
-        logger.info(f"n2-l2 curr samples outside previous NRE using curr NRE boundary sample: {len(l2)}")
+        logger.info(f"k2 round {rd} samples within NRE_{rd - 1} using NRE_{rd} boundary sample: {len(k2)}")
+        logger.info(f"l2 round {rd} samples outside NRE_{rd - 1} using NRE_{rd} boundary sample: {len(l2)}")
 
     torch.save(obj=k1, f=f"{current_root}/k1")
     torch.save(obj=l1, f=f"{current_root}/l1")
