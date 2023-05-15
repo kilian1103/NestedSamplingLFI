@@ -26,7 +26,7 @@ def plot_NRE_expansion_and_contraction_rate(root_storage: Dict[str, str], nreSet
     data_exp = []
     data_comp = []
     data_rate = []
-    for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+    for rd in range(0, nreSettings.NRE_num_retrain_rounds):
         root = root_storage[f"round_{rd}"]
         k1 = torch.load(f"{root}/k1")
         l1 = torch.load(f"{root}/l1")
@@ -43,7 +43,7 @@ def plot_NRE_expansion_and_contraction_rate(root_storage: Dict[str, str], nreSet
         rate = comp * expan
         data_rate.append(rate)
 
-    iter = list(range(1, nreSettings.NRE_num_retrain_rounds + 2))
+    iter = list(range(1, nreSettings.NRE_num_retrain_rounds + 1))
     plt.figure()
     plt.plot(iter, data_comp, label="compression")
     plt.plot(iter, data_exp, label="expansion")
