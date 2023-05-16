@@ -56,10 +56,9 @@ def execute():
         network = retrain_next_round(root=root, nextRoundPoints=samples,
                                      nreSettings=nreSettings, sim=sim,
                                      prior=prior, obs=obs)
-        network_storage[f"round_{rd}"] = network
-        root_storage[f"round_{rd}"] = root
-
         trained_NRE = NRE(network=network, obs=obs)
+        network_storage[f"round_{rd}"] = trained_NRE
+        root_storage[f"round_{rd}"] = root
         logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
         with torch.no_grad():
             # generate samples within median countour of prior trained NRE
@@ -75,7 +74,7 @@ def execute():
                                                        nsamples=nreSettings.n_training_samples,
                                                        keep_chain=nreSettings.ns_keep_chain,
                                                        boundarySample=boundarySample)
-                k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
+                k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
                                                    network_storage=network_storage, rd=rd,
                                                    boundarySample=boundarySample)
                 samples = torch.load(f=f"{root}/posterior_samples")
@@ -95,7 +94,7 @@ def execute():
                                                    keep_chain=nreSettings.ns_keep_chain,
                                                    boundarySample=boundarySample)
             if not nreSettings.ns_nre_use_previous_boundary_sample_for_counting and rd >= 1:
-                k1, l1, k2, l2, n0, n1 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage, obs=obs,
+                k1, l1, k2, l2, n0, n1 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
                                                            network_storage=network_storage, rd=rd,
                                                            boundarySample=boundarySample)
 

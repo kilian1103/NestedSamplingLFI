@@ -1,7 +1,6 @@
 import logging
 from typing import Tuple, Dict, Any
 
-import swyft
 import torch
 from torch import Tensor
 
@@ -9,8 +8,8 @@ from NSLFI.NRE_NS_Wrapper import NRE
 from NSLFI.NRE_Settings import NRE_Settings
 
 
-def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any], root_storage: Dict[str, Any],
-                      obs: swyft.Sample, rd: int, boundarySample: Tensor) -> Tuple[Tensor, ...]:
+def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, NRE], root_storage: Dict[str, Any], rd: int,
+                      boundarySample: Tensor) -> Tuple[Tensor, ...]:
     """Intersect samples from two NREs.
     :param nreSettings: NRE settings
     :param network_storage: dictionary containing the NREs
@@ -25,12 +24,10 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, Any]
     logger.info(f"intersecting samples using NRE {rd - 1} and {rd}")
 
     # load NREs
-    previous_NRE = network_storage[f"round_{rd - 1}"]
-    previous_NRE_wrapped = NRE(previous_NRE, obs)
+    previous_NRE_wrapped = network_storage[f"round_{rd - 1}"]
     previous_root = root_storage[f"round_{rd - 1}"]
 
-    current_NRE = network_storage[f"round_{rd}"]
-    current_NRE_wrapped = NRE(current_NRE, obs)
+    current_NRE_wrapped = network_storage[f"round_{rd}"]
     current_root = root_storage[f"round_{rd}"]
 
     # load samples
