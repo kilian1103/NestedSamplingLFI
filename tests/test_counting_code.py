@@ -49,14 +49,15 @@ def gen(l, ls, n):
 
 def plot_contour(ax, l, *args, **kwargs):
     """Plot contour of l on ax"""
-    x, y = np.meshgrid(np.linspace(-1, 1, 100), np.linspace(-1, 1, 100))
-    z = np.array([l(torch.tensor([x_, y_])) for x_, y_ in zip(x.flatten(), y.flatten())]).reshape(x.shape)
+    x, y = torch.meshgrid(torch.linspace(-1, 1, 100), torch.linspace(-1, 1, 100))
+    z = torch.as_tensor([l(torch.as_tensor([x_, y_])) for x_, y_ in zip(x.flatten(), y.flatten())]).reshape(x.shape)
     return ax.contour(x, y, z, *args, **kwargs)
 
 
 def test_intersect_samples_left_bound():
     """Test intersect_samples with left boundary sample, circles are contained in each other"""
     # initialization
+    torch.manual_seed(100)
     n0 = n1 = 100
     boundarySample = torch.tensor([-0.2, 0])  # circle should be contained fully within other circle
 
@@ -116,7 +117,6 @@ def test_intersect_samples_left_bound():
                                        network_storage=network_storage, rd=rd,
                                        boundarySample=boundarySample, current_samples=posterior_1,
                                        previous_samples=posterior_0)
-
     np.testing.assert_equal(len(k1), n0)
     np.testing.assert_equal(len(l1), 0)
 
@@ -127,6 +127,7 @@ def test_intersect_samples_left_bound():
 def test_intersect_samples_right_bound():
     """Test intersect_samples with right boundary sample, circles are disjoint"""
     # initialization
+    torch.manual_seed(100)
     n0 = n1 = 100
     boundarySample = torch.tensor([0.2, 0])  # circles should be disjoint to each other
 
