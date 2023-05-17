@@ -54,7 +54,7 @@ def plot_contour(ax, l, *args, **kwargs):
     return ax.contour(x, y, z, *args, **kwargs)
 
 
-def test_intersect_samples_prev_left_bound():
+def test_intersect_samples_left_bound():
     """Test intersect_samples with left boundary sample, circles are contained in each other"""
     # initialization
     n0 = n1 = 100
@@ -62,7 +62,6 @@ def test_intersect_samples_prev_left_bound():
 
     # setup settings
     nreSettings = NRE_Settings()
-    nreSettings.ns_nre_use_previous_boundary_sample_for_counting = True
 
     # setup root directory
     nre_0_root = "nre_0_root"
@@ -115,7 +114,8 @@ def test_intersect_samples_prev_left_bound():
     rd = 1
     k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
                                        network_storage=network_storage, rd=rd,
-                                       boundarySample=boundarySample)
+                                       boundarySample=boundarySample, current_samples=posterior_1,
+                                       previous_samples=posterior_0)
 
     np.testing.assert_equal(len(k1), n0)
     np.testing.assert_equal(len(l1), 0)
@@ -124,7 +124,7 @@ def test_intersect_samples_prev_left_bound():
     shutil.rmtree(nre_1_root)
 
 
-def test_intersect_samples_prev_right_bound():
+def test_intersect_samples_right_bound():
     """Test intersect_samples with right boundary sample, circles are disjoint"""
     # initialization
     n0 = n1 = 100
@@ -132,7 +132,6 @@ def test_intersect_samples_prev_right_bound():
 
     # setup settings
     nreSettings = NRE_Settings()
-    nreSettings.ns_nre_use_previous_boundary_sample_for_counting = True
 
     # setup root directory
     nre_0_root = "nre_0_root"
@@ -185,7 +184,8 @@ def test_intersect_samples_prev_right_bound():
     rd = 1
     k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
                                        network_storage=network_storage, rd=rd,
-                                       boundarySample=boundarySample)
+                                       boundarySample=boundarySample, current_samples=posterior_1,
+                                       previous_samples=posterior_0)
 
     np.testing.assert_equal(len(k1), 0)
     np.testing.assert_equal(len(l1), n0)
