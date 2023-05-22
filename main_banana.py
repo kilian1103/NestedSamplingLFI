@@ -82,9 +82,9 @@ def execute():
                                                    previous_samples=previous_samples)
                 loglikes = trained_NRE.logLikelihood(samples)
             median_logL, idx = torch.median(loglikes, dim=-1)
-            n1 = len(loglikes[loglikes > median_logL])
-            n2 = len(loglikes[loglikes < median_logL])
-            compression = n1 / (n1 + n2)
+            n1 = loglikes[loglikes > median_logL]
+            n2 = loglikes[loglikes < median_logL]
+            compression = len(n1) / (len(n1) + len(n2))
             logger.info(f"Median compression due to selecting new boundary sample: {compression}")
             boundarySample = samples[idx]
             torch.save(boundarySample, f"{root}/boundary_sample")
@@ -96,19 +96,16 @@ def execute():
                                                    keep_chain=nreSettings.ns_keep_chain,
                                                    boundarySample=boundarySample)
             if not nreSettings.ns_nre_use_previous_boundary_sample_for_counting and rd >= 1:
-                previousRoot = root_storage[f"round_{rd - 1}"]
                 current_samples = torch.load(f"{root}/posterior_samples")
-                previous_samples = torch.load(f"{previousRoot}/posterior_samples")
                 previous_NRE = network_storage[f"round_{rd - 1}"]
                 current_boundary_logL_previous_NRE = previous_NRE.logLikelihood(boundarySample)
-                previous_logL_previous_NRE = previous_NRE.logLikelihood(previous_samples)
-                n1 = previous_samples[previous_logL_previous_NRE > current_boundary_logL_previous_NRE]
-                n2 = previous_samples[previous_logL_previous_NRE < current_boundary_logL_previous_NRE]
+                previous_logL_previous_NRE = previous_NRE.logLikelihood(samples)
+                n1 = samples[previous_logL_previous_NRE > current_boundary_logL_previous_NRE]
+                n2 = samples[previous_logL_previous_NRE < current_boundary_logL_previous_NRE]
                 previous_compression_with_current_boundary = len(n1) / (len(n1) + len(n2))
                 logger.info(
                     f"Compression of previous NRE contour due to current boundary sample: "
                     f"{previous_compression_with_current_boundary}")
-
                 k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
                                                    network_storage=network_storage, rd=rd,
                                                    boundarySample=boundarySample,
