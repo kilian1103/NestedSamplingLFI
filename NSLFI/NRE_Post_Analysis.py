@@ -32,10 +32,6 @@ def plot_NRE_expansion_and_contraction_rate(root_storage: Dict[str, str], nreSet
         l1 = torch.load(f"{root}/l1")
         k2 = torch.load(f"{root}/k2")
         l2 = torch.load(f"{root}/l2")
-        if not nreSettings.ns_nre_use_previous_boundary_sample_for_counting:
-            n1 = torch.load(f"{root}/n1")
-            n0 = torch.load(f"{root}/n0")
-            median_comp = len(n1) / (len(n0) + len(n1))
         comp = len(k1) / (len(k1) + len(l1))
         data_comp.append(comp)
         expan = (len(k2) + len(l2)) / len(k2)
