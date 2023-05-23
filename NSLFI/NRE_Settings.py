@@ -19,7 +19,7 @@ class NRE_Settings:
         self.device = "cpu"
         self.dropout = 0.3
         self.early_stopping_patience = 3
-        self.max_epochs = 20
+        self.max_epochs = 50
         self.NRE_num_retrain_rounds = 2
         self.ns_sampler = "Slice"
         self.ns_keep_chain = True

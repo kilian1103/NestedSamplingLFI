@@ -57,7 +57,6 @@ class NestedSamplerBounds(NestedSampler):
                 deadpoints_logL.append(logLike)
                 if len(deadpoints) == nsamples_per_core:
                     break
-
         comm_gen.Barrier()
         deadpoints = comm_gen.gather(deadpoints, root=0)
         deadpoints_logL = comm_gen.gather(deadpoints_logL, root=0)

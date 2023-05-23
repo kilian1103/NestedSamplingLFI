@@ -69,7 +69,6 @@ def execute():
                                          prior=prior, obs=obs)
         else:
             network = None
-        # broadcast network to all ranks
         comm_gen.Barrier()
         network = comm_gen.bcast(network, root=0)
         trained_NRE = NRE(network=network, obs=obs)
