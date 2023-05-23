@@ -4,6 +4,7 @@ import os
 import numpy as np
 import swyft
 import torch
+from mpi4py import MPI
 
 import wandb
 from NSLFI.NRE_Intersector import intersect_samples
@@ -16,19 +17,23 @@ from NSLFI.NestedSamplerBounds import NestedSamplerBounds
 
 
 def execute():
-    np.random.seed(234)
-    torch.manual_seed(234)
+    comm_gen = MPI.COMM_WORLD
+    rank_gen = comm_gen.Get_rank()
+    size_gen = comm_gen.Get_size()
+    np.random.seed(234 + rank_gen)
+    torch.manual_seed(234 + rank_gen)
     nreSettings = NRE_Settings()
     logging.basicConfig(filename=nreSettings.logger_name, level=logging.INFO,
                         filemode="w")
     logger = logging.getLogger()
     logger.info('Started')
     root = nreSettings.root
-    try:
-        os.makedirs(root)
-    except OSError:
-        logger.info("root folder already exists!")
-
+    if rank_gen == 0:
+        try:
+            os.makedirs(root)
+        except OSError:
+            logger.info("root folder already exists!")
+    comm_gen.Barrier()
     network_storage = dict()
     root_storage = dict()
     # uniform prior for theta_i
@@ -43,31 +48,43 @@ def execute():
     bimodal = False
     sim = Simulator(bounds_z=None, bimodal=bimodal, nreSettings=nreSettings)
     # generate samples using simulator
-    samples = torch.as_tensor(
-        sim.sample(nreSettings.n_training_samples, targets=[nreSettings.targetKey])[nreSettings.targetKey])
-
+    if rank_gen == 0:
+        samples = torch.as_tensor(
+            sim.sample(nreSettings.n_training_samples, targets=[nreSettings.targetKey])[nreSettings.targetKey])
+    else:
+        samples = torch.empty((nreSettings.n_training_samples, nreSettings.num_features))
+    # broadcast samples to all ranks
+    comm_gen.Barrier()
+    samples = comm_gen.bcast(samples, root=0)
     # retrain NRE and sample new samples with NS loop
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-        logger.info("retraining round: " + str(rd))
-        if nreSettings.activate_wandb:
-            wandb.init(
-                # set the wandb project where this run will be logged
-                project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
-        network = retrain_next_round(root=root, nextRoundPoints=samples,
-                                     nreSettings=nreSettings, sim=sim,
-                                     prior=prior, obs=obs)
+        if rank_gen == 0:
+            logger.info("retraining round: " + str(rd))
+            if nreSettings.activate_wandb:
+                wandb.init(
+                    # set the wandb project where this run will be logged
+                    project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
+            network = retrain_next_round(root=root, nextRoundPoints=samples,
+                                         nreSettings=nreSettings, sim=sim,
+                                         prior=prior, obs=obs)
+        else:
+            network = None
+        # broadcast network to all ranks
+        comm_gen.Barrier()
+        network = comm_gen.bcast(network, root=0)
         trained_NRE = NRE(network=network, obs=obs)
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = root
         logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
         with torch.no_grad():
-            # generate samples within median countour of prior trained NRE
+            # generate samples within median contour of prior trained NRE
             loglikes = trained_NRE.logLikelihood(samples)
             if nreSettings.ns_nre_use_previous_boundary_sample_for_counting and rd >= 1:
                 # use previous boundary sample to refill new NRE contour
                 previousRoot = root_storage[f"round_{rd - 1}"]
                 boundarySample = torch.load(f"{previousRoot}/boundary_sample")
                 previous_samples = torch.load(f"{previousRoot}/posterior_samples")
+                comm_gen.Barrier()
                 nestedSampler = NestedSamplerBounds(logLikelihood=trained_NRE.logLikelihood, livepoints=samples,
                                                     prior=prior, root=root, samplertype=nreSettings.ns_sampler,
                                                     logLs=loglikes)
@@ -75,19 +92,25 @@ def execute():
                                                        nsamples=nreSettings.n_training_samples,
                                                        keep_chain=nreSettings.ns_keep_chain,
                                                        boundarySample=boundarySample)
+                comm_gen.Barrier()
                 samples = torch.load(f=f"{root}/posterior_samples")
-                k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
-                                                   network_storage=network_storage, rd=rd,
-                                                   boundarySample=boundarySample, current_samples=samples,
-                                                   previous_samples=previous_samples)
+                if rank_gen == 0:
+                    k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
+                                                       network_storage=network_storage, rd=rd,
+                                                       boundarySample=boundarySample, current_samples=samples,
+                                                       previous_samples=previous_samples)
+                comm_gen.Barrier()
                 loglikes = trained_NRE.logLikelihood(samples)
             median_logL, idx = torch.median(loglikes, dim=-1)
-            n1 = loglikes[loglikes > median_logL]
-            n2 = loglikes[loglikes < median_logL]
-            compression = len(n1) / (len(n1) + len(n2))
-            logger.info(f"Median compression due to selecting new boundary sample: {compression}")
+            if rank_gen == 0:
+                n1 = loglikes[loglikes > median_logL]
+                n2 = loglikes[loglikes < median_logL]
+                compression = len(n1) / (len(n1) + len(n2))
+                logger.info(f"Median compression due to selecting new boundary sample: {compression}")
             boundarySample = samples[idx]
-            torch.save(boundarySample, f"{root}/boundary_sample")
+            if rank_gen == 0:
+                torch.save(boundarySample, f"{root}/boundary_sample")
+            comm_gen.Barrier()
             nestedSampler = NestedSamplerBounds(logLikelihood=trained_NRE.logLikelihood, livepoints=samples,
                                                 prior=prior, root=root, samplertype=nreSettings.ns_sampler,
                                                 logLs=loglikes)
@@ -95,30 +118,34 @@ def execute():
                                                    nsamples=nreSettings.n_training_samples,
                                                    keep_chain=nreSettings.ns_keep_chain,
                                                    boundarySample=boundarySample)
+            comm_gen.Barrier()
             if not nreSettings.ns_nre_use_previous_boundary_sample_for_counting and rd >= 1:
-                current_samples = torch.load(f"{root}/posterior_samples")
-                previous_NRE = network_storage[f"round_{rd - 1}"]
-                current_boundary_logL_previous_NRE = previous_NRE.logLikelihood(boundarySample)
-                previous_logL_previous_NRE = previous_NRE.logLikelihood(samples)
-                n1 = samples[previous_logL_previous_NRE > current_boundary_logL_previous_NRE]
-                n2 = samples[previous_logL_previous_NRE < current_boundary_logL_previous_NRE]
-                previous_compression_with_current_boundary = len(n1) / (len(n1) + len(n2))
-                logger.info(
-                    f"Compression of previous NRE contour due to current boundary sample: "
-                    f"{previous_compression_with_current_boundary}")
-                k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
-                                                   network_storage=network_storage, rd=rd,
-                                                   boundarySample=boundarySample,
-                                                   current_samples=current_samples,
-                                                   previous_samples=n1)
+                if rank_gen == 0:
+                    current_samples = torch.load(f"{root}/posterior_samples")
+                    previous_NRE = network_storage[f"round_{rd - 1}"]
+                    current_boundary_logL_previous_NRE = previous_NRE.logLikelihood(boundarySample)
+                    previous_logL_previous_NRE = previous_NRE.logLikelihood(samples)
+                    n1 = samples[previous_logL_previous_NRE > current_boundary_logL_previous_NRE]
+                    n2 = samples[previous_logL_previous_NRE < current_boundary_logL_previous_NRE]
+                    previous_compression_with_current_boundary = len(n1) / (len(n1) + len(n2))
+                    logger.info(
+                        f"Compression of previous NRE contour due to current boundary sample: "
+                        f"{previous_compression_with_current_boundary}")
+                    k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
+                                                       network_storage=network_storage, rd=rd,
+                                                       boundarySample=boundarySample,
+                                                       current_samples=current_samples,
+                                                       previous_samples=n1)
 
+        comm_gen.Barrier()
         nextSamples = torch.load(f=f"{root}/posterior_samples")
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
         samples = nextSamples
     # plot triangle plot
-    plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)
-    plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
+    if rank_gen == 0:
+        plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)
+        plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
 
 
 if __name__ == '__main__':

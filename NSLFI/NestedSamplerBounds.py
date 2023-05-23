@@ -1,6 +1,7 @@
 from typing import Any, Dict
 
 import torch
+from mpi4py import MPI
 from torch import Tensor
 from torch.distributions import Uniform
 
@@ -22,7 +23,9 @@ class NestedSamplerBounds(NestedSampler):
         :param keep_chain: keep the chain of samples that led to the final sample: True/False
         :return:
         """
-
+        comm_gen = MPI.COMM_WORLD
+        rank_gen = comm_gen.Get_rank()
+        size_gen = comm_gen.Get_size()
         # dynamic storage -> lists
         deadpoints = []
         deadpoints_logL = []
@@ -35,8 +38,12 @@ class NestedSamplerBounds(NestedSampler):
         self.logLikelihoods = self.logLikelihoods[self.logLikelihoods > boundarySampleLogLike]
         cov = torch.cov(self.livepoints.T)
         cholesky = torch.linalg.cholesky(cov)
-
-        while len(deadpoints) < nsamples:
+        # prepare for MPI
+        nsamples_per_core = nsamples // size_gen
+        if rank_gen == 0:
+            # add remainder to first core
+            nsamples_per_core += nsamples % size_gen
+        while len(deadpoints) < nsamples_per_core:
             # find new samples satisfying likelihood constraint
             proposal_samples = self.sampler.sample(livepoints=self.livepoints.clone(),
                                                    minlogLike=boundarySampleLogLike,
@@ -48,9 +55,19 @@ class NestedSamplerBounds(NestedSampler):
                 deadpoints.append(proposal_sample)
                 deadpoints_birthlogL.append(boundarySampleLogLike)
                 deadpoints_logL.append(logLike)
-                if len(deadpoints) == nsamples:
+                if len(deadpoints) == nsamples_per_core:
                     break
-        torch.save(f=f"{self.root}/posterior_samples", obj=torch.stack(deadpoints).squeeze())
-        torch.save(f=f"{self.root}/logL", obj=torch.as_tensor(deadpoints_logL))
-        torch.save(f=f"{self.root}/logL_birth", obj=torch.as_tensor(deadpoints_birthlogL))
+
+        comm_gen.Barrier()
+        deadpoints = comm_gen.gather(deadpoints, root=0)
+        deadpoints_logL = comm_gen.gather(deadpoints_logL, root=0)
+        deadpoints_birthlogL = comm_gen.gather(deadpoints_birthlogL, root=0)
+        comm_gen.Barrier()
+        if rank_gen == 0:
+            deadpoints = [item for sublist in deadpoints for item in sublist]
+            deadpoints_logL = [item for sublist in deadpoints_logL for item in sublist]
+            deadpoints_birthlogL = [item for sublist in deadpoints_birthlogL for item in sublist]
+            torch.save(f=f"{self.root}/posterior_samples", obj=torch.stack(deadpoints).squeeze())
+            torch.save(f=f"{self.root}/logL", obj=torch.as_tensor(deadpoints_logL))
+            torch.save(f=f"{self.root}/logL_birth", obj=torch.as_tensor(deadpoints_birthlogL))
         return {"log Z mean": 0, "log Z std": 0}

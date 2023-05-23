@@ -68,5 +68,4 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
     plt.figure()
     swyft.corner(predictions, ["z[0]", "z[1]"], bins=50, smooth=1)
     plt.savefig(f"{root}/NRE_predictions.pdf")
-    plt.show()
     return network

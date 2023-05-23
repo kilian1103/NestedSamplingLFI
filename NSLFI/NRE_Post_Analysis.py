@@ -48,4 +48,3 @@ def plot_NRE_expansion_and_contraction_rate(root_storage: Dict[str, str], nreSet
     plt.ylabel("rate")
     plt.legend()
     plt.savefig(f"{root_storage['round_0']}/NRE_expansion_and_contraction_rate.pdf")
-    plt.show()
