@@ -9,6 +9,7 @@ from mpi4py import MPI
 import wandb
 from NSLFI.NRE_Intersector import intersect_samples
 from NSLFI.NRE_NS_Wrapper import NRE
+from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Post_Analysis import plot_NRE_posterior, plot_NRE_expansion_and_contraction_rate
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_Simulator import Simulator
@@ -54,7 +55,6 @@ def execute():
     else:
         samples = torch.empty((nreSettings.n_training_samples, nreSettings.num_features))
     # broadcast samples to all ranks
-    comm_gen.Barrier()
     samples = comm_gen.bcast(samples, root=0)
     comm_gen.Barrier()
     # retrain NRE and sample new samples with NS loop
@@ -69,8 +69,7 @@ def execute():
                                          nreSettings=nreSettings, sim=sim,
                                          prior=prior, obs=obs)
         else:
-            network = None
-        comm_gen.Barrier()
+            network = Network(nreSettings=nreSettings)
         network = comm_gen.bcast(network, root=0)
         comm_gen.Barrier()
         trained_NRE = NRE(network=network, obs=obs)
