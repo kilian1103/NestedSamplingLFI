@@ -103,13 +103,12 @@ def execute():
                 comm_gen.Barrier()
                 loglikes = trained_NRE.logLikelihood(samples)
             median_logL, idx = torch.median(loglikes, dim=-1)
+            boundarySample = samples[idx]
             if rank_gen == 0:
                 n1 = loglikes[loglikes > median_logL]
                 n2 = loglikes[loglikes < median_logL]
                 compression = len(n1) / (len(n1) + len(n2))
                 logger.info(f"Median compression due to selecting new boundary sample: {compression}")
-            boundarySample = samples[idx]
-            if rank_gen == 0:
                 torch.save(boundarySample, f"{root}/boundary_sample")
             comm_gen.Barrier()
             nestedSampler = NestedSamplerBounds(logLikelihood=trained_NRE.logLikelihood, livepoints=samples,
