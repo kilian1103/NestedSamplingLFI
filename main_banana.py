@@ -56,6 +56,7 @@ def execute():
     # broadcast samples to all ranks
     comm_gen.Barrier()
     samples = comm_gen.bcast(samples, root=0)
+    comm_gen.Barrier()
     # retrain NRE and sample new samples with NS loop
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         if rank_gen == 0:
@@ -71,6 +72,7 @@ def execute():
             network = None
         comm_gen.Barrier()
         network = comm_gen.bcast(network, root=0)
+        comm_gen.Barrier()
         trained_NRE = NRE(network=network, obs=obs)
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = root
