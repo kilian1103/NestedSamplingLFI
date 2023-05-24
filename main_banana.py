@@ -34,7 +34,6 @@ def execute():
             os.makedirs(root)
         except OSError:
             logger.info("root folder already exists!")
-    comm_gen.Barrier()
     network_storage = dict()
     root_storage = dict()
     # uniform prior for theta_i
@@ -99,7 +98,6 @@ def execute():
                                                        network_storage=network_storage, rd=rd,
                                                        boundarySample=boundarySample, current_samples=samples,
                                                        previous_samples=previous_samples)
-                comm_gen.Barrier()
                 loglikes = trained_NRE.logLikelihood(samples)
             median_logL, idx = torch.median(loglikes, dim=-1)
             boundarySample = samples[idx]
@@ -135,8 +133,6 @@ def execute():
                                                        boundarySample=boundarySample,
                                                        current_samples=current_samples,
                                                        previous_samples=n1)
-
-        comm_gen.Barrier()
         nextSamples = torch.load(f=f"{root}/posterior_samples")
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
