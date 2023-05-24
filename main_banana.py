@@ -21,6 +21,7 @@ def execute():
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
+    # add different seed for each rank
     np.random.seed(234 + rank_gen)
     torch.manual_seed(234 + rank_gen)
     nreSettings = NRE_Settings()
