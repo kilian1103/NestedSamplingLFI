@@ -9,7 +9,7 @@ class NRE_Settings:
         self.wandb_project_name = "NSNRE"
         self.activate_wandb = True
         self.logger_name = f"{self.root}.log"
-        self.n_training_samples = 30_000
+        self.n_training_samples = 4_000
         self.n_weighted_samples = 10_000
         self.datamodule_fractions = [0.8, 0.1, 0.1]
         self.obsKey = "x"
@@ -24,6 +24,5 @@ class NRE_Settings:
         self.ns_sampler = "Slice"
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3
-        self.ns_nre_use_previous_boundary_sample_for_counting = False
         self.sim_prior_lower = -1
         self.sim_prior_upper = 2
