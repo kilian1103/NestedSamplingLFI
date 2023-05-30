@@ -46,7 +46,7 @@ def execute():
     # observation for simulator
     obs = swyft.Sample(x=np.array(nreSettings.num_features * [0]))
     # define forward model settings
-    bimodal = False
+    bimodal = True
     sim = Simulator(bounds_z=None, bimodal=bimodal, nreSettings=nreSettings)
     # generate samples using simulator
     if rank_gen == 0:
@@ -96,7 +96,7 @@ def execute():
                                                    keep_chain=nreSettings.ns_keep_chain,
                                                    boundarySample=boundarySample)
             comm_gen.Barrier()
-            if rd >= 1 and rank_gen == 0:
+            if rd >= 1 and rank_gen == 0 and nreSettings.activate_NSNRE_counting:
                 current_samples = torch.load(f"{root}/posterior_samples")
                 previous_NRE = network_storage[f"round_{rd - 1}"]
                 current_boundary_logL_previous_NRE = previous_NRE.logLikelihood(boundarySample)

@@ -9,7 +9,7 @@ class NRE_Settings:
         self.wandb_project_name = "NSNRE"
         self.activate_wandb = True
         self.logger_name = f"{self.root}.log"
-        self.n_training_samples = 4_000
+        self.n_training_samples = 30_000
         self.n_weighted_samples = 10_000
         self.datamodule_fractions = [0.8, 0.1, 0.1]
         self.obsKey = "x"
@@ -21,6 +21,7 @@ class NRE_Settings:
         self.early_stopping_patience = 3
         self.max_epochs = 50
         self.NRE_num_retrain_rounds = 2
+        self.activate_NSNRE_counting = True
         self.ns_sampler = "Slice"
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3
