@@ -46,8 +46,7 @@ def execute():
     # observation for simulator
     obs = swyft.Sample(x=np.array(nreSettings.num_features * [0]))
     # define forward model settings
-    bimodal = True
-    sim = Simulator(bounds_z=None, bimodal=bimodal, nreSettings=nreSettings)
+    sim = Simulator(bounds_z=None, bimodal=False, nreSettings=nreSettings)
     # generate samples using simulator
     if rank_gen == 0:
         samples = torch.as_tensor(
