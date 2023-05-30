@@ -163,7 +163,7 @@ traitlets==5.9.0
 typing_extensions==4.5.0
 uri-template==1.2.0
 urllib3==1.26.15
-wandb==0.14.0
+wandb==0.15.3
 wcwidth==0.2.6
 webcolors==1.13
 webencodings==0.5.1
