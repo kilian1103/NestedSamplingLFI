@@ -25,17 +25,14 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
         os.makedirs(root)
     except OSError:
         logger.info("root folder already exists!")
-    out = []
     logger.info(f"Simulating new {nreSettings.obsKey} using NS samples {nreSettings.targetKey} with Simulator!")
-    for z in nextRoundPoints.numpy().squeeze():
-        trace = dict()
-        trace[nreSettings.targetKey] = z
-        sim.graph[nreSettings.obsKey].evaluate(trace)
-        sim.graph["l"].evaluate(trace)
-        result = sim.transform_samples(trace)
-        out.append(result)
-    out = collate_output(out)
-    nextRoundSamples = swyft.Samples(out)
+    samples = []
+    for point in nextRoundPoints:
+        cond = {nreSettings.targetKey: point}
+        sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
+        samples.append(sample)
+    samples = collate_output(samples)
+    nextRoundSwyftSamples = swyft.Samples(samples)
     logger.info("Simulation done!")
     logger.info("Setting up network for training!")
     early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
@@ -50,7 +47,7 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
                                  default_root_dir=nreSettings.root, logger=tb_logger,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
-    dm = swyft.SwyftDataModule(nextRoundSamples, fractions=nreSettings.datamodule_fractions, num_workers=0,
+    dm = swyft.SwyftDataModule(nextRoundSwyftSamples, fractions=nreSettings.datamodule_fractions, num_workers=0,
                                batch_size=64)
     network = Network(nreSettings=nreSettings)
     # network = torch.compile(network)
