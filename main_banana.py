@@ -39,7 +39,7 @@ def execute():
     root_storage = dict()
     # uniform prior for theta_i
     theta_prior = torch.distributions.uniform.Uniform(low=nreSettings.sim_prior_lower,
-                                                      high=nreSettings.sim_prior_lower + nreSettings.sim_prior_upper)
+                                                      high=nreSettings.sim_prior_lower + nreSettings.prior_width)
     # wrap prior for NS sampling procedure
     prior = {f"theta_{i}": theta_prior for i in range(nreSettings.num_features)}
 

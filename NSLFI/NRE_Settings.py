@@ -26,4 +26,4 @@ class NRE_Settings:
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3
         self.sim_prior_lower = -1
-        self.sim_prior_upper = 2
+        self.prior_width = 2

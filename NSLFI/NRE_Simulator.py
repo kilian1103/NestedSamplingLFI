@@ -10,8 +10,8 @@ class Simulator(swyft.Simulator):
         super().__init__()
         self.nreSettings = nreSettings
         self.z_sampler = swyft.RectBoundSampler(
-            [stats.uniform(self.nreSettings.sim_prior_lower, self.nreSettings.sim_prior_upper),
-             stats.uniform(self.nreSettings.sim_prior_lower, self.nreSettings.sim_prior_upper),
+            [stats.uniform(self.nreSettings.sim_prior_lower, self.nreSettings.prior_width),
+             stats.uniform(self.nreSettings.sim_prior_lower, self.nreSettings.prior_width),
              ],
             bounds=bounds_z
         )
