@@ -8,7 +8,7 @@ import wandb
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from swyft import collate_output
+from swyft import collate_output as reformat_samples
 from torch import Tensor
 from torch.distributions import Uniform
 
@@ -31,7 +31,7 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
         cond = {nreSettings.targetKey: point}
         sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
         samples.append(sample)
-    samples = collate_output(samples)
+    samples = reformat_samples(samples)
     nextRoundSwyftSamples = swyft.Samples(samples)
     logger.info("Simulation done!")
     logger.info("Setting up network for training!")
