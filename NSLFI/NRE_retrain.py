@@ -63,6 +63,7 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
     predictions = trainer.infer(network, obs, prior_samples)
     logger.info("Plotting posterior inference results!")
     plt.figure()
-    swyft.corner(predictions, ["z[0]", "z[1]"], bins=50, smooth=1)
+    swyft.corner(predictions, [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)], bins=50,
+                 smooth=1)
     plt.savefig(f"{root}/NRE_predictions.pdf")
     return network
