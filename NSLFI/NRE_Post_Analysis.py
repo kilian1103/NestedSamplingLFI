@@ -1,6 +1,7 @@
 from typing import Dict
 
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from getdist import MCSamples, plots
 
@@ -13,11 +14,14 @@ def plot_NRE_posterior(root_storage: Dict[str, str], nreSettings: NRE_Settings):
     g.settings.x_label_rotation = 45  # This stops the x axis labels
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         root = root_storage[f"round_{rd}"]
-        samples = torch.load(f=f"{root}/posterior_samples")
-        weights = torch.load(f=f"{root}/logL")
-        sample = MCSamples(samples=samples.numpy(), weights=weights.numpy(), label=f"round {rd}")
+        dat = np.loadtxt(f"{root}/test.txt")
+        weights = dat[:, 0]
+        logL = dat[:, 1]
+        samples = dat[:, 2:]
+        sample = MCSamples(samples=samples, weights=weights, loglikes=logL, label=f"round {rd}")
         data.append(sample)
-    g.triangle_plot(data, filled=True, labels=["z[0]", "z[1]"])
+    g.triangle_plot(data, filled=True,
+                    labels=[f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)])
     root = root_storage["round_0"]
     g.export(f"{root}/NRE_triangle_plot.pdf")
 

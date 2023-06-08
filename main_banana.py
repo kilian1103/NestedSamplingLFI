@@ -2,19 +2,20 @@ import logging
 import os
 
 import numpy as np
+import pypolychord
 import swyft
 import torch
 from mpi4py import MPI
 
+import NSLFI.NRE_Polychord_Models
 import wandb
 from NSLFI.NRE_Intersector import intersect_samples
 from NSLFI.NRE_NS_Wrapper import NRE
 from NSLFI.NRE_Network import Network
-from NSLFI.NRE_Post_Analysis import plot_NRE_posterior, plot_NRE_expansion_and_contraction_rate
+from NSLFI.NRE_Post_Analysis import plot_NRE_posterior
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_Simulator import Simulator
 from NSLFI.NRE_retrain import retrain_next_round
-from NSLFI.NestedSamplerBounds import NestedSamplerBounds
 
 
 def execute():
@@ -22,9 +23,9 @@ def execute():
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
     # add different seed for each rank
-    np.random.seed(234 + rank_gen)
-    torch.manual_seed(234 + rank_gen)
     nreSettings = NRE_Settings()
+    np.random.seed(nreSettings.seed)
+    torch.manual_seed(nreSettings.seed)
     logging.basicConfig(filename=nreSettings.logger_name, level=logging.INFO,
                         filemode="w")
     logger = logging.getLogger()
@@ -46,7 +47,7 @@ def execute():
     # observation for simulator
     obs = swyft.Sample(x=np.array(nreSettings.num_features * [0]))
     # define forward model settings
-    sim = Simulator(bounds_z=None, bimodal=False, nreSettings=nreSettings)
+    sim = Simulator(bounds_z=None, bimodal=True, nreSettings=nreSettings)
     # generate samples using simulator
     if rank_gen == 0:
         samples = torch.as_tensor(
@@ -87,15 +88,23 @@ def execute():
                 logger.info(f"Median compression due to selecting new boundary sample: {compression}")
                 torch.save(boundarySample, f"{root}/boundary_sample")
             comm_gen.Barrier()
-            nestedSampler = NestedSamplerBounds(logLikelihood=trained_NRE.logLikelihood, livepoints=samples,
-                                                prior=prior, root=root, samplertype=nreSettings.ns_sampler,
-                                                logLs=loglikes)
-            output = nestedSampler.nested_sampling(stop_criterion=nreSettings.ns_stopping_criterion,
-                                                   nsamples=nreSettings.n_training_samples,
-                                                   keep_chain=nreSettings.ns_keep_chain,
-                                                   boundarySample=boundarySample)
+            trained_NRE = NSLFI.NRE_Polychord_Models.NRE(network=network, obs=obs)
+            polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
+            polyset.base_dir = root
+            polyset.seed = nreSettings.seed
+            samples = samples[loglikes > median_logL]
+            samples_norm = (samples - nreSettings.sim_prior_lower) / nreSettings.prior_width
+            polyset.nlive = samples_norm.shape[0]
+            polyset.cube_samples = samples_norm
+            polyset.max_ndead = nreSettings.n_training_samples - samples_norm.shape[0]
+
+            # Run PolyChord
+            pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
+                                      nDerived=nreSettings.nderived, settings=polyset,
+                                      prior=trained_NRE.prior, dumper=trained_NRE.dumper)
             comm_gen.Barrier()
             if rd >= 1 and rank_gen == 0 and nreSettings.activate_NSNRE_counting:
+                # TODO fix counting code for polychord
                 current_samples = torch.load(f"{root}/posterior_samples")
                 previous_NRE = network_storage[f"round_{rd - 1}"]
                 current_boundary_logL_previous_NRE = previous_NRE.logLikelihood(boundarySample)
@@ -111,14 +120,16 @@ def execute():
                                                    boundarySample=boundarySample,
                                                    current_samples=current_samples,
                                                    previous_samples=n1)
-        nextSamples = torch.load(f=f"{root}/posterior_samples")
+        nextSamples = np.loadtxt(f"{root}/test.txt")
+        nextSamples = torch.as_tensor(nextSamples[:, 2:])
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
         samples = nextSamples
     # plot triangle plot
     if rank_gen == 0:
         plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)
-        plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
+        # TODO fix counting code
+        # plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
 
 
 if __name__ == '__main__':
