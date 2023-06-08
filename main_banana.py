@@ -5,10 +5,10 @@ import numpy as np
 import pypolychord
 import swyft
 import torch
+import wandb
 from mpi4py import MPI
 
 import NSLFI.NRE_Polychord_Models
-import wandb
 from NSLFI.NRE_Intersector import intersect_samples
 from NSLFI.NRE_NS_Wrapper import NRE
 from NSLFI.NRE_Network import Network
@@ -90,6 +90,7 @@ def execute():
             comm_gen.Barrier()
             trained_NRE = NSLFI.NRE_Polychord_Models.NRE(network=network, obs=obs)
             polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
+            polyset.file_root = nreSettings.file_root
             polyset.base_dir = root
             polyset.seed = nreSettings.seed
             samples = samples[loglikes > median_logL]
@@ -120,7 +121,7 @@ def execute():
                                                    boundarySample=boundarySample,
                                                    current_samples=current_samples,
                                                    previous_samples=n1)
-        nextSamples = np.loadtxt(f"{root}/test.txt")
+        nextSamples = np.loadtxt(f"{root}/{nreSettings.file_root}.txt")
         nextSamples = torch.as_tensor(nextSamples[:, 2:])
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot

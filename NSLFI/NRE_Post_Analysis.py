@@ -14,7 +14,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], nreSettings: NRE_Settings):
     g.settings.x_label_rotation = 45  # This stops the x axis labels
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         root = root_storage[f"round_{rd}"]
-        dat = np.loadtxt(f"{root}/test.txt")
+        dat = np.loadtxt(f"{root}/{nreSettings.file_root}.txt")
         weights = dat[:, 0]
         logL = dat[:, 1]
         samples = dat[:, 2:]

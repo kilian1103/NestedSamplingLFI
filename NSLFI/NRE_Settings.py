@@ -30,3 +30,4 @@ class NRE_Settings:
         self.prior_width = 2
         # polychord settings
         self.nderived = 0
+        self.file_root = "samples"
