@@ -24,15 +24,15 @@ def execute():
     logger.info('Started')
     network_storage = dict()
     root_storage = dict()
-    # TODO merge prior framework, so far simulator has scipy, polychord has hypercube and MCMC has torch
+    # TODO merge prior framework, so far simulator has scipy, polychord has hypercube
     dataEnv = DataEnvironment(nreSettings=nreSettings, logger=logger)
     dataEnv.generate_data()
     # retrain NRE and sample new samples with NS loop
-    execute_NSNRE_cycle(nreSettings=nreSettings, logger=logger, prior=dataEnv.prior,
+    execute_NSNRE_cycle(nreSettings=nreSettings, logger=logger,
                         obs=dataEnv.obs, sim=dataEnv.sim,
                         network_storage=network_storage,
                         root_storage=root_storage, samples=dataEnv.samples,
-                        root=dataEnv.root)
+                        root=nreSettings.root)
     # plot triangle plot
     if rank_gen == 0:
         plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)

@@ -19,18 +19,11 @@ class DataEnvironment:
         comm_gen = MPI.COMM_WORLD
         rank_gen = comm_gen.Get_rank()
         size_gen = comm_gen.Get_size()
-        root = self.nreSettings.root
         if rank_gen == 0:
             try:
-                os.makedirs(root)
+                os.makedirs(self.nreSettings.root)
             except OSError:
                 self.logger.info("root folder already exists!")
-        # uniform prior for theta_i
-        theta_prior = torch.distributions.uniform.Uniform(low=self.nreSettings.sim_prior_lower,
-                                                          high=self.nreSettings.sim_prior_lower +
-                                                               self.nreSettings.prior_width)
-        # wrap prior for NS sampling procedure
-        prior = {f"theta_{i}": theta_prior for i in range(self.nreSettings.num_features)}
 
         # observation for simulator
         obs = swyft.Sample(x=np.array(self.nreSettings.num_features * [0]))
@@ -49,6 +42,4 @@ class DataEnvironment:
         # save datageneration results
         self.sim = sim
         self.samples = samples
-        self.prior = prior
         self.obs = obs
-        self.root = root

@@ -15,7 +15,7 @@ from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
 
 
-def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: Simulator, prior: dict,
+def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: Simulator,
                         obs: swyft.Sample, network_storage: dict, root_storage: dict, samples: torch.Tensor, root: str):
     # retrain NRE and sample new samples with NS loop
     comm_gen = MPI.COMM_WORLD
