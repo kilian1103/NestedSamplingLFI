@@ -24,6 +24,7 @@ def execute():
     logger.info('Started')
     network_storage = dict()
     root_storage = dict()
+    # TODO merge prior framework, so far simulator has scipy, polychord has hypercube and MCMC has torch
     dataEnv = DataEnvironment(nreSettings=nreSettings, logger=logger)
     dataEnv.generate_data()
     # retrain NRE and sample new samples with NS loop
