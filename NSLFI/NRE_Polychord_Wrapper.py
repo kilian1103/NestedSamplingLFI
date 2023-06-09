@@ -9,13 +9,17 @@ from NSLFI.NRE_Network import Network
 
 
 class NRE_PolyChord:
+    """Wrapper for the NRE to be used with PolyChord."""
+
     def __init__(self, network: Network, obs: swyft.Sample):
+        """Initializes the NRE_PolyChord."""
         self.network = network.eval()
         self.nre_settings = self.network.nreSettings
         self.obs = {
             self.nre_settings.obsKey: torch.tensor(obs[self.nre_settings.obsKey]).type(torch.float64).unsqueeze(0)}
 
     def prior(self, cube) -> np.ndarray:
+        """Transforms the unit cube to the prior cube."""
         theta = np.zeros_like(cube)
         theta[0] = UniformPrior(self.nre_settings.sim_prior_lower,
                                 self.nre_settings.sim_prior_lower + self.nre_settings.prior_width)(
@@ -26,8 +30,9 @@ class NRE_PolyChord:
         return theta
 
     def logLikelihood(self, theta: np.ndarray) -> Tuple[Any, List]:
-        # check if list of datapoints or single datapoint
+        """Computes the loglikelihood ("NRE") of the given theta."""
         theta = torch.as_tensor(theta)
+        # check if list of datapoints or single datapoint
         if theta.ndim == 1:
             theta = theta.unsqueeze(0)
         prediction = self.network(self.obs, {self.nre_settings.targetKey: theta.type(torch.float64)})
