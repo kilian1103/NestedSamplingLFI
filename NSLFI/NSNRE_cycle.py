@@ -52,12 +52,10 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
             polyset.file_root = nreSettings.file_root
             polyset.base_dir = root
             polyset.seed = nreSettings.seed
-            samples = samples[loglikes > median_logL]
             samples_norm = (samples - nreSettings.sim_prior_lower) / nreSettings.prior_width
             polyset.nlive = samples_norm.shape[0]
             polyset.cube_samples = samples_norm
-            polyset.max_ndead = nreSettings.n_training_samples - samples_norm.shape[0]
-
+            polyset.max_ndead = nreSettings.n_training_samples  # exp(-max_ndead/n_live) compression
             # Run PolyChord
             pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
                                       nDerived=nreSettings.nderived, settings=polyset,
@@ -81,7 +79,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                                                    current_samples=current_samples,
                                                    previous_samples=n1)
         nextSamples = np.loadtxt(f"{root}/{nreSettings.file_root}.txt")
-        nextSamples = torch.as_tensor(nextSamples[:, 2:])
+        nextSamples = torch.as_tensor(nextSamples[-nreSettings.n_training_samples:, 2:])
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
         samples = nextSamples

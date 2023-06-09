@@ -15,9 +15,9 @@ def plot_NRE_posterior(root_storage: Dict[str, str], nreSettings: NRE_Settings):
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         root = root_storage[f"round_{rd}"]
         dat = np.loadtxt(f"{root}/{nreSettings.file_root}.txt")
-        weights = dat[:, 0]
-        logL = dat[:, 1]
-        samples = dat[:, 2:]
+        weights = dat[-nreSettings.n_training_samples:, 0]
+        logL = dat[-nreSettings.n_training_samples:, 1]
+        samples = dat[-nreSettings.n_training_samples:, 2:]
         sample = MCSamples(samples=samples, weights=weights, loglikes=logL, label=f"round {rd}")
         data.append(sample)
     g.triangle_plot(data, filled=True,
