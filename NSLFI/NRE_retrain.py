@@ -1,6 +1,5 @@
 import logging
 import os
-from typing import Dict
 
 import matplotlib.pyplot as plt
 import swyft
@@ -10,7 +9,6 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output as reformat_samples
 from torch import Tensor
-from torch.distributions import Uniform
 
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
@@ -18,7 +16,7 @@ from NSLFI.NRE_Simulator import Simulator
 
 
 def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Settings,
-                       sim: Simulator, prior: Dict[str, Uniform],
+                       sim: Simulator,
                        obs: swyft.Sample) -> Network:
     logger = logging.getLogger(nreSettings.logger_name)
     try:

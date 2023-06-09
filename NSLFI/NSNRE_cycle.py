@@ -8,10 +8,9 @@ import wandb
 from mpi4py import MPI
 from swyft import Simulator
 
-import NSLFI.NRE_Polychord_Models
 from NSLFI.NRE_Intersector import intersect_samples
-from NSLFI.NRE_NS_Wrapper import NRE
 from NSLFI.NRE_Network import Network
+from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
 
@@ -31,26 +30,24 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                     # set the wandb project where this run will be logged
                     project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
             network = retrain_next_round(root=root, nextRoundPoints=samples,
-                                         nreSettings=nreSettings, sim=sim,
-                                         prior=prior, obs=obs)
+                                         nreSettings=nreSettings, sim=sim, obs=obs)
         else:
             network = Network(nreSettings=nreSettings)
         network = comm_gen.bcast(network, root=0)
         comm_gen.Barrier()
-        trained_NRE = NRE(network=network, obs=obs)
+        trained_NRE = NRE_PolyChord(network=network, obs=obs)
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = root
         logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
         with torch.no_grad():
             # generate samples within median contour of prior trained NRE
-            loglikes = trained_NRE.logLikelihood(samples)
+            loglikes, _ = trained_NRE.logLikelihood(samples.numpy())
             median_logL, idx = torch.median(loglikes, dim=-1)
             boundarySample = samples[idx]
             if rank_gen == 0:
                 # save median boundary sample
                 torch.save(boundarySample, f"{root}/boundary_sample")
             comm_gen.Barrier()
-            trained_NRE = NSLFI.NRE_Polychord_Models.NRE(network=network, obs=obs)
             polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
             polyset.file_root = nreSettings.file_root
             polyset.base_dir = root
