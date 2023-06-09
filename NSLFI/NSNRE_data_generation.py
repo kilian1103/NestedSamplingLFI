@@ -34,6 +34,7 @@ class DataEnvironment:
             samples = torch.as_tensor(
                 sim.sample(self.nreSettings.n_training_samples, targets=[self.nreSettings.targetKey])[
                     self.nreSettings.targetKey])
+            torch.save(samples, f"{self.nreSettings.root}/full_prior_samples")
         else:
             samples = torch.empty((self.nreSettings.n_training_samples, self.nreSettings.num_features))
         # broadcast samples to all ranks
