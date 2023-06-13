@@ -21,7 +21,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
-    full_samples = samples.clone()
+    # full_samples = samples.clone()
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))
@@ -29,7 +29,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                 wandb.init(
                     # set the wandb project where this run will be logged
                     project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
-            network = retrain_next_round(root=root, nextRoundPoints=full_samples,
+            # replace full_samples with samples
+            network = retrain_next_round(root=root, nextRoundPoints=samples,
                                          nreSettings=nreSettings, sim=sim, obs=obs)
         else:
             network = Network(nreSettings=nreSettings)
@@ -39,48 +40,57 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = root
         logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
-        with torch.no_grad():
-            # generate samples within median contour of prior trained NRE
-            loglikes, _ = trained_NRE.logLikelihood(samples.numpy())
-            median_logL, idx = torch.median(loglikes, dim=-1)
-            boundarySample = samples[idx]
-            if rank_gen == 0:
-                # save median boundary sample
-                torch.save(boundarySample, f"{root}/boundary_sample")
-            comm_gen.Barrier()
-            polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
-            polyset.file_root = nreSettings.file_root
-            polyset.base_dir = root
-            polyset.seed = nreSettings.seed
-            samples_norm = (samples - nreSettings.sim_prior_lower) / nreSettings.prior_width
-            polyset.nlive = samples_norm.shape[0]
-            polyset.cube_samples = samples_norm
-            polyset.max_ndead = nreSettings.n_training_samples  # exp(-max_ndead/n_live) compression
-            # Run PolyChord
+        # start counting
+        if rd >= 1 and nreSettings.activate_NSNRE_counting:
+            # TODO fix counting code
+            previous_root = root_storage[f"round_{rd - 1}"]
+            data = np.loadtxt(f"{previous_root}/{nreSettings.file_root}.txt")
+            boundarySample = data[-nreSettings.n_training_samples - 1, 2:].reshape(1, nreSettings.num_features)
+            boundarySample_logL = float(data[-nreSettings.n_training_samples - 1, 1])
+            boundarySample_norm = (boundarySample - nreSettings.sim_prior_lower) / nreSettings.prior_width
+            previous_samples = data[-nreSettings.n_training_samples:, 2:]
+
+            polyset_repop = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
+            # repop settings
+            polyset_repop.nlive = 1
+            polyset_repop.nfail = nreSettings.n_training_samples
+            polyset_repop.cube_samples = boundarySample_norm
+            polyset_repop.nlives = {boundarySample_logL: nreSettings.n_training_samples + 1}
+            polyset_repop.max_ndead = 1
+            # other settings
+            polyset_repop.file_root = "repop"
+            polyset_repop.base_dir = root
+            polyset_repop.seed = nreSettings.seed
+
             pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
-                                      nDerived=nreSettings.nderived, settings=polyset,
+                                      nDerived=nreSettings.nderived, settings=polyset_repop,
                                       prior=trained_NRE.prior, dumper=trained_NRE.dumper)
-            comm_gen.Barrier()
-            if rd >= 1 and rank_gen == 0 and nreSettings.activate_NSNRE_counting:
-                # TODO fix counting code for polychord
-                current_samples = torch.load(f"{root}/posterior_samples")
-                previous_NRE = network_storage[f"round_{rd - 1}"]
-                current_boundary_logL_previous_NRE = previous_NRE.logLikelihood(boundarySample)
-                previous_logL_previous_NRE = previous_NRE.logLikelihood(samples)
-                n1 = samples[previous_logL_previous_NRE > current_boundary_logL_previous_NRE]
-                n2 = samples[previous_logL_previous_NRE < current_boundary_logL_previous_NRE]
-                previous_compression_with_current_boundary = len(n1) / (len(n1) + len(n2))
-                logger.info(
-                    f"Compression of previous NRE contour due to current boundary sample: "
-                    f"{previous_compression_with_current_boundary}")
+            data = np.loadtxt(f"{root}/repop.txt")
+            samples = data[1:nreSettings.n_training_samples + 1, 2:]
+            if rank_gen == 0:
                 k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
                                                    network_storage=network_storage, rd=rd,
                                                    boundarySample=boundarySample,
-                                                   current_samples=current_samples,
-                                                   previous_samples=n1)
+                                                   current_samples=torch.as_tensor(samples),
+                                                   previous_samples=torch.as_tensor(previous_samples))
+        comm_gen.Barrier()
+        # start compressing
+        samples_norm = (samples - nreSettings.sim_prior_lower) / nreSettings.prior_width
+        polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
+        polyset.file_root = nreSettings.file_root
+        polyset.base_dir = root
+        polyset.seed = nreSettings.seed
+        polyset.nlive = samples_norm.shape[0]
+        polyset.cube_samples = samples_norm
+        polyset.max_ndead = int(1 * nreSettings.n_training_samples)  # exp(-max_ndead/n_live) compression
+        # Run PolyChord
+        pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
+                                  nDerived=nreSettings.nderived, settings=polyset,
+                                  prior=trained_NRE.prior, dumper=trained_NRE.dumper)
+        comm_gen.Barrier()
         nextSamples = np.loadtxt(f"{root}/{nreSettings.file_root}.txt")
         nextSamples = torch.as_tensor(nextSamples[-nreSettings.n_training_samples:, 2:])
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
-        full_samples = torch.cat([full_samples, nextSamples], dim=0)
+        # full_samples = torch.cat([full_samples, nextSamples], dim=0)
         samples = nextSamples

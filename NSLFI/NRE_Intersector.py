@@ -4,11 +4,12 @@ from typing import Tuple, Dict, Any
 import torch
 from torch import Tensor
 
-from NSLFI.NRE_NS_Wrapper import NRE
+from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 
 
-def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, NRE], root_storage: Dict[str, Any], rd: int,
+def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, NRE_PolyChord],
+                      root_storage: Dict[str, Any], rd: int,
                       boundarySample: Tensor, previous_samples: Tensor, current_samples: Tensor) -> Tuple[Tensor, ...]:
     """Intersect samples from two NREs.
     :param nreSettings: NRE settings
@@ -29,13 +30,13 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, NRE]
 
     current_NRE_wrapped = network_storage[f"round_{rd}"]
     current_root = root_storage[f"round_{rd}"]
+    with torch.no_grad():
+        # evaluate new contour using previous boundary sample
+        previous_NRE_boundary_logL = previous_NRE_wrapped.logLikelihood(boundarySample)
+        current_NRE_boundary_logL = current_NRE_wrapped.logLikelihood(boundarySample)
 
-    # evaluate new contour using previous boundary sample
-    previous_NRE_boundary_logL = previous_NRE_wrapped.logLikelihood(boundarySample)
-    current_NRE_boundary_logL = current_NRE_wrapped.logLikelihood(boundarySample)
-
-    previous_NRE_with_curr_samples_logLs = previous_NRE_wrapped.logLikelihood(current_samples)
-    current_NRE_with_prev_samples_logLs = current_NRE_wrapped.logLikelihood(previous_samples)
+        previous_NRE_with_curr_samples_logLs = previous_NRE_wrapped.logLikelihood(current_samples)
+        current_NRE_with_prev_samples_logLs = current_NRE_wrapped.logLikelihood(previous_samples)
 
     k1 = previous_samples[current_NRE_with_prev_samples_logLs > current_NRE_boundary_logL]
     l1 = previous_samples[current_NRE_with_prev_samples_logLs < current_NRE_boundary_logL]

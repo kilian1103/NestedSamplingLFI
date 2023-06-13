@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from mpi4py import MPI
 
-from NSLFI.NRE_Post_Analysis import plot_NRE_posterior
+from NSLFI.NRE_Post_Analysis import plot_NRE_posterior, plot_NRE_expansion_and_contraction_rate
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NSNRE_cycle import execute_NSNRE_cycle
 from NSLFI.NSNRE_data_generation import DataEnvironment
@@ -37,7 +37,8 @@ def execute():
     if rank_gen == 0:
         plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)
         # TODO fix counting code
-        # plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
+        if nreSettings.activate_NSNRE_counting:
+            plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
 
 
 if __name__ == '__main__':
