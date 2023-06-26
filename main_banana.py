@@ -36,7 +36,6 @@ def execute():
     # plot triangle plot
     if rank_gen == 0:
         plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)
-        # TODO fix counting code
         if nreSettings.activate_NSNRE_counting:
             plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
 
