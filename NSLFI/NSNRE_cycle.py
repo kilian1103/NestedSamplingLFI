@@ -46,19 +46,18 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
             # TODO fix counting code, polychord has bugs with these settings
             previous_root = root_storage[f"round_{rd - 1}"]
             data = np.loadtxt(f"{previous_root}/{nreSettings.file_root}.txt")
+
             boundarySample = data[-nreSettings.n_training_samples - 1, 2:]
-            logger.info(f"boundarySample: {boundarySample}")
             boundarySample_logL, _ = trained_NRE.logLikelihood(boundarySample)  # recompute ! not reload from file
 
             livepoint_norm = (boundarySample - nreSettings.sim_prior_lower) / nreSettings.prior_width
-            # livepoint_norm = np.tile(livepoint_norm, (size_gen, 1))
             livepoint_norm = livepoint_norm.reshape(1, nreSettings.num_features)
-            logger.info(f"livepoints shape: {livepoint_norm.shape}")
 
             previous_samples = data[-nreSettings.n_training_samples:, 2:]
             comm_gen.Barrier()
-            polyset_repop = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
+
             # repop settings
+            polyset_repop = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
             polyset_repop.nlive = 1
             polyset_repop.nfail = nreSettings.n_training_samples
             polyset_repop.cube_samples = livepoint_norm
