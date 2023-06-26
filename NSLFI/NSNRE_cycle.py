@@ -1,5 +1,6 @@
 import logging
 
+import anesthetic
 import numpy as np
 import pypolychord
 import swyft
@@ -63,9 +64,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
             polyset_repop.cube_samples = livepoint_norm
             polyset_repop.nlives = {boundarySample_logL: nreSettings.n_training_samples + 1,
                                     boundarySample_logL + 1e-8: 0}
-            # TODO use anesthetic to get livepoints at iteration i, samples
-            #  polyset_repop.max_ndead = 1
-            # polyset_repop.write_resume = False
+            polyset_repop.max_ndead = 1
             # other settings
             polyset_repop.file_root = "repop"
             polyset_repop.base_dir = root
@@ -74,8 +73,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                                       nDerived=nreSettings.nderived, settings=polyset_repop,
                                       prior=trained_NRE.prior)
             comm_gen.Barrier()
-            data = np.loadtxt(f"{root}/{polyset_repop.file_root}.txt")
-            samples = data[1:nreSettings.n_training_samples + 1, 2:].reshape(
+            data = anesthetic.read_chains(root=f"{root}/{polyset_repop.file_root}")
+            samples = data.live_points(0)[[i for i in range(nreSettings.num_features)]].to_numpy().reshape(
                 nreSettings.n_training_samples,
                 nreSettings.num_features)
             if rank_gen == 0:
@@ -99,9 +98,10 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                                   nDerived=nreSettings.nderived, settings=polyset,
                                   prior=trained_NRE.prior, dumper=trained_NRE.dumper)
         comm_gen.Barrier()
-        # TODO use anesthetc
-        nextSamples = np.loadtxt(f"{root}/{nreSettings.file_root}.txt")
-        nextSamples = torch.as_tensor(nextSamples[-nreSettings.n_training_samples:, 2:])
+        nextSamples = anesthetic.read_chains(root=f"{root}/{nreSettings.file_root}")
+        nextSamples = nextSamples.live_points(polyset.max_ndead)[
+            [i for i in range(nreSettings.num_features)]]
+        nextSamples = torch.as_tensor(nextSamples.to_numpy())
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
         # full_samples = torch.cat([full_samples, nextSamples], dim=0)
