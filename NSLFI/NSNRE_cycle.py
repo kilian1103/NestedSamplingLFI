@@ -21,7 +21,9 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
-    # full_samples = samples.clone()
+    if nreSettings.use_previous_round_samples_for_training:
+        full_samples = samples.clone()
+
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))
@@ -30,8 +32,12 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                     # set the wandb project where this run will be logged
                     project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
             # replace full_samples with samples
-            network = retrain_next_round(root=root, nextRoundPoints=samples,
-                                         nreSettings=nreSettings, sim=sim, obs=obs)
+            if nreSettings.use_previous_round_samples_for_training:
+                network = retrain_next_round(root=root, nextRoundPoints=full_samples,
+                                             nreSettings=nreSettings, sim=sim, obs=obs)
+            else:
+                network = retrain_next_round(root=root, nextRoundPoints=samples,
+                                             nreSettings=nreSettings, sim=sim, obs=obs)
         else:
             network = Network(nreSettings=nreSettings)
         network = comm_gen.bcast(network, root=0)
@@ -101,5 +107,6 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
         nextSamples = torch.as_tensor(nextSamples.to_numpy())
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
-        # full_samples = torch.cat([full_samples, nextSamples], dim=0)
+        if nreSettings.use_previous_round_samples_for_training:
+            full_samples = torch.cat([full_samples, nextSamples], dim=0)
         samples = nextSamples

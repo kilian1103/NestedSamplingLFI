@@ -23,6 +23,7 @@ class NRE_Settings:
         self.max_epochs = 50
         self.NRE_num_retrain_rounds = 2
         self.activate_NSNRE_counting = False
+        self.use_previous_round_samples_for_training = False
         self.ns_sampler = "Slice"
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3
