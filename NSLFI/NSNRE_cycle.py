@@ -60,9 +60,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
             polyset_repop.nlive = 1
             polyset_repop.nfail = nreSettings.n_training_samples
             polyset_repop.cube_samples = livepoint_norm
-            polyset_repop.nlives = {boundarySample_logL: nreSettings.n_training_samples + 1,
+            polyset_repop.nlives = {boundarySample_logL: nreSettings.n_training_samples,
                                     boundarySample_logL + 1e-8: 0}
-            polyset_repop.max_ndead = 1
             # other settings
             polyset_repop.file_root = "repop"
             polyset_repop.base_dir = root
