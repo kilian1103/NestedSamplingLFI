@@ -42,35 +42,46 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
         logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
         # start counting
         if rd >= 1 and nreSettings.activate_NSNRE_counting:
-            # TODO fix counting code
+            # TODO fix counting code, polychord has bugs with these settings
             previous_root = root_storage[f"round_{rd - 1}"]
             data = np.loadtxt(f"{previous_root}/{nreSettings.file_root}.txt")
-            boundarySample = data[-nreSettings.n_training_samples - 1, 2:].reshape(1, nreSettings.num_features)
-            boundarySample_logL = float(data[-nreSettings.n_training_samples - 1, 1])
-            boundarySample_norm = (boundarySample - nreSettings.sim_prior_lower) / nreSettings.prior_width
-            previous_samples = data[-nreSettings.n_training_samples:, 2:]
+            boundarySample = data[-nreSettings.n_training_samples - 1, 2:]
+            logger.info(f"boundarySample: {boundarySample}")
+            boundarySample_logL, _ = trained_NRE.logLikelihood(boundarySample)  # recompute ! not reload from file
 
+            livepoint_norm = (boundarySample - nreSettings.sim_prior_lower) / nreSettings.prior_width
+            # livepoint_norm = np.tile(livepoint_norm, (size_gen, 1))
+            livepoint_norm = livepoint_norm.reshape(1, nreSettings.num_features)
+            logger.info(f"livepoints shape: {livepoint_norm.shape}")
+
+            previous_samples = data[-nreSettings.n_training_samples:, 2:]
+            comm_gen.Barrier()
             polyset_repop = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
             # repop settings
             polyset_repop.nlive = 1
             polyset_repop.nfail = nreSettings.n_training_samples
-            polyset_repop.cube_samples = boundarySample_norm
-            polyset_repop.nlives = {boundarySample_logL: nreSettings.n_training_samples + 1}
-            polyset_repop.max_ndead = 1
+            polyset_repop.cube_samples = livepoint_norm
+            polyset_repop.nlives = {boundarySample_logL: nreSettings.n_training_samples + 1,
+                                    boundarySample_logL + 1e-8: 0}
+            # TODO use anesthetic to get livepoints at iteration i, samples
+            #  polyset_repop.max_ndead = 1
+            # polyset_repop.write_resume = False
             # other settings
             polyset_repop.file_root = "repop"
             polyset_repop.base_dir = root
             polyset_repop.seed = nreSettings.seed
-
             pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
                                       nDerived=nreSettings.nderived, settings=polyset_repop,
-                                      prior=trained_NRE.prior, dumper=trained_NRE.dumper)
-            data = np.loadtxt(f"{root}/repop.txt")
-            samples = data[1:nreSettings.n_training_samples + 1, 2:]
+                                      prior=trained_NRE.prior)
+            comm_gen.Barrier()
+            data = np.loadtxt(f"{root}/{polyset_repop.file_root}.txt")
+            samples = data[1:nreSettings.n_training_samples + 1, 2:].reshape(
+                nreSettings.n_training_samples,
+                nreSettings.num_features)
             if rank_gen == 0:
                 k1, l1, k2, l2 = intersect_samples(nreSettings=nreSettings, root_storage=root_storage,
                                                    network_storage=network_storage, rd=rd,
-                                                   boundarySample=boundarySample,
+                                                   boundarySample=torch.as_tensor(boundarySample).unsqueeze(0),
                                                    current_samples=torch.as_tensor(samples),
                                                    previous_samples=torch.as_tensor(previous_samples))
         comm_gen.Barrier()
@@ -88,6 +99,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                                   nDerived=nreSettings.nderived, settings=polyset,
                                   prior=trained_NRE.prior, dumper=trained_NRE.dumper)
         comm_gen.Barrier()
+        # TODO use anesthetc
         nextSamples = np.loadtxt(f"{root}/{nreSettings.file_root}.txt")
         nextSamples = torch.as_tensor(nextSamples[-nreSettings.n_training_samples:, 2:])
         newRoot = root + f"_rd_{rd + 1}"

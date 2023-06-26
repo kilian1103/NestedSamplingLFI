@@ -32,11 +32,11 @@ def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, NRE_
     current_root = root_storage[f"round_{rd}"]
     with torch.no_grad():
         # evaluate new contour using previous boundary sample
-        previous_NRE_boundary_logL = previous_NRE_wrapped.logLikelihood(boundarySample)
-        current_NRE_boundary_logL = current_NRE_wrapped.logLikelihood(boundarySample)
+        previous_NRE_boundary_logL, _ = previous_NRE_wrapped.logLikelihood(boundarySample)
+        current_NRE_boundary_logL, _ = current_NRE_wrapped.logLikelihood(boundarySample)
 
-        previous_NRE_with_curr_samples_logLs = previous_NRE_wrapped.logLikelihood(current_samples)
-        current_NRE_with_prev_samples_logLs = current_NRE_wrapped.logLikelihood(previous_samples)
+        previous_NRE_with_curr_samples_logLs, _ = previous_NRE_wrapped.logLikelihood(current_samples)
+        current_NRE_with_prev_samples_logLs, _ = current_NRE_wrapped.logLikelihood(previous_samples)
 
     k1 = previous_samples[current_NRE_with_prev_samples_logLs > current_NRE_boundary_logL]
     l1 = previous_samples[current_NRE_with_prev_samples_logLs < current_NRE_boundary_logL]
