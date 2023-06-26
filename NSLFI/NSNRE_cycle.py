@@ -46,8 +46,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
             previous_root = root_storage[f"round_{rd - 1}"]
             previous_samples = anesthetic.read_chains(root=f"{previous_root}/{nreSettings.file_root}")
 
-            boundarySample = previous_samples.iloc[
-                -nreSettings.n_training_samples - 1, nreSettings.num_features].to_numpy()
+            boundarySample = previous_samples.iloc[-nreSettings.n_training_samples - 1,
+                             :nreSettings.num_features].to_numpy()
             boundarySample_logL, _ = trained_NRE.logLikelihood(boundarySample)  # recompute ! not reload from file
 
             livepoint_norm = (boundarySample - nreSettings.sim_prior_lower) / nreSettings.prior_width
@@ -72,7 +72,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                                       prior=trained_NRE.prior)
             comm_gen.Barrier()
             data = anesthetic.read_chains(root=f"{root}/{polyset_repop.file_root}")
-            samples = data.live_points(0).iloc[:, :nreSettings.num_features].to_numpy().reshape(
+            samples = data.live_points(1).iloc[:nreSettings.n_training_samples,
+                      :nreSettings.num_features].to_numpy().reshape(
                 nreSettings.n_training_samples,
                 nreSettings.num_features)
             if rank_gen == 0:
@@ -89,7 +90,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
         polyset.base_dir = root
         polyset.seed = nreSettings.seed
         polyset.nlive = samples_norm.shape[0]
-        polyset.cube_samples = samples_norm
+        polyset.cube_samples = samples_norm.reshape(nreSettings.n_training_samples, nreSettings.num_features)
         polyset.max_ndead = int(1 * nreSettings.n_training_samples)  # exp(-max_ndead/n_live) compression
         # Run PolyChord
         pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
@@ -97,7 +98,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                                   prior=trained_NRE.prior, dumper=trained_NRE.dumper)
         comm_gen.Barrier()
         nextSamples = anesthetic.read_chains(root=f"{root}/{nreSettings.file_root}")
-        nextSamples = nextSamples.live_points(polyset.max_ndead).iloc[:, :nreSettings.num_features]
+        nextSamples = nextSamples.live_points().iloc[:, :nreSettings.num_features]
         nextSamples = torch.as_tensor(nextSamples.to_numpy())
         newRoot = root + f"_rd_{rd + 1}"
         root = newRoot
