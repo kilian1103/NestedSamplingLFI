@@ -13,6 +13,7 @@ from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
+from NSLFI.utils import random_subset
 
 
 def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: Simulator,
@@ -23,7 +24,6 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
     size_gen = comm_gen.Get_size()
     if nreSettings.use_previous_round_samples_for_training:
         full_samples = samples.clone()
-
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))
@@ -31,9 +31,17 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                 wandb.init(
                     # set the wandb project where this run will be logged
                     project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
-            # replace full_samples with samples
+
             if nreSettings.use_previous_round_samples_for_training:
-                network = retrain_next_round(root=root, nextRoundPoints=full_samples,
+                # thin samples
+                if rd == 0:
+                    # first round, use all samples
+                    subset = full_samples
+                else:
+                    # thin samples for next round
+                    subset = random_subset(dataset=full_samples, thinning_factor=nreSettings.thinning_factor_of_dataset)
+
+                network = retrain_next_round(root=root, nextRoundPoints=subset,
                                              nreSettings=nreSettings, sim=sim, obs=obs)
             else:
                 network = retrain_next_round(root=root, nextRoundPoints=samples,
