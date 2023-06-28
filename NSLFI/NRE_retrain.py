@@ -65,5 +65,5 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
     swyft.corner(predictions, [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)], bins=50,
                  smooth=1)
     plt.savefig(f"{root}/NRE_predictions.pdf")
-    torch.save(network.state_dict(), f"{root}/NRE_network.pt")
+    torch.save(network.state_dict(), f"{root}/{nreSettings.neural_network_file}")
     return network
