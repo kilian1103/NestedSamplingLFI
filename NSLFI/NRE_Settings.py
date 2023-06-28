@@ -7,6 +7,7 @@ class NRE_Settings:
         """
         self.root = "swyft_polychord_NSNRE"
         self.wandb_project_name = "NSNRE"
+        self.neural_network_file = "NRE_network.pt"
         self.activate_wandb = False
         self.logger_name = f"{self.root}.log"
         self.seed = 234
