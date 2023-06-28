@@ -3,6 +3,7 @@ import os
 
 import matplotlib.pyplot as plt
 import swyft
+import torch
 import wandb
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
@@ -64,4 +65,5 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
     swyft.corner(predictions, [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)], bins=50,
                  smooth=1)
     plt.savefig(f"{root}/NRE_predictions.pdf")
+    torch.save(network.state_dict(), f"{root}/NRE_network.pt")
     return network
