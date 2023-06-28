@@ -38,3 +38,16 @@ def test_dataset_thinning_with_wrong_type():
         assert True
     else:
         assert False
+
+
+def test_dataset_thinning_with_too_small_factor():
+    nsize = 100
+    ndim = 2
+    thinning_factor = 0.001
+    dataset = torch.distributions.uniform.Uniform(low=0, high=1).sample(sample_shape=(nsize, ndim))
+    try:
+        subset = random_subset(dataset, thinning_factor)
+    except ValueError:
+        assert True
+    else:
+        assert False

@@ -1,10 +1,10 @@
 import math
 
 import numpy as np
-import torch
+from torch import Tensor
 
 
-def random_subset(dataset: torch.Tensor, thinning_factor: float):
+def random_subset(dataset: Tensor, thinning_factor: float):
     """
     Randomly select a subset of the dataset
     :param dataset: torch.Tensor of shape (nsize, ndim)
@@ -17,5 +17,7 @@ def random_subset(dataset: torch.Tensor, thinning_factor: float):
         raise ValueError("thinning_factor must be between 0 and 1")
     N = dataset.shape[0]  # Size of the dataset
     num_samples = math.floor(thinning_factor * N)  # Number of samples in the random subset
+    if num_samples == 0:
+        raise ValueError("thinning_factor is too small")
     indices = np.random.choice(N, num_samples, replace=False)  # Randomly select indices
     return dataset[indices]  # Return the subset of the dataset
