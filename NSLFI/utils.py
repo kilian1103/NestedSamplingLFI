@@ -11,8 +11,8 @@ def random_subset(dataset: torch.Tensor, thinning_factor: float):
     :param thinning_factor: float between 0 and 1
     :return:
     """
-    if isinstance(thinning_factor, str):
-        raise TypeError("thinning_factor must be a float or int type and not a string")
+    if not isinstance(thinning_factor, int) and not isinstance(thinning_factor, float):
+        raise TypeError("thinning_factor must be a float or int type")
     if thinning_factor > 1 or thinning_factor <= 0:
         raise ValueError("thinning_factor must be between 0 and 1")
     N = dataset.shape[0]  # Size of the dataset
