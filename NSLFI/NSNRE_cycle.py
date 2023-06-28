@@ -48,8 +48,10 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                                              nreSettings=nreSettings, sim=sim, obs=obs)
         else:
             network = Network(nreSettings=nreSettings)
-        network = comm_gen.bcast(network, root=0)
         comm_gen.Barrier()
+        # load saved network
+        network.load_state_dict(torch.load(f"{root}/NRE_network.pt"))
+        network.double()  # change to float64 precision of network
         trained_NRE = NRE_PolyChord(network=network, obs=obs)
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = root
