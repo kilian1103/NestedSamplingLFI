@@ -16,7 +16,7 @@ class NRE_PolyChord:
         self.network = network.eval()
         self.nre_settings = self.network.nreSettings
         self.obs = {
-            self.nre_settings.obsKey: torch.tensor(obs[self.nre_settings.obsKey]).type(torch.float64).unsqueeze(0)}
+            self.nre_settings.obsKey: torch.tensor(obs[self.nre_settings.obsKey]).unsqueeze(0)}
 
     def prior(self, cube) -> np.ndarray:
         """Transforms the unit cube to the prior cube."""
@@ -35,7 +35,7 @@ class NRE_PolyChord:
         # check if list of datapoints or single datapoint
         if theta.ndim == 1:
             theta = theta.unsqueeze(0)
-        prediction = self.network(self.obs, {self.nre_settings.targetKey: theta.type(torch.float64)})
+        prediction = self.network(self.obs, {self.nre_settings.targetKey: theta})
         if prediction.logratios[:, 0].shape[0] == 1:
             return float(prediction.logratios[:, 0]), []
         else:
