@@ -31,21 +31,16 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                 wandb.init(
                     # set the wandb project where this run will be logged
                     project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
-
-            if nreSettings.use_previous_round_samples_for_training:
                 # thin samples
-                if rd == 0:
-                    # first round, use all samples
-                    subset = full_samples
-                else:
-                    # thin samples for next round
-                    subset = random_subset(dataset=full_samples, thinning_factor=nreSettings.thinning_factor_of_dataset)
-
-                network = retrain_next_round(root=root, nextRoundPoints=subset,
-                                             nreSettings=nreSettings, sim=sim, obs=obs)
+            if rd == 0:
+                # first round, use all samples
+                subset = full_samples
             else:
-                network = retrain_next_round(root=root, nextRoundPoints=samples,
-                                             nreSettings=nreSettings, sim=sim, obs=obs)
+                # thin samples for next round
+                subset = random_subset(dataset=full_samples, thinning_factor=nreSettings.thinning_factor_of_dataset)
+
+            network = retrain_next_round(root=root, nextRoundPoints=subset,
+                                         nreSettings=nreSettings, sim=sim, obs=obs)
         else:
             network = Network(nreSettings=nreSettings)
         comm_gen.Barrier()
