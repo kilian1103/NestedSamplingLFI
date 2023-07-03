@@ -24,13 +24,15 @@ class NRE_Settings:
         self.max_epochs = 50
         self.NRE_num_retrain_rounds = 2
         self.activate_NSNRE_counting = False
-        self.use_previous_round_samples_for_training = False
         self.thinning_factor_of_dataset = 1
         self.ns_sampler = "Slice"
         self.ns_keep_chain = True
         self.ns_stopping_criterion = 1e-3
         self.sim_prior_lower = -1
         self.prior_width = 2
+        self.anesthetic_sample_threshold = 0.999
         # polychord settings
         self.nderived = 0
         self.file_root = "samples"
+        self.enhanced_run_file_root = "enhanced_run_samples"
+        self.nlives_logL_coefficient = 0.1

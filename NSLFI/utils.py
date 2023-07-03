@@ -1,10 +1,11 @@
 import math
 
 import numpy as np
+from anesthetic import NestedSamples
 from torch import Tensor
 
 
-def random_subset(dataset: Tensor, thinning_factor: float):
+def random_subset(dataset: Tensor, thinning_factor: float) -> Tensor:
     """
     Randomly select a subset of the dataset
     :param dataset: torch.Tensor of shape (nsize, ndim)
@@ -21,3 +22,10 @@ def random_subset(dataset: Tensor, thinning_factor: float):
         raise ValueError("thinning_factor is too small")
     indices = np.random.choice(N, num_samples, replace=False)  # Randomly select indices
     return dataset[indices]  # Return the subset of the dataset
+
+
+def select_weighted_contour(data: NestedSamples, threshold: float) -> int:
+    """find the index of the sample that corresponds to the threshold of the cumulative weights."""
+    cumulative_weights = data.get_weights().cumsum()
+    index = np.searchsorted(cumulative_weights / cumulative_weights[-1], threshold)
+    return index

@@ -13,7 +13,7 @@ from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
-from NSLFI.utils import random_subset
+from NSLFI.utils import random_subset, select_weighted_contour
 
 
 def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: Simulator,
@@ -22,8 +22,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
-    if nreSettings.use_previous_round_samples_for_training:
-        full_samples = samples.clone()
+    full_samples = samples.clone()
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))
@@ -93,25 +92,41 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: 
                                                    current_samples=torch.as_tensor(samples),
                                                    previous_samples=torch.as_tensor(previous_samples))
         comm_gen.Barrier()
-        # start compressing
-        samples_norm = (samples - nreSettings.sim_prior_lower) / nreSettings.prior_width
+        # start light run to choose boundary contour
         polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
         polyset.file_root = nreSettings.file_root
         polyset.base_dir = root
         polyset.seed = nreSettings.seed
-        polyset.nlive = samples_norm.shape[0]
-        polyset.cube_samples = samples_norm.reshape(nreSettings.n_training_samples, nreSettings.num_features)
-        polyset.max_ndead = int(1 * nreSettings.n_training_samples)  # exp(-max_ndead/n_live) compression
+        polyset.nlive = 100 * nreSettings.num_features
         # Run PolyChord
         pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
                                   nDerived=nreSettings.nderived, settings=polyset,
                                   prior=trained_NRE.prior, dumper=trained_NRE.dumper)
         comm_gen.Barrier()
         nextSamples = anesthetic.read_chains(root=f"{root}/{nreSettings.file_root}")
-        nextSamples = nextSamples.live_points().iloc[:, :nreSettings.num_features]
+        boundarySampleIdx = select_weighted_contour(data=nextSamples, threshold=nreSettings.anesthetic_sample_threshold)
+        boundarySample = nextSamples.iloc[boundarySampleIdx, :nreSettings.num_features].to_numpy()
+        boundarySample_logL, _ = trained_NRE.logLikelihood(boundarySample)  # recompute ! not reload from file
+        logger.info(f"Boundary sample logL: {boundarySample_logL}")
+
+        # rerun polychord with increased livepoints until boundary contour
+        polyset_enhanced = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
+        polyset_enhanced.file_root = nreSettings.enhanced_run_file_root
+        polyset_enhanced.base_dir = root
+        polyset_enhanced.seed = nreSettings.seed
+        polyset_enhanced.nlive = 100 * nreSettings.num_features
+        polyset_enhanced.nfail = 10 * nreSettings.n_training_samples
+        polyset_enhanced.nlives = {
+            boundarySample_logL - nreSettings.nlives_logL_coefficient: nreSettings.n_training_samples}
+        pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
+                                  nDerived=nreSettings.nderived, settings=polyset_enhanced,
+                                  prior=trained_NRE.prior, dumper=trained_NRE.dumper)
+        comm_gen.Barrier()
+        nextSamples = anesthetic.read_chains(root=f"{root}/{nreSettings.enhanced_run_file_root}")
+        nextSamples = nextSamples.live_points(boundarySample_logL).iloc[:,
+                      :nreSettings.num_features]
         nextSamples = torch.as_tensor(nextSamples.to_numpy())
-        newRoot = root + f"_rd_{rd + 1}"
-        root = newRoot
-        if nreSettings.use_previous_round_samples_for_training:
-            full_samples = torch.cat([full_samples, nextSamples], dim=0)
-        samples = nextSamples
+        logger.info(
+            f"number of samples for next round after polychord dynamic live compression: {nextSamples.shape[0]}")
+        root += f"_rd_{rd + 1}"
+        full_samples = torch.cat([full_samples, nextSamples], dim=0)
