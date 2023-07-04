@@ -38,6 +38,7 @@ def execute():
         plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)
         if nreSettings.activate_NSNRE_counting:
             plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
+    logger.info('Finished')
 
 
 if __name__ == '__main__':
