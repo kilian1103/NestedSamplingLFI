@@ -35,4 +35,4 @@ class NRE_Settings:
         self.nderived = 0
         self.file_root = "samples"
         self.enhanced_run_file_root = "enhanced_run_samples"
-        self.nlives_logL_coefficient = 0.1
+        self.nlives_logL_coefficient = 0.05

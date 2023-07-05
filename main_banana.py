@@ -35,7 +35,8 @@ def execute():
                         root=nreSettings.root)
     # plot triangle plot
     if rank_gen == 0:
-        plot_NRE_posterior(nreSettings=nreSettings, root_storage=root_storage)
+        plot_NRE_posterior(nreSettings=nreSettings, network_storage=network_storage, root_storage=root_storage,
+                           dataEnv=dataEnv)
         if nreSettings.activate_NSNRE_counting:
             plot_NRE_expansion_and_contraction_rate(nreSettings=nreSettings, root_storage=root_storage)
     logger.info('Finished')
