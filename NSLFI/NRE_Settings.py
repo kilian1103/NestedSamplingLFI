@@ -32,6 +32,7 @@ class NRE_Settings:
         self.prior_width = 2
         self.anesthetic_sample_threshold = 0.999
         # polychord settings
+        self.nlive_scan_run = 100
         self.nderived = 0
         self.file_root = "samples"
         self.enhanced_run_file_root = "enhanced_run_samples"
