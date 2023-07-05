@@ -12,20 +12,32 @@ from NSLFI.NSNRE_data_generation import DataEnvironment
 
 def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
                        nreSettings: NRE_Settings, dataEnv: DataEnvironment):
-    # simulate full prior samples
-    prior_samples = {nreSettings.targetKey: torch.as_tensor(
-        dataEnv.sim.sample(nreSettings.n_weighted_samples, targets=[nreSettings.targetKey])[
-            nreSettings.targetKey])}
-    obs = {nreSettings.obsKey: torch.tensor(dataEnv.obs[nreSettings.obsKey]).unsqueeze(0)}
+    # simulate full prior samples and compute true posterior
+    prior_samples = dataEnv.sim.sample(nreSettings.n_weighted_samples)
+    true_logLikes = torch.as_tensor(-prior_samples["l"])  # minus sign because of simulator convention
+    true_samples = prior_samples[nreSettings.targetKey]
+    weights_total = torch.exp(true_logLikes - true_logLikes.max()).sum()
+    weights = torch.exp(true_logLikes - true_logLikes.max()) / weights_total * len(true_logLikes)
+    weights = weights.numpy()
 
+    # NRE refactoring
+    prior_samples_nre = {nreSettings.targetKey: torch.as_tensor(prior_samples[nreSettings.targetKey])}
+    obs = {nreSettings.obsKey: torch.tensor(dataEnv.obs[nreSettings.obsKey]).unsqueeze(0)}
+    # set up labels for plotting
     params = [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)]
     params_idx = [i for i in range(nreSettings.num_features - 1, -1, -1)]
     params_labels = {i: f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)}
+
+    # true posterior
     fig, axes = make_2d_axes(params_idx, labels=params_labels)
+    mcmc = MCMCSamples(data=true_samples, logL=true_logLikes, weights=weights, labels=params_labels)
+    mcmc.plot_2d(axes=axes, alpha=0.9, label="true contours", color="red")
+
     with torch.no_grad():
+        # use trained NRE and evaluate on full prior samples
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             network = network_storage[f"round_{rd}"]
-            predictions = network.network(obs, prior_samples)
+            predictions = network.network(obs, prior_samples_nre)
             samples, weights = swyft.get_weighted_samples(predictions, params)
             logLs = predictions.logratios.numpy().squeeze()
             weights = weights.numpy().squeeze()
