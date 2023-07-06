@@ -98,17 +98,17 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         polyset.file_root = nreSettings.file_root
         polyset.base_dir = root
         polyset.seed = nreSettings.seed
-        polyset.nfail = nreSettings.nlive_scan_run * nreSettings.n_training_samples
+        polyset.nfail = nreSettings.nlive_scan_run_per_feature * nreSettings.n_training_samples
         if rd >= 1:
             # thin samples  to get livepoints
-            thinning_factor = (nreSettings.nlive_scan_run * nreSettings.num_features) / nextSamples.shape[0]
+            thinning_factor = (nreSettings.nlive_scan_run_per_feature * nreSettings.num_features) / nextSamples.shape[0]
             livepoints = random_subset(dataset=nextSamples, thinning_factor=thinning_factor)
             livepoints_norm = (livepoints - nreSettings.sim_prior_lower) / nreSettings.prior_width
             polyset.cube_samples = livepoints_norm.numpy().reshape(livepoints_norm.shape[0],
                                                                    nreSettings.num_features)
             polyset.nlive = livepoints_norm.shape[0]
         else:
-            polyset.nlive = nreSettings.nlive_scan_run * nreSettings.num_features
+            polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
         # Run PolyChord
         pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
                                   nDerived=nreSettings.nderived, settings=polyset,
@@ -127,7 +127,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         polyset_enhanced.file_root = nreSettings.enhanced_run_file_root
         polyset_enhanced.base_dir = root
         polyset_enhanced.seed = nreSettings.seed
-        polyset_enhanced.nfail = nreSettings.nlive_scan_run * nreSettings.n_training_samples
+        polyset_enhanced.nfail = nreSettings.nlive_scan_run_per_feature * nreSettings.n_training_samples
         polyset_enhanced.nlives = {
             boundarySample_logL - nreSettings.nlives_logL_coefficient: nreSettings.n_training_samples,
             boundarySample_logL + nreSettings.nlives_logL_coefficient: 0}
@@ -135,7 +135,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
             polyset_enhanced.cube_samples = polyset.cube_samples
             polyset_enhanced.nlive = polyset.cube_samples.shape[0]
         else:
-            polyset_enhanced.nlive = nreSettings.nlive_scan_run * nreSettings.num_features
+            polyset_enhanced.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
         pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
                                   nDerived=nreSettings.nderived, settings=polyset_enhanced,
                                   prior=trained_NRE.prior, dumper=trained_NRE.dumper)

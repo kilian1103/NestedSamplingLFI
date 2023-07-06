@@ -31,7 +31,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
     # true posterior
     fig, axes = make_2d_axes(params_idx, labels=params_labels)
     mcmc = MCMCSamples(data=true_samples, logL=true_logLikes, weights=weights, labels=params_labels)
-    mcmc.plot_2d(axes=axes, alpha=0.9, label="true contours", color="red")
+    mcmc.plot_2d(axes=axes, alpha=0.9, label="true", color="red")
 
     with torch.no_grad():
         # use trained NRE and evaluate on full prior samples
@@ -43,9 +43,10 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             weights = weights.numpy().squeeze()
             samples = samples.numpy().squeeze()
             mcmc = MCMCSamples(data=samples, logL=logLs, weights=weights, labels=params_labels)
-            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"round {rd}")
+            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}")
         root = root_storage["round_0"]
-        axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center', ncols=2)
+        axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
+                                ncols=nreSettings.NRE_num_retrain_rounds + 2)
         fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
 
 
