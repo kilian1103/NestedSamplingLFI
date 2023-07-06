@@ -43,7 +43,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             weights = weights.numpy().squeeze()
             samples = samples.numpy().squeeze()
             mcmc = MCMCSamples(data=samples, logL=logLs, weights=weights, labels=params_labels)
-            mcmc.plot_2d(axes=axes, alpha=0.9, label=f"round {rd}")
+            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"round {rd}")
         root = root_storage["round_0"]
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center', ncols=2)
         fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
