@@ -16,13 +16,14 @@ from NSLFI.NRE_retrain import retrain_next_round
 from NSLFI.utils import random_subset, select_weighted_contour
 
 
-def execute_NSNRE_cycle(nreSettings: NRE_Settings, logger: logging.Logger, sim: Simulator,
+def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
                         obs: swyft.Sample, network_storage: dict, root_storage: dict, samples: torch.Tensor, root: str):
     # retrain NRE and sample new samples with NS loop
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
     full_samples = samples.clone()
+    logger = logging.getLogger(nreSettings.logger_name)
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))

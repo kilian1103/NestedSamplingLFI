@@ -11,19 +11,19 @@ from NSLFI.NRE_Simulator import Simulator
 
 
 class DataEnvironment:
-    def __init__(self, nreSettings: NRE_Settings, logger: logging.Logger):
+    def __init__(self, nreSettings: NRE_Settings):
         self.nreSettings = nreSettings
-        self.logger = logger
 
     def generate_data(self):
         comm_gen = MPI.COMM_WORLD
         rank_gen = comm_gen.Get_rank()
         size_gen = comm_gen.Get_size()
+        logger = logging.getLogger(self.nreSettings.logger_name)
         if rank_gen == 0:
             try:
                 os.makedirs(self.nreSettings.root)
             except OSError:
-                self.logger.info("root folder already exists!")
+                logger.info("root folder already exists!")
 
         # observation for simulator
         obs = swyft.Sample(x=np.array(self.nreSettings.num_features * [0]))

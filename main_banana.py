@@ -21,14 +21,15 @@ def execute():
     logging.basicConfig(filename=nreSettings.logger_name, level=logging.INFO,
                         filemode="w")
     logger = logging.getLogger()
+    nreSettings.logger = logger
     logger.info('Started')
     network_storage = dict()
     root_storage = dict()
     # TODO merge prior framework, so far simulator has scipy, polychord has hypercube
-    dataEnv = DataEnvironment(nreSettings=nreSettings, logger=logger)
+    dataEnv = DataEnvironment(nreSettings=nreSettings)
     dataEnv.generate_data()
     # retrain NRE and sample new samples with NS loop
-    execute_NSNRE_cycle(nreSettings=nreSettings, logger=logger,
+    execute_NSNRE_cycle(nreSettings=nreSettings,
                         obs=dataEnv.obs, sim=dataEnv.sim,
                         network_storage=network_storage,
                         root_storage=root_storage, samples=dataEnv.samples,
