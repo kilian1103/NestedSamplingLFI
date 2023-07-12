@@ -28,6 +28,6 @@ class Simulator(swyft.Simulator):
 
     def build(self, graph):
         z = graph.node(self.nreSettings.targetKey, self.z_sampler)
-        x = graph.node(self.nreSettings.obsKey, lambda z: self.f(z) + np.random.randn(2), z)
+        x = graph.node(self.nreSettings.obsKey, lambda z: self.f(z) + np.random.randn(self.nreSettings.num_features), z)
         l = graph.node("l", lambda z: -stats.norm.logpdf(self.f(z)).sum(),
                        z)  # return -ln p(x=0|z) for cross-checks
