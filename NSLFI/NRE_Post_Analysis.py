@@ -13,7 +13,7 @@ from NSLFI.NSNRE_data_generation import DataEnvironment
 def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
                        nreSettings: NRE_Settings, dataEnv: DataEnvironment):
     # simulate full prior samples and compute true posterior
-    prior_samples = dataEnv.sim.sample(nreSettings.n_weighted_samples)
+    prior_samples = dataEnv.sim.sample(nreSettings.n_weighted_samples * nreSettings.num_features)
     true_logLikes = torch.as_tensor(-prior_samples["l"])  # minus sign because of simulator convention
     true_samples = prior_samples[nreSettings.targetKey]
     weights_total = torch.exp(true_logLikes - true_logLikes.max()).sum()
@@ -29,9 +29,10 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
     params_labels = {i: f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)}
 
     # true posterior
-    fig, axes = make_2d_axes(params_idx, labels=params_labels)
+    fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=False, ticks="outer")
     mcmc = MCMCSamples(data=true_samples, logL=true_logLikes, weights=weights, labels=params_labels)
-    mcmc.plot_2d(axes=axes, alpha=0.9, label="true", color="red")
+    mcmc.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
+                 kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
 
     with torch.no_grad():
         # use trained NRE and evaluate on full prior samples

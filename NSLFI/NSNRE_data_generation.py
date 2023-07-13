@@ -13,6 +13,8 @@ from NSLFI.NRE_Simulator import Simulator
 class DataEnvironment:
     def __init__(self, nreSettings: NRE_Settings):
         self.nreSettings = nreSettings
+        # define forward model settings
+        self.sim = Simulator(bounds_z=None, bimodal=True, nreSettings=self.nreSettings)
 
     def generate_data(self):
         comm_gen = MPI.COMM_WORLD
@@ -27,8 +29,6 @@ class DataEnvironment:
 
         # observation for simulator
         obs = swyft.Sample(x=np.array(self.nreSettings.num_features * [0]))
-        # define forward model settings
-        sim = Simulator(bounds_z=None, bimodal=True, nreSettings=self.nreSettings)
         # generate samples using simulator
         if rank_gen == 0:
             samples = torch.as_tensor(
@@ -41,6 +41,5 @@ class DataEnvironment:
         samples = comm_gen.bcast(samples, root=0)
         comm_gen.Barrier()
         # save datageneration results
-        self.sim = sim
         self.samples = samples
         self.obs = obs
