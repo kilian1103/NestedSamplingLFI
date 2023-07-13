@@ -32,7 +32,7 @@ class DataEnvironment:
         # generate samples using simulator
         if rank_gen == 0:
             samples = torch.as_tensor(
-                sim.sample(self.nreSettings.n_training_samples, targets=[self.nreSettings.targetKey])[
+                self.sim.sample(self.nreSettings.n_training_samples, targets=[self.nreSettings.targetKey])[
                     self.nreSettings.targetKey])
             torch.save(samples, f"{self.nreSettings.root}/full_prior_samples")
         else:
