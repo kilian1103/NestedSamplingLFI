@@ -13,7 +13,8 @@ from NSLFI.NSNRE_data_generation import DataEnvironment
 def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
                        nreSettings: NRE_Settings, dataEnv: DataEnvironment):
     # simulate full prior samples and compute true posterior
-    prior_samples = dataEnv.sim.sample(nreSettings.n_weighted_samples * nreSettings.num_features)
+    prior_samples = dataEnv.sim.sample(
+        nreSettings.n_weighted_samples * nreSettings.num_features * nreSettings.NRE_num_retrain_rounds)
     true_logLikes = torch.as_tensor(-prior_samples["l"])  # minus sign because of simulator convention
     true_samples = prior_samples[nreSettings.targetKey]
     weights_total = torch.exp(true_logLikes - true_logLikes.max()).sum()
@@ -25,7 +26,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
     obs = {nreSettings.obsKey: torch.tensor(dataEnv.obs[nreSettings.obsKey]).unsqueeze(0)}
     # set up labels for plotting
     params = [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)]
-    params_idx = [i for i in range(nreSettings.num_features - 1, -1, -1)]
+    params_idx = [i for i in range(0, nreSettings.num_features)]
     params_labels = {i: f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)}
 
     # true posterior
@@ -44,7 +45,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             weights = weights.numpy().squeeze()
             samples = samples.numpy().squeeze()
             mcmc = MCMCSamples(data=samples, logL=logLs, weights=weights, labels=params_labels)
-            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}")
+            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}", kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
         root = root_storage["round_0"]
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
