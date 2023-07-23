@@ -99,7 +99,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         polyset.base_dir = root
         polyset.seed = nreSettings.seed
         polyset.nfail = nreSettings.nlive_scan_run_per_feature * nreSettings.n_training_samples
-        if rd >= 1:
+        if rd >= 1 and not nreSettings.activate_NSNRE_deadpoints_training:
             # thin samples  to get livepoints
             thinning_factor = (nreSettings.nlive_scan_run_per_feature * nreSettings.num_features) / nextSamples.shape[0]
             livepoints = random_subset(dataset=nextSamples, thinning_factor=thinning_factor)
@@ -123,25 +123,28 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         logger.info(f"Boundary sample logL: {boundarySample_logL}")
 
         # full run
-        polyset_enhanced = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
-        polyset_enhanced.file_root = nreSettings.enhanced_run_file_root
-        polyset_enhanced.base_dir = root
-        polyset_enhanced.seed = nreSettings.seed
-        polyset_enhanced.nfail = nreSettings.nlive_scan_run_per_feature * nreSettings.n_training_samples
-        polyset_enhanced.nlives = {
-            boundarySample_logL - nreSettings.nlives_logL_coefficient: nreSettings.n_training_samples,
-            boundarySample_logL + nreSettings.nlives_logL_coefficient: 0}
-        if rd >= 1:
-            polyset_enhanced.cube_samples = polyset.cube_samples
-            polyset_enhanced.nlive = polyset.cube_samples.shape[0]
+        if not nreSettings.activate_NSNRE_deadpoints_training:
+            polyset_enhanced = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
+            polyset_enhanced.file_root = nreSettings.enhanced_run_file_root
+            polyset_enhanced.base_dir = root
+            polyset_enhanced.seed = nreSettings.seed
+            polyset_enhanced.nfail = nreSettings.nlive_scan_run_per_feature * nreSettings.n_training_samples
+            polyset_enhanced.nlives = {
+                boundarySample_logL - nreSettings.nlives_logL_coefficient: nreSettings.n_training_samples,
+                boundarySample_logL + nreSettings.nlives_logL_coefficient: 0}
+            if rd >= 1:
+                polyset_enhanced.cube_samples = polyset.cube_samples
+                polyset_enhanced.nlive = polyset.cube_samples.shape[0]
+            else:
+                polyset_enhanced.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
+            pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
+                                      nDerived=nreSettings.nderived, settings=polyset_enhanced,
+                                      prior=trained_NRE.prior, dumper=trained_NRE.dumper)
+            comm_gen.Barrier()
+            nextSamples = anesthetic.read_chains(root=f"{root}/{nreSettings.enhanced_run_file_root}")
+            nextSamples = nextSamples.live_points(boundarySample_logL).iloc[:, :nreSettings.num_features]
         else:
-            polyset_enhanced.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
-        pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
-                                  nDerived=nreSettings.nderived, settings=polyset_enhanced,
-                                  prior=trained_NRE.prior, dumper=trained_NRE.dumper)
-        comm_gen.Barrier()
-        nextSamples = anesthetic.read_chains(root=f"{root}/{nreSettings.enhanced_run_file_root}")
-        nextSamples = nextSamples.live_points(boundarySample_logL).iloc[:, :nreSettings.num_features]
+            nextSamples = scanSamples.iloc[:, :nreSettings.num_features]
         nextSamples = torch.as_tensor(nextSamples.to_numpy())
         logger.info(
             f"number of samples for next round after polychord dynamic live compression: {nextSamples.shape[0]}")
