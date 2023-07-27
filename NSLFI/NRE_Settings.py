@@ -24,7 +24,7 @@ class NRE_Settings:
         self.max_epochs = 50
         self.NRE_num_retrain_rounds = 2
         self.activate_NSNRE_counting = False
-        self.activate_NSNRE_deadpoints_training = False
+        self.activate_NSNRE_deadpoints_training = True
         self.thinning_factor_of_dataset = 1
         self.ns_sampler = "Slice"
         self.ns_keep_chain = True

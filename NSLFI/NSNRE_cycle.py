@@ -108,6 +108,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
                                                                    nreSettings.num_features)
             polyset.nlive = livepoints_norm.shape[0]
         else:
+            polyset.nprior = nreSettings.n_training_samples
             polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
         # Run PolyChord
         pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
@@ -149,5 +150,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         logger.info(
             f"number of samples for next round after polychord dynamic live compression: {nextSamples.shape[0]}")
         root += f"_rd_{rd + 1}"
-        full_samples = torch.cat([full_samples, nextSamples.clone()], dim=0)
+        if nreSettings.activate_NSNRE_deadpoints_training:
+            full_samples = nextSamples.clone()
+        else:
+            full_samples = torch.cat([full_samples, nextSamples.clone()], dim=0)
         logger.info(f"total data size for training: {full_samples.shape[0]}")
