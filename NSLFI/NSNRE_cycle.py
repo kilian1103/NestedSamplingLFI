@@ -8,6 +8,7 @@ import wandb
 from mpi4py import MPI
 from swyft import Simulator
 
+from NSLFI.KL_divergence import compute_KL_divergence
 from NSLFI.NRE_Intersector import intersect_samples
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
@@ -116,6 +117,10 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
                                   prior=trained_NRE.prior, dumper=trained_NRE.dumper)
         comm_gen.Barrier()
         scanSamples = anesthetic.read_chains(root=f"{root}/{nreSettings.file_root}")
+        if rd >= 1:
+            DKL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
+                                        current_samples=scanSamples, rd=rd)
+            logger.info(f"DKL of rd {rd} is: {DKL}")
         boundarySampleIdx = select_weighted_contour(data=scanSamples,
                                                     threshold=nreSettings.anesthetic_sample_threshold)
         boundarySample = scanSamples.iloc[boundarySampleIdx, :nreSettings.num_features].to_numpy()
@@ -148,10 +153,10 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
             nextSamples = scanSamples.iloc[:, :nreSettings.num_features]
         nextSamples = torch.as_tensor(nextSamples.to_numpy())
         logger.info(
-            f"number of samples for next round after polychord dynamic live compression: {nextSamples.shape[0]}")
+            f"number of samples for next round {rd} after polychord dynamic live compression: {nextSamples.shape[0]}")
         root += f"_rd_{rd + 1}"
         if nreSettings.activate_NSNRE_deadpoints_training:
             full_samples = nextSamples.clone()
         else:
             full_samples = torch.cat([full_samples, nextSamples.clone()], dim=0)
-        logger.info(f"total data size for training: {full_samples.shape[0]}")
+        logger.info(f"total data size for training for rd {rd + 1}: {full_samples.shape[0]}")
