@@ -1,6 +1,7 @@
 import logging
 
 import anesthetic
+import matplotlib.pyplot as plt
 import pypolychord
 import swyft
 import torch
@@ -18,14 +19,19 @@ from NSLFI.utils import random_subset, select_weighted_contour
 
 
 def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
-                        obs: swyft.Sample, network_storage: dict, root_storage: dict, samples: torch.Tensor, root: str):
+                        obs: swyft.Sample, network_storage: dict, root_storage: dict, samples: torch.Tensor):
     # retrain NRE and sample new samples with NS loop
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
     full_samples = samples.clone()
     logger = logging.getLogger(nreSettings.logger_name)
+    dkl_storage = list()
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+        if rd == 0:
+            root = f"{nreSettings.root}"
+        else:
+            root = f"{nreSettings.root}_round_{rd}"
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))
             if nreSettings.activate_wandb:
@@ -120,6 +126,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         if rd >= 1:
             DKL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
                                         current_samples=scanSamples, rd=rd)
+            dkl_storage.append(DKL)
             logger.info(f"DKL of rd {rd} is: {DKL}")
         boundarySampleIdx = select_weighted_contour(data=scanSamples,
                                                     threshold=nreSettings.anesthetic_sample_threshold)
@@ -154,9 +161,13 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         nextSamples = torch.as_tensor(nextSamples.to_numpy())
         logger.info(
             f"number of samples for next round {rd} after polychord dynamic live compression: {nextSamples.shape[0]}")
-        root += f"_rd_{rd + 1}"
         if nreSettings.activate_NSNRE_deadpoints_training:
             full_samples = nextSamples.clone()
         else:
             full_samples = torch.cat([full_samples, nextSamples.clone()], dim=0)
         logger.info(f"total data size for training for rd {rd + 1}: {full_samples.shape[0]}")
+    plt.figure()
+    plt.plot([x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], dkl_storage)
+    plt.xlabel("round")
+    plt.ylabel("KL divergence")
+    plt.savefig(f"{root_storage['round_0']}/kl_divergence.pdf")

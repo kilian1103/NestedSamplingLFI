@@ -32,8 +32,7 @@ def execute():
     execute_NSNRE_cycle(nreSettings=nreSettings,
                         obs=dataEnv.obs, sim=dataEnv.sim,
                         network_storage=network_storage,
-                        root_storage=root_storage, samples=dataEnv.samples,
-                        root=nreSettings.root)
+                        root_storage=root_storage, samples=dataEnv.samples)
     # plot triangle plot
     if rank_gen == 0:
         plot_NRE_posterior(nreSettings=nreSettings, network_storage=network_storage, root_storage=root_storage,

@@ -26,9 +26,6 @@ class NRE_Settings:
         self.activate_NSNRE_counting = False
         self.activate_NSNRE_deadpoints_training = True
         self.thinning_factor_of_dataset = 1
-        self.ns_sampler = "Slice"
-        self.ns_keep_chain = True
-        self.ns_stopping_criterion = 1e-3
         self.sim_prior_lower = -1
         self.prior_width = 2
         self.anesthetic_sample_threshold = 0.999
