@@ -62,10 +62,12 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
 
         plt.figure()
-        plt.plot([x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], dkl_storage,
-                 label=r"$KL \mathrm{NRE}_i / \mathrm{NRE}_{i-1}$")
-        plt.plot([x for x in range(0, nreSettings.NRE_num_retrain_rounds + 1)], dkl_storage_true,
-                 label=r"$KL \mathrm{True} / \mathrm{NRE}_i}$")
+        plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],
+                     yerr=[x[1] for x in dkl_storage],
+                     label=r"$KL \mathrm{NRE}_i / \mathrm{NRE}_{i-1}$")
+        plt.errorbar(x=[x for x in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
+                     y=[x[0] for x in dkl_storage_true],
+                     yerr=[x[1] for x in dkl_storage_true], label=r"$KL \mathrm{True} / \mathrm{NRE}_i}$")
         plt.legend()
         plt.xlabel("round")
         plt.ylabel("KL divergence")

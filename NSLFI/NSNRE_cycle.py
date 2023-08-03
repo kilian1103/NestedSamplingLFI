@@ -167,7 +167,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
             full_samples = torch.cat([full_samples, nextSamples.clone()], dim=0)
         logger.info(f"total data size for training for rd {rd + 1}: {full_samples.shape[0]}")
     plt.figure()
-    plt.plot([x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], dkl_storage)
+    plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],
+                 yerr=[x[1] for x in dkl_storage])
     plt.xlabel("round")
     plt.ylabel("KL divergence")
     plt.savefig(f"{root_storage['round_0']}/kl_divergence.pdf")
