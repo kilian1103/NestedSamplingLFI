@@ -5,6 +5,7 @@ import swyft
 import torch
 from anesthetic import MCMCSamples, make_2d_axes
 
+from NSLFI.KL_divergence import compute_KL_divergence
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NSNRE_data_generation import DataEnvironment
@@ -31,10 +32,11 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
 
     # true posterior
     fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=False, ticks="outer")
-    mcmc = MCMCSamples(data=true_samples, logL=true_logLikes, weights=weights, labels=params_labels)
-    mcmc.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
-                 kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
-
+    mcmc_true = MCMCSamples(data=true_samples, logL=true_logLikes, weights=weights, labels=params_labels)
+    mcmc_true.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
+                      kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+    dkl_storage_true = []
+    dkl_storage = []
     with torch.no_grad():
         # use trained NRE and evaluate on full prior samples
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
@@ -45,11 +47,30 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             weights = weights.numpy().squeeze()
             samples = samples.numpy().squeeze()
             mcmc = MCMCSamples(data=samples, logL=logLs, weights=weights, labels=params_labels)
+            KDL_true = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
+                                             current_samples=mcmc_true.copy(), rd=rd + 1)
+            dkl_storage_true.append(KDL_true)
+            if rd != 0:
+                KDL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
+                                            current_samples=mcmc, rd=rd)
+                dkl_storage.append(KDL)
+
             mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}", kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
         root = root_storage["round_0"]
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
         fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
+
+        plt.figure()
+        plt.plot([x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], dkl_storage,
+                 label=r"$KL \mathrm{NRE}_i / \mathrm{NRE}_{i-1}$")
+        plt.plot([x for x in range(0, nreSettings.NRE_num_retrain_rounds + 1)], dkl_storage_true,
+                 label=r"$KL \mathrm{True} / \mathrm{NRE}_i}$")
+        plt.legend()
+        plt.xlabel("round")
+        plt.ylabel("KL divergence")
+        plt.title("KL divergence between NRE rounds")
+        plt.savefig(f"{root_storage['round_0']}/kl_divergence_truth.pdf")
 
 
 def plot_NRE_expansion_and_contraction_rate(root_storage: Dict[str, str], nreSettings: NRE_Settings):
