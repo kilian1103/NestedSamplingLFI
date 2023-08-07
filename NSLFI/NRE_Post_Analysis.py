@@ -5,10 +5,10 @@ import swyft
 import torch
 from anesthetic import MCMCSamples, make_2d_axes
 
-from NSLFI.KL_divergence import compute_KL_divergence
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NSNRE_data_generation import DataEnvironment
+from NSLFI.utils import compute_KL_divergence
 
 
 def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],

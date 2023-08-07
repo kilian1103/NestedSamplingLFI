@@ -9,12 +9,12 @@ import wandb
 from mpi4py import MPI
 from swyft import Simulator
 
-from NSLFI.KL_divergence import compute_KL_divergence
 from NSLFI.NRE_Intersector import intersect_samples
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
+from NSLFI.utils import compute_KL_divergence
 from NSLFI.utils import random_subset, select_weighted_contour
 
 
