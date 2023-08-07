@@ -14,8 +14,7 @@ from NSLFI.NSNRE_data_generation import DataEnvironment
 def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
                        nreSettings: NRE_Settings, dataEnv: DataEnvironment):
     # simulate full prior samples and compute true posterior
-    prior_samples = dataEnv.sim.sample(
-        nreSettings.n_weighted_samples * nreSettings.num_features * nreSettings.NRE_num_retrain_rounds)
+    prior_samples = dataEnv.sim.sample(nreSettings.n_weighted_samples)
     true_logLikes = torch.as_tensor(-prior_samples["l"])  # minus sign because of simulator convention
     true_samples = prior_samples[nreSettings.targetKey]
     weights_total = torch.exp(true_logLikes - true_logLikes.max()).sum()
