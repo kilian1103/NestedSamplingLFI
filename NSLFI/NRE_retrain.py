@@ -8,12 +8,11 @@ import wandb
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from swyft import collate_output as reformat_samples
+from swyft import collate_output as reformat_samples, Simulator
 from torch import Tensor
 
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.NRE_Simulator import Simulator
 
 
 def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Settings,
