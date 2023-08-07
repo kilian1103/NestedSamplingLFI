@@ -9,7 +9,7 @@ class Network(swyft.SwyftModule):
         self.nreSettings = nreSettings
         #  self.logratios1 = swyft.LogRatioEstimator_1dim(num_features=2, num_params=2, varnames=targetkey,
         #  dropout=0.2, hidden_features=128)
-        self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=self.nreSettings.num_features, marginals=(
+        self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=self.nreSettings.num_features_dataset, marginals=(
             tuple(dim for dim in range(self.nreSettings.num_features)),),
                                                        varnames=self.nreSettings.targetKey,
                                                        dropout=self.nreSettings.dropout, hidden_features=128, Lmax=8)

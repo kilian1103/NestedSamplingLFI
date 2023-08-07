@@ -17,6 +17,7 @@ class NRE_Settings:
         self.obsKey = "x"
         self.targetKey = "z"
         self.num_features = 2
+        self.num_features_dataset = 2
         self.trainmode = True
         self.device = "cpu"
         self.dropout = 0.3

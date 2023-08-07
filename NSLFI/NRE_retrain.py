@@ -27,7 +27,7 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
     logger.info(f"Simulating new {nreSettings.obsKey} using NS samples {nreSettings.targetKey} with Simulator!")
     samples = []
     for point in nextRoundPoints:
-        cond = {nreSettings.targetKey: point}
+        cond = {nreSettings.targetKey: point.float()}
         sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
         samples.append(sample)
     samples = reformat_samples(samples)

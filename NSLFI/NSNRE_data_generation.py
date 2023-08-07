@@ -14,7 +14,7 @@ class DataEnvironment:
     def __init__(self, nreSettings: NRE_Settings):
         self.nreSettings = nreSettings
         # define forward model settings
-        self.sim = Simulator(bounds_z=None, bimodal=True, nreSettings=self.nreSettings)
+        self.sim = Simulator(nreSettings=self.nreSettings)
 
     def generate_data(self):
         comm_gen = MPI.COMM_WORLD
@@ -28,7 +28,7 @@ class DataEnvironment:
                 logger.info("root folder already exists!")
 
         # observation for simulator
-        obs = swyft.Sample(x=np.array(self.nreSettings.num_features * [0]))
+        obs = swyft.Sample(x=np.array(self.nreSettings.num_features_dataset * [0]))
         # generate samples using simulator
         if rank_gen == 0:
             samples = torch.as_tensor(

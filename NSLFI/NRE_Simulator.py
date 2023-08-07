@@ -6,7 +6,7 @@ from NSLFI.NRE_Settings import NRE_Settings
 
 
 class Simulator(swyft.Simulator):
-    def __init__(self, bimodal: bool, nreSettings: NRE_Settings, bounds_z=None):
+    def __init__(self, nreSettings: NRE_Settings, bounds_z=None, bimodal=True):
         super().__init__()
         self.nreSettings = nreSettings
         self.z_sampler = swyft.RectBoundSampler(
