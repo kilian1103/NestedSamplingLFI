@@ -38,15 +38,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
                 wandb.init(
                     # set the wandb project where this run will be logged
                     project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
-                # thin samples
-            if rd == 0:
-                # first round, use all samples
-                subset = full_samples
-            else:
-                # thin samples for next round
-                subset = random_subset(dataset=full_samples, thinning_factor=nreSettings.thinning_factor_of_dataset)
-
-            network = retrain_next_round(root=root, nextRoundPoints=subset,
+            network = retrain_next_round(root=root, nextRoundPoints=full_samples,
                                          nreSettings=nreSettings, sim=sim, obs=obs)
         else:
             network = Network(nreSettings=nreSettings)
