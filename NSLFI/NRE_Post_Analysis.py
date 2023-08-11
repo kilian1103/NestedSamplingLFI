@@ -30,11 +30,14 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
     params_labels = {i: rf"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)}
 
     # true posterior
-    fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=False, ticks="outer")
     mcmc_true = MCMCSamples(data=true_samples, logL=true_logLikes, weights=weights, labels=params_labels)
     mcmc_true.compress()
-    mcmc_true.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
-                      kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+    if nreSettings.plot_triange_plot:
+        fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=False,
+                                 ticks="outer")
+        mcmc_true.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
+                          kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+    samples_storage = [mcmc_true]
     dkl_storage_true = []
     dkl_storage = []
     with torch.no_grad():
@@ -47,6 +50,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             weights = weights.numpy().squeeze()
             samples = samples.numpy().squeeze()
             mcmc = MCMCSamples(data=samples, logL=logLs, weights=weights, labels=params_labels)
+            samples_storage.append(mcmc)
             KDL_true = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
                                              current_samples=mcmc_true.copy(), rd=rd + 1)
             dkl_storage_true.append(KDL_true)
@@ -55,11 +59,15 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
                                             current_samples=mcmc, rd=rd)
                 dkl_storage.append(KDL)
             mcmc.compress()
-            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}", kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+            if nreSettings.plot_triange_plot:
+                mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
+                             kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
         root = root_storage["round_0"]
-        axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
-                                ncols=nreSettings.NRE_num_retrain_rounds + 2)
-        fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
+
+        if nreSettings.plot_triange_plot:
+            axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
+                                    ncols=nreSettings.NRE_num_retrain_rounds + 2)
+            fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
 
         plt.figure()
         plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],
