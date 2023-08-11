@@ -28,18 +28,16 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
     params = [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)]
     params_idx = [i for i in range(0, nreSettings.num_features)]
     params_labels = {i: rf"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)}
-
     # true posterior
     mcmc_true = MCMCSamples(data=true_samples, logL=true_logLikes, weights=weights, labels=params_labels)
     mcmc_true.compress()
-    if nreSettings.plot_triange_plot:
-        fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=False,
-                                 ticks="outer")
-        mcmc_true.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
-                          kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
-    samples_storage = [mcmc_true]
+
+    samples_storage = []
     dkl_storage_true = []
     dkl_storage = []
+    root = root_storage["round_0"]
+
+    # load data for plots
     with torch.no_grad():
         # use trained NRE and evaluate on full prior samples
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
@@ -50,25 +48,35 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             weights = weights.numpy().squeeze()
             samples = samples.numpy().squeeze()
             mcmc = MCMCSamples(data=samples, logL=logLs, weights=weights, labels=params_labels)
+            mcmc.compress()
             samples_storage.append(mcmc)
+
+    # triangle plot
+    if nreSettings.plot_triange_plot:
+        fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=False,
+                                 ticks="outer")
+        mcmc_true.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
+                          kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+
+        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+            mcmc = samples_storage[rd]
+            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
+                         kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+        axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
+                                ncols=nreSettings.NRE_num_retrain_rounds + 2)
+        fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
+
+    # KL divergence plot
+    if nreSettings.plot_KL_divergence:
+        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             KDL_true = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
                                              current_samples=mcmc_true.copy(), rd=rd + 1)
             dkl_storage_true.append(KDL_true)
             if rd != 0:
+                mcmc = samples_storage[rd]
                 KDL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
                                             current_samples=mcmc, rd=rd)
                 dkl_storage.append(KDL)
-            mcmc.compress()
-            if nreSettings.plot_triange_plot:
-                mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
-                             kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
-        root = root_storage["round_0"]
-
-        if nreSettings.plot_triange_plot:
-            axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
-                                    ncols=nreSettings.NRE_num_retrain_rounds + 2)
-            fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
-
         plt.figure()
         plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],
                      yerr=[x[1] for x in dkl_storage],
@@ -80,7 +88,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         plt.xlabel("round")
         plt.ylabel("KL divergence")
         plt.title("KL divergence between NRE rounds")
-        plt.savefig(f"{root_storage['round_0']}/kl_divergence_truth.pdf")
+        plt.savefig(f"{root}/kl_divergence_truth.pdf")
 
 
 def plot_NRE_expansion_and_contraction_rate(root_storage: Dict[str, str], nreSettings: NRE_Settings):
