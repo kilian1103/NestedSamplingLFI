@@ -18,6 +18,7 @@ class NRE_Settings:
         self.targetKey = "z"
         self.num_features = 2
         self.num_features_dataset = 2
+        self.num_mixture_components = 4
         self.trainmode = True
         self.device = "cpu"
         self.dropout = 0.3
@@ -30,8 +31,10 @@ class NRE_Settings:
         self.sim_prior_lower = -1
         self.prior_width = 2
         self.anesthetic_sample_threshold = 0.999
+        self.plot_triange_plot = True
+        self.plot_KL_divergence = True
         # polychord settings
-        self.nlive_scan_run_per_feature = 100
+        self.nlive_scan_run_per_feature = 25
         self.nderived = 0
         self.file_root = "samples"
         self.enhanced_run_file_root = "enhanced_run_samples"
