@@ -33,7 +33,8 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
 
     if nreSettings.true_contours_available:
         dkl_storage_true = []
-        true_logLikes = torch.as_tensor(-prior_samples["l"])  # minus sign because of simulator convention
+        true_logLikes = torch.as_tensor(
+            -prior_samples[nreSettings.contourKey])  # minus sign because of simulator convention
         # true posterior
         weights_total = torch.exp(true_logLikes - true_logLikes.max()).sum()
         weights = torch.exp(true_logLikes - true_logLikes.max()) / weights_total * len(true_logLikes)

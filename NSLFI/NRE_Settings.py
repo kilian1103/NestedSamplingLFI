@@ -16,6 +16,7 @@ class NRE_Settings:
         self.datamodule_fractions = [0.8, 0.1, 0.1]
         self.obsKey = "x"
         self.targetKey = "z"
+        self.contourKey = "l"
         self.num_features = 2
         self.num_features_dataset = 2
         self.num_mixture_components = 4

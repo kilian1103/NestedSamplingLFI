@@ -72,4 +72,4 @@ class Simulator(swyft.Simulator):
         z = graph.node(self.nreSettings.targetKey, lambda z_i, a_i: a_i @ z_i, z_i, a_i)
         x = graph.node(self.nreSettings.obsKey, self.dataGivenThetaGivenA, z_i, a_i)
         # true answer
-        zgivenX_i = graph.node("l", self.thetaGivenDataGivenA, x_i, z, a_i)
+        zgivenX_i = graph.node(self.nreSettings.contourKey, self.thetaGivenDataGivenA, x_i, z, a_i)
