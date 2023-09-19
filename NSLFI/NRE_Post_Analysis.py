@@ -15,13 +15,13 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
                        nreSettings: NRE_Settings, dataEnv: DataEnvironment):
     # simulate full prior samples and compute true posterior
     prior_samples = dataEnv.sim.sample(nreSettings.n_weighted_samples)
-
-    true_samples = prior_samples[nreSettings.targetKey]
+    theta_samples = prior_samples[nreSettings.targetKey]
     data_samples = prior_samples[nreSettings.obsKey]
 
     # NRE refactoring
-    prior_samples_nre = {nreSettings.targetKey: torch.as_tensor(prior_samples[nreSettings.targetKey])}
+    prior_samples_nre = {nreSettings.targetKey: torch.as_tensor(theta_samples)}
     obs = {nreSettings.obsKey: torch.tensor(dataEnv.obs[nreSettings.obsKey]).unsqueeze(0)}
+
     # set up labels for plotting
     params = [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)]
     params_idx = [i for i in range(0, nreSettings.num_features)]
@@ -40,7 +40,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         weights = torch.exp(true_logLikes - true_logLikes.max()) / weights_total * len(true_logLikes)
         weights = weights.numpy()
 
-        mcmc_true = MCMCSamples(data=true_samples, logL=true_logLikes, weights=weights, labels=params_labels)
+        mcmc_true = MCMCSamples(data=theta_samples, logL=true_logLikes, weights=weights, labels=params_labels)
         mcmc_true.compress()
 
     # load data for plots
@@ -83,7 +83,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         fig, axes = make_2d_axes(params_idx_ext, labels=params_labels_ext, lower=True, diagonal=True, upper=False,
                                  ticks="outer")
         if nreSettings.true_contours_available:
-            mcmc_true_ext = MCMCSamples(data=torch.cat((true_samples, data_samples), dim=1), logL=true_logLikes,
+            mcmc_true_ext = MCMCSamples(data=torch.cat((theta_samples, data_samples), dim=1), logL=true_logLikes,
                                         weights=weights, labels=params_labels_ext)
             mcmc_true_ext.compress()
             mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
