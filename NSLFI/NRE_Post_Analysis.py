@@ -17,6 +17,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
     prior_samples = dataEnv.sim.sample(nreSettings.n_weighted_samples)
     true_logLikes = torch.as_tensor(-prior_samples["l"])  # minus sign because of simulator convention
     true_samples = prior_samples[nreSettings.targetKey]
+    data_samples = prior_samples[nreSettings.obsKey]
     weights_total = torch.exp(true_logLikes - true_logLikes.max()).sum()
     weights = torch.exp(true_logLikes - true_logLikes.max()) / weights_total * len(true_logLikes)
     weights = weights.numpy()
@@ -52,7 +53,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             samples_storage.append(mcmc)
 
     # triangle plot
-    if nreSettings.plot_triange_plot:
+    if nreSettings.plot_triangle_plot:
         fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=False,
                                  ticks="outer")
         mcmc_true.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
@@ -65,6 +66,23 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
         fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
+
+    # data and param triangle plot
+    if nreSettings.plot_triangle_plot_ext:
+        params_labels_ext = params_labels.copy()
+        params_labels_ext.update({nreSettings.num_features + j: rf"${nreSettings.obsKey}_{j}$" for j in
+                                  range(nreSettings.num_features_dataset)})
+        params_idx_ext = [i for i in range(0, nreSettings.num_features + nreSettings.num_features_dataset)]
+        mcmc_true_ext = MCMCSamples(data=torch.cat((true_samples, data_samples), dim=1), logL=true_logLikes,
+                                    weights=weights, labels=params_labels_ext)
+        mcmc_true_ext.compress()
+        fig, axes = make_2d_axes(params_idx_ext, labels=params_labels_ext, lower=True, diagonal=True, upper=False,
+                                 ticks="outer")
+        mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
+                              kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+        axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
+                                ncols=nreSettings.NRE_num_retrain_rounds + 2)
+        fig.savefig(f"{root}/NRE_triangle_posterior_ext.pdf")
 
     # KL divergence plot
     if nreSettings.plot_KL_divergence:
