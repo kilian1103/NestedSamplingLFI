@@ -31,6 +31,7 @@ class NRE_Settings:
         self.sim_prior_lower = -1
         self.prior_width = 2
         self.anesthetic_sample_threshold = 0.999
+        self.true_contours_available = True
         self.plot_triangle_plot = True
         self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
