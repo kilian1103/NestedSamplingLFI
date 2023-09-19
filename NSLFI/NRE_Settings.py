@@ -32,7 +32,7 @@ class NRE_Settings:
         self.prior_width = 2
         self.anesthetic_sample_threshold = 0.999
         self.plot_triangle_plot = True
-        self.plot_triangle_plot_ext = True
+        self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
         # polychord settings
         self.nlive_scan_run_per_feature = 25
