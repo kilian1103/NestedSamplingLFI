@@ -18,7 +18,7 @@ class NRE_Settings:
         self.targetKey = "z"
         self.contourKey = "l"
         self.num_features = 2
-        self.num_features_dataset = 2
+        self.num_features_dataset = 3
         self.num_mixture_components = 4
         self.trainmode = True
         self.device = "cpu"
@@ -29,12 +29,12 @@ class NRE_Settings:
         self.activate_NSNRE_counting = False
         self.activate_NSNRE_deadpoints_training = True
         self.thinning_factor_of_dataset = 1
-        self.sim_prior_lower = -1
-        self.prior_width = 2
+        self.sim_prior_lower = -10
+        self.prior_width = 20
         self.anesthetic_sample_threshold = 0.999
-        self.true_contours_available = True
+        self.true_contours_available = False
         self.plot_triangle_plot = True
-        self.plot_triangle_plot_ext = False
+        self.plot_triangle_plot_ext = True
         self.plot_KL_divergence = True
         # polychord settings
         self.nlive_scan_run_per_feature = 25

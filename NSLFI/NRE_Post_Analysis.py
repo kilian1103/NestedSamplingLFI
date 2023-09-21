@@ -27,6 +27,11 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
     params_idx = [i for i in range(0, nreSettings.num_features)]
     params_labels = {i: rf"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)}
 
+    params_labels_ext = params_labels.copy()
+    params_labels_ext.update({nreSettings.num_features + j: rf"$D_{j}$" for j in
+                              range(nreSettings.num_features_dataset)})
+    params_idx_ext = [i for i in range(0, nreSettings.num_features + nreSettings.num_features_dataset)]
+
     samples_storage = []
     dkl_storage = []
     root = root_storage["round_0"]
@@ -53,7 +58,10 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             logLs = predictions.logratios.numpy().squeeze()
             weights = weights.numpy().squeeze()
             samples = samples.numpy().squeeze()
-            mcmc = MCMCSamples(data=samples, logL=logLs, weights=weights, labels=params_labels)
+            mcmc = MCMCSamples(data=torch.cat((torch.as_tensor(samples), torch.as_tensor(data_samples)), dim=1),
+                               logL=logLs,
+                               weights=weights,
+                               labels=params_labels_ext)
             mcmc.compress()
             samples_storage.append(mcmc)
 
@@ -75,10 +83,6 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
 
     # data and param triangle plot
     if nreSettings.plot_triangle_plot_ext:
-        params_labels_ext = params_labels.copy()
-        params_labels_ext.update({nreSettings.num_features + j: rf"${nreSettings.obsKey}_{j}$" for j in
-                                  range(nreSettings.num_features_dataset)})
-        params_idx_ext = [i for i in range(0, nreSettings.num_features + nreSettings.num_features_dataset)]
 
         fig, axes = make_2d_axes(params_idx_ext, labels=params_labels_ext, lower=True, diagonal=True, upper=False,
                                  ticks="outer")
@@ -88,6 +92,11 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             mcmc_true_ext.compress()
             mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
                                   kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+
+        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+            mcmc = samples_storage[rd]
+            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
+                         kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
         fig.savefig(f"{root}/NRE_triangle_posterior_ext.pdf")
