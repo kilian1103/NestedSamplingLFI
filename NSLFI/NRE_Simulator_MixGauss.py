@@ -23,7 +23,7 @@ class Simulator(swyft.Simulator):
                                                                                    self.mu_theta.unsqueeze(
                                                                                        2)).squeeze(
             2)  # random data mean vec
-        self.Sigma = 0.5 * torch.eye(self.n)  # cov matrix of parameter prior
+        self.Sigma = torch.eye(self.n)  # cov matrix of parameter prior
         self.S = torch.eye(self.d) + self.M @ self.Sigma @ torch.transpose(self.M, 1, 2)  # cov matrix of dataset
         self.X = self.M @ self.Sigma  # covariance entries between data and parameter
 
@@ -42,15 +42,15 @@ class Simulator(swyft.Simulator):
     def thetaGivenDataGivenA(self, D: np.ndarray, idx: int):
         mean = self.mu_theta + (torch.transpose(self.X, 1, 2) @ torch.inverse(self.S) @ (
                 torch.as_tensor(D).float() - self.mu_data).unsqueeze(2)).squeeze(2)
-        sigma = self.Sigma - torch.transpose(self.X, 1, 2) @ torch.inverse(self.S) @ self.X
-        rv = stats.multivariate_normal(mean=mean[idx].squeeze(), cov=sigma[idx].squeeze()).rvs()
+        cov = self.Sigma - torch.transpose(self.X, 1, 2) @ self.S @ self.X
+        rv = stats.multivariate_normal(mean=mean[idx].squeeze(), cov=cov[idx].squeeze()).rvs()
         return rv
 
     def dataGivenThetaGivenA(self, theta: np.ndarray, idx: int):
         mean = self.mu_data + (self.X @ torch.inverse(self.Sigma) @ (
                 torch.as_tensor(theta).float() - self.mu_theta).unsqueeze(2)).squeeze(2)
-        sigma = self.S - self.X @ self.Sigma @ torch.transpose(self.X, 1, 2)
-        rv = stats.multivariate_normal(mean=mean[idx].squeeze(), cov=sigma[idx].squeeze()).rvs()
+        cov = self.S - self.X @ self.Sigma @ torch.transpose(self.X, 1, 2)
+        rv = stats.multivariate_normal(mean=mean[idx].squeeze(), cov=cov[idx].squeeze()).rvs()
         return rv
 
     def logratio(self, x, z):
