@@ -21,12 +21,9 @@ class NRE_PolyChord:
     def prior(self, cube) -> np.ndarray:
         """Transforms the unit cube to the prior cube."""
         theta = np.zeros_like(cube)
-        theta[0] = UniformPrior(self.nre_settings.sim_prior_lower,
-                                self.nre_settings.sim_prior_lower + self.nre_settings.prior_width)(
-            cube[0])
-        theta[1] = UniformPrior(self.nre_settings.sim_prior_lower,
-                                self.nre_settings.sim_prior_lower + self.nre_settings.prior_width)(
-            cube[1])
+        for i in range(len(cube)):
+            theta[i] = UniformPrior(self.nre_settings.sim_prior_lower,
+                                    self.nre_settings.sim_prior_lower + self.nre_settings.prior_width)(cube[i])
         return theta
 
     def logLikelihood(self, theta: np.ndarray) -> Tuple[Any, List]:
