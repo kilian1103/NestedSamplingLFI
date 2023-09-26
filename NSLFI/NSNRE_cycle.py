@@ -28,10 +28,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
     logger = logging.getLogger(nreSettings.logger_name)
     dkl_storage = list()
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-        if rd == 0:
-            root = f"{nreSettings.root}"
-        else:
-            root = f"{nreSettings.root}_round_{rd}"
+        root = f"{nreSettings.root}_round_{rd}"
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))
             if nreSettings.activate_wandb:
