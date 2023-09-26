@@ -1,5 +1,4 @@
 import logging
-import os
 
 import numpy as np
 import swyft
@@ -21,11 +20,6 @@ class DataEnvironment:
         rank_gen = comm_gen.Get_rank()
         size_gen = comm_gen.Get_size()
         logger = logging.getLogger(self.nreSettings.logger_name)
-        if rank_gen == 0:
-            try:
-                os.makedirs(self.nreSettings.root)
-            except OSError:
-                logger.info("root folder already exists!")
 
         # observation for simulator
         obs = swyft.Sample(x=np.array(self.nreSettings.num_features_dataset * [0]))
@@ -34,7 +28,6 @@ class DataEnvironment:
             samples = torch.as_tensor(
                 self.sim.sample(self.nreSettings.n_training_samples, targets=[self.nreSettings.targetKey])[
                     self.nreSettings.targetKey])
-            torch.save(samples, f"{self.nreSettings.root}/full_prior_samples")
         else:
             samples = torch.empty((self.nreSettings.n_training_samples, self.nreSettings.num_features))
         # broadcast samples to all ranks
