@@ -1,9 +1,11 @@
 from typing import Dict
 
 import matplotlib.pyplot as plt
+import numpy as np
 import swyft
 import torch
 from anesthetic import MCMCSamples, make_2d_axes
+from swyft import collate_output as reformat_samples
 
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
@@ -13,11 +15,17 @@ from NSLFI.utils import compute_KL_divergence
 
 def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
                        nreSettings: NRE_Settings, dataEnv: DataEnvironment):
-    # simulate full prior samples and compute true posterior
-    prior_samples = dataEnv.sim.sample(nreSettings.n_weighted_samples)
-    theta_samples = prior_samples[nreSettings.targetKey]
-    data_samples = prior_samples[nreSettings.obsKey]
-
+    # full prior samples of NSNRE
+    theta_samples = np.random.uniform(nreSettings.sim_prior_lower,
+                                      nreSettings.sim_prior_lower + nreSettings.prior_width,
+                                      (nreSettings.n_weighted_samples, nreSettings.num_features))
+    joints = []
+    for theta in theta_samples:
+        cond = {nreSettings.targetKey: theta}
+        joint = dataEnv.sim.sample(conditions=cond)
+        joints.append(joint)
+    joints = reformat_samples(joints)
+    data_samples = joints[nreSettings.obsKey]
     # NRE refactoring
     prior_samples_nre = {nreSettings.targetKey: torch.as_tensor(theta_samples)}
     obs = {nreSettings.obsKey: torch.tensor(dataEnv.obs[nreSettings.obsKey]).unsqueeze(0)}
@@ -39,13 +47,14 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
     if nreSettings.true_contours_available:
         dkl_storage_true = []
         true_logLikes = torch.as_tensor(
-            -prior_samples[nreSettings.contourKey])  # minus sign because of simulator convention
+            -joints[nreSettings.contourKey])  # minus sign because of simulator convention
         # true posterior
         weights_total = torch.exp(true_logLikes - true_logLikes.max()).sum()
         weights = torch.exp(true_logLikes - true_logLikes.max()) / weights_total * len(true_logLikes)
         weights = weights.numpy()
 
-        mcmc_true = MCMCSamples(data=theta_samples, logL=true_logLikes, weights=weights, labels=params_labels)
+        mcmc_true = MCMCSamples(data=joints[nreSettings.targetKey], logL=true_logLikes, weights=weights,
+                                labels=params_labels)
         mcmc_true.compress()
 
     # load data for plots
@@ -87,8 +96,10 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         fig, axes = make_2d_axes(params_idx_ext, labels=params_labels_ext, lower=True, diagonal=True, upper=False,
                                  ticks="outer")
         if nreSettings.true_contours_available:
-            mcmc_true_ext = MCMCSamples(data=torch.cat((theta_samples, data_samples), dim=1), logL=true_logLikes,
-                                        weights=weights, labels=params_labels_ext)
+            mcmc_true_ext = MCMCSamples(
+                data=torch.cat((joints[nreSettings.targetKey], joints[nreSettings.obsKey]), dim=1),
+                logL=true_logLikes,
+                weights=weights, labels=params_labels_ext)
             mcmc_true_ext.compress()
             mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
                                   kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
