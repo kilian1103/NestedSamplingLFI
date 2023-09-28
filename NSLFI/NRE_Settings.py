@@ -12,11 +12,12 @@ class NRE_Settings:
         self.logger_name = f"{self.root}.log"
         self.seed = 234
         self.n_training_samples = 30_000
-        self.n_weighted_samples = 10_000
+        self.n_weighted_samples = 30_000
         self.datamodule_fractions = [0.8, 0.1, 0.1]
         self.obsKey = "x"
         self.targetKey = "z"
         self.contourKey = "l"
+        self.posteriorsKey = "post"
         self.num_features = 2
         self.num_features_dataset = 3
         self.num_mixture_components = 4

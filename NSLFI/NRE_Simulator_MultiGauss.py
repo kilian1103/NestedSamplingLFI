@@ -16,6 +16,8 @@ class Simulator(swyft.Simulator):
         self.C = torch.eye(self.d)  # cov matrix of dataset
         self.mu = torch.zeros(self.n)  # mean vec of parameter prior
         self.Sigma = torch.eye(self.n)  # cov matrix of parameter prior
+        self.Sigma_inv = torch.inverse(self.Sigma)
+        self.C_inv = torch.inverse(self.C)
         self.z_sampler = stats.multivariate_normal(mean=self.mu, cov=self.Sigma).rvs
 
     def xgivenz(self, z):
@@ -28,7 +30,16 @@ class Simulator(swyft.Simulator):
         logratio = (loglike - logevidence).sum()
         return logratio
 
+    def zgivenx(self, x):
+        """Posterior sampling"""
+        return stats.multivariate_normal(mean=(self.Sigma_inv + self.M.T @ self.C_inv @ self.M).inverse() @ (
+                self.Sigma_inv @ self.mu + self.M.T @ self.C_inv @ (torch.as_tensor(x).float() - self.m)),
+                                         cov=(
+                                                 self.Sigma_inv + self.M.T @ self.C_inv @
+                                                 self.M).inverse()).rvs()
+
     def build(self, graph):
         z = graph.node(self.nreSettings.targetKey, self.z_sampler)
         x = graph.node(self.nreSettings.obsKey, self.xgivenz, z)
         l = graph.node(self.nreSettings.contourKey, self.logratio, x, z)
+        post = graph.node(self.nreSettings.posteriorsKey, self.zgivenx, x)

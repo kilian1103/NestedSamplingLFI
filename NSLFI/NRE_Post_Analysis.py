@@ -46,14 +46,22 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
 
     if nreSettings.true_contours_available:
         dkl_storage_true = []
-        true_logLikes = torch.as_tensor(
-            -joints[nreSettings.contourKey])  # minus sign because of simulator convention
+        posteriors = []
+
+        for theta in theta_samples:
+            cond_true = {nreSettings.targetKey: theta,
+                         nreSettings.obsKey: dataEnv.obs[nreSettings.obsKey]}
+            posterior = dataEnv.sim.sample(conditions=cond_true)
+            posteriors.append(posterior)
+        posteriors = reformat_samples(posteriors)
+
+        true_logLikes = torch.as_tensor(posteriors[nreSettings.contourKey])
         # true posterior
         weights_total = torch.exp(true_logLikes - true_logLikes.max()).sum()
         weights = torch.exp(true_logLikes - true_logLikes.max()) / weights_total * len(true_logLikes)
         weights = weights.numpy()
 
-        mcmc_true = MCMCSamples(data=joints[nreSettings.targetKey], logL=true_logLikes, weights=weights,
+        mcmc_true = MCMCSamples(data=posteriors[nreSettings.posteriorsKey], logL=true_logLikes, weights=weights,
                                 labels=params_labels)
         mcmc_true.compress()
 
@@ -97,7 +105,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
                                  ticks="outer")
         if nreSettings.true_contours_available:
             mcmc_true_ext = MCMCSamples(
-                data=torch.cat((joints[nreSettings.targetKey], joints[nreSettings.obsKey]), dim=1),
+                data=torch.cat((posteriors[nreSettings.targetKey], posteriors[nreSettings.obsKey]), dim=1),
                 logL=true_logLikes,
                 weights=weights, labels=params_labels_ext)
             mcmc_true_ext.compress()
