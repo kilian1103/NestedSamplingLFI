@@ -16,18 +16,18 @@ from NSLFI.utils import compute_KL_divergence
 def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
                        nreSettings: NRE_Settings, dataEnv: DataEnvironment):
     # full prior samples of NSNRE
-    theta_samples = np.random.uniform(nreSettings.sim_prior_lower,
-                                      nreSettings.sim_prior_lower + nreSettings.prior_width,
-                                      (nreSettings.n_weighted_samples, nreSettings.num_features))
-    joints = []
-    for theta in theta_samples:
+    full_prior_theta_samples = np.random.uniform(nreSettings.sim_prior_lower,
+                                                 nreSettings.sim_prior_lower + nreSettings.prior_width,
+                                                 (nreSettings.n_weighted_samples, nreSettings.num_features))
+    full_prior_joints = []
+    for theta in full_prior_theta_samples:
         cond = {nreSettings.targetKey: theta}
         joint = dataEnv.sim.sample(conditions=cond)
-        joints.append(joint)
-    joints = reformat_samples(joints)
-    data_samples = joints[nreSettings.obsKey]
+        full_prior_joints.append(joint)
+    full_prior_joints = reformat_samples(full_prior_joints)
+    full_prior_data_samples = full_prior_joints[nreSettings.obsKey]
     # NRE refactoring
-    prior_samples_nre = {nreSettings.targetKey: torch.as_tensor(theta_samples)}
+    prior_samples_nre = {nreSettings.targetKey: torch.as_tensor(full_prior_theta_samples)}
     obs = {nreSettings.obsKey: torch.tensor(dataEnv.obs[nreSettings.obsKey]).unsqueeze(0)}
 
     # set up labels for plotting
@@ -48,7 +48,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         dkl_storage_true = []
         posteriors = []
 
-        for theta in theta_samples:
+        for theta in full_prior_theta_samples:
             cond_true = {nreSettings.targetKey: theta,
                          nreSettings.obsKey: dataEnv.obs[nreSettings.obsKey]}
             posterior = dataEnv.sim.sample(conditions=cond_true)
@@ -57,11 +57,11 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
 
         true_logLikes = torch.as_tensor(posteriors[nreSettings.contourKey])
         # true posterior
-        weights_total = torch.exp(true_logLikes - true_logLikes.max()).sum()
-        weights = torch.exp(true_logLikes - true_logLikes.max()) / weights_total * len(true_logLikes)
-        weights = weights.numpy()
+        weights_total_true = torch.exp(true_logLikes - true_logLikes.max()).sum()
+        weights_true = torch.exp(true_logLikes - true_logLikes.max()) / weights_total_true * len(true_logLikes)
+        weights_true = weights_true.numpy()
 
-        mcmc_true = MCMCSamples(data=posteriors[nreSettings.posteriorsKey], logL=true_logLikes, weights=weights,
+        mcmc_true = MCMCSamples(data=posteriors[nreSettings.posteriorsKey], logL=true_logLikes, weights=weights_true,
                                 labels=params_labels)
         mcmc_true.compress()
 
@@ -75,10 +75,11 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             logLs = predictions.logratios.numpy().squeeze()
             weights = weights.numpy().squeeze()
             samples = samples.numpy().squeeze()
-            mcmc = MCMCSamples(data=torch.cat((torch.as_tensor(samples), torch.as_tensor(data_samples)), dim=1),
-                               logL=logLs,
-                               weights=weights,
-                               labels=params_labels_ext)
+            mcmc = MCMCSamples(
+                data=torch.cat((torch.as_tensor(samples), torch.as_tensor(full_prior_data_samples)), dim=1),
+                logL=logLs,
+                weights=weights,
+                labels=params_labels_ext)
             mcmc.compress()
             samples_storage.append(mcmc)
 
@@ -107,7 +108,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
             mcmc_true_ext = MCMCSamples(
                 data=torch.cat((posteriors[nreSettings.targetKey], posteriors[nreSettings.obsKey]), dim=1),
                 logL=true_logLikes,
-                weights=weights, labels=params_labels_ext)
+                weights=weights_true, labels=params_labels_ext)
             mcmc_true_ext.compress()
             mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
                                   kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
