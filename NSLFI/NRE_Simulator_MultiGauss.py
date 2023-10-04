@@ -27,7 +27,7 @@ class Simulator(swyft.Simulator):
         loglike = stats.multivariate_normal(mean=(self.m + self.M @ z), cov=self.C).logpdf(x)
         logevidence = stats.multivariate_normal(mean=(self.m + self.M @ self.mu),
                                                 cov=(self.C + self.M @ self.Sigma @ self.M.T)).logpdf(x)
-        logratio = (loglike - logevidence).sum()
+        logratio = loglike - logevidence
         return logratio
 
     def zgivenx(self, x):
