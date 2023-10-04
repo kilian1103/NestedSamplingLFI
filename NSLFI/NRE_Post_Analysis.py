@@ -63,7 +63,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
 
         mcmc_true = MCMCSamples(data=posteriors[nreSettings.posteriorsKey], logL=true_logLikes, weights=weights_true,
                                 labels=params_labels)
-        mcmc_true.compress()
+        mcmc_true = mcmc_true.compress(nreSettings.n_compressed_weighted_samples).drop_duplicates()
 
     # load data for plots
     with torch.no_grad():
@@ -80,7 +80,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
                 logL=logLs,
                 weights=weights,
                 labels=params_labels_ext)
-            mcmc.compress()
+            mcmc = mcmc.compress(nreSettings.n_compressed_weighted_samples).drop_duplicates()
             samples_storage.append(mcmc)
 
     # triangle plot
@@ -109,7 +109,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
                 data=torch.cat((posteriors[nreSettings.targetKey], posteriors[nreSettings.obsKey]), dim=1),
                 logL=true_logLikes,
                 weights=weights_true, labels=params_labels_ext)
-            mcmc_true_ext.compress()
+            mcmc_true_ext = mcmc_true_ext.compress(nreSettings.n_compressed_weighted_samples).drop_duplicates()
             mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
                                   kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
 
