@@ -29,7 +29,7 @@ class NRE_Settings:
         self.max_epochs = 50
         self.NRE_num_retrain_rounds = 5
         self.learning_rate_init = 0.001
-        self.learning_rate_decay = 0.9
+        self.learning_rate_decay = 0.1
         self.activate_NSNRE_counting = False
         self.activate_NSNRE_deadpoints_training = True
         self.thinning_factor_of_dataset = 1
