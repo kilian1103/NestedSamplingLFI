@@ -11,10 +11,10 @@ from swyft import Simulator
 
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
+from NSLFI.NRE_Post_Analysis import plot_quantile_plot
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
 from NSLFI.utils import compute_KL_divergence
-from NSLFI.utils import plot_quantile_plot
 
 
 def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,

@@ -148,6 +148,18 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         plt.savefig(f"{root}/kl_divergence_truth.pdf")
 
 
+def plot_quantile_plot(samples, percentiles: np.ndarray, nreSettings: NRE_Settings, root: str):
+    samples = samples.drop_weights()
+    quantiles = samples.quantile(percentiles)
+    plt.figure()
+    for i in range(nreSettings.num_features):
+        plt.plot(percentiles, quantiles.iloc[:, i], label=rf"$z_{i}$")
+    plt.xlabel("quantile")
+    plt.ylabel(rf"$z$ value")
+    plt.legend()
+    plt.savefig(f"{root}/quantile_plot.pdf")
+
+
 def plot_NRE_expansion_and_contraction_rate(root_storage: Dict[str, str], nreSettings: NRE_Settings):
     data_exp = []
     data_comp = []

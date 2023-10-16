@@ -3,7 +3,6 @@ from typing import Dict
 from typing import Tuple
 
 import anesthetic
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from anesthetic import NestedSamples
@@ -69,15 +68,3 @@ def reload_data_for_plotting() -> Tuple[Dict[str, str], Dict[str, NRE_PolyChord]
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = current_root
     return root_storage, network_storage, nreSettings, dataEnv
-
-
-def plot_quantile_plot(samples, percentiles: np.ndarray, nreSettings: NRE_Settings, root: str):
-    samples = samples.drop_weights()
-    quantiles = samples.quantile(percentiles)
-    plt.figure()
-    for i in range(nreSettings.num_features):
-        plt.plot(percentiles, quantiles.iloc[:, i], label=rf"$z_{i}$")
-    plt.xlabel("quantile")
-    plt.ylabel(rf"$z$ value")
-    plt.legend()
-    plt.savefig(f"{root}/quantile_plot.pdf")
