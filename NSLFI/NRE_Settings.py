@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class NRE_Settings:
     def __init__(self):
         """NRE initialisation.
@@ -40,6 +43,7 @@ class NRE_Settings:
         self.plot_triangle_plot = True
         self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
+        self.percentiles_of_quantile_plot = np.arange(0, 1.05, 0.05)
         # polychord settings
         self.nlive_scan_run_per_feature = 1000
         self.nderived = 0

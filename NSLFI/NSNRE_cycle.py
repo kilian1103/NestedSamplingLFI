@@ -15,7 +15,7 @@ from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
 from NSLFI.utils import compute_KL_divergence
-from NSLFI.utils import random_subset, select_weighted_contour
+from NSLFI.utils import random_subset, select_weighted_contour, plot_quantile_plot
 
 
 def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
@@ -147,6 +147,11 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
             nextSamples = nextSamples.live_points(boundarySample_logL).iloc[:, :nreSettings.num_features]
         else:
             nextSamples = scanSamples.iloc[:, :nreSettings.num_features]
+            if rank_gen == 0:
+                plot_quantile_plot(samples=nextSamples.copy(), percentiles=nreSettings.percentiles_of_quantile_plot,
+                                   nreSettings=nreSettings,
+                                   root=root)
+        comm_gen.Barrier()
         nextSamples = torch.as_tensor(nextSamples.to_numpy())
         logger.info(
             f"number of samples for next round {rd} after polychord dynamic live compression: {nextSamples.shape[0]}")
@@ -155,6 +160,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         else:
             full_samples = torch.cat([full_samples, nextSamples.clone()], dim=0)
         logger.info(f"total data size for training for rd {rd + 1}: {full_samples.shape[0]}")
+
+    ### plot KL divergence plot
     plt.figure()
     plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],
                  yerr=[x[1] for x in dkl_storage])
