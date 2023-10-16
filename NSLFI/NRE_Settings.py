@@ -25,7 +25,6 @@ class NRE_Settings:
         self.num_features = 4
         self.num_features_dataset = 10
         self.num_mixture_components = 4
-        self.trainmode = True
         self.device = "cpu"
         self.dropout = 0.3
         self.early_stopping_patience = 3
@@ -33,12 +32,8 @@ class NRE_Settings:
         self.NRE_num_retrain_rounds = 5
         self.learning_rate_init = 0.001
         self.learning_rate_decay = 0.1
-        self.activate_NSNRE_counting = False
-        self.activate_NSNRE_deadpoints_training = True
-        self.thinning_factor_of_dataset = 1
         self.sim_prior_lower = -10
         self.prior_width = 20
-        self.anesthetic_sample_threshold = 0.999
         self.true_contours_available = True
         self.plot_triangle_plot = True
         self.plot_triangle_plot_ext = False
@@ -49,4 +44,3 @@ class NRE_Settings:
         self.nderived = 0
         self.file_root = "samples"
         self.enhanced_run_file_root = "enhanced_run_samples"
-        self.nlives_logL_coefficient = 0.05
