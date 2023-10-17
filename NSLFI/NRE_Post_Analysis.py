@@ -42,7 +42,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
 
     samples_storage = []
     dkl_storage = []
-    root = root_storage["round_0"]
+    root = root_storage[f"round_{nreSettings.NRE_num_retrain_rounds}"]
 
     if nreSettings.true_contours_available:
         dkl_storage_true = []
@@ -185,4 +185,4 @@ def plot_NRE_expansion_and_contraction_rate(root_storage: Dict[str, str], nreSet
     plt.xlabel("round")
     plt.ylabel("rate")
     plt.legend()
-    plt.savefig(f"{root_storage['round_0']}/NRE_expansion_and_contraction_rate.pdf")
+    plt.savefig(f"{root_storage[f'round_{nreSettings.NRE_num_retrain_rounds}']}/NRE_expansion_and_contraction_rate.pdf")
