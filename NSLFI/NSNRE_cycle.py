@@ -25,7 +25,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
     dkl_storage = list()
 
     if nreSettings.NRE_start_from_round > 0:
-        ### only execute this code when previous rounds are already trained
+        ### only execute this code when previous rounds are already trained ###
         for i in range(0, nreSettings.NRE_start_from_round):
             root = f"{nreSettings.root}_round_{i}"
             current_network = Network(nreSettings=nreSettings)
@@ -43,10 +43,10 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         training_samples = deadpoints
 
-    ### main cycle
+    ### main cycle ###
     for rd in range(nreSettings.NRE_start_from_round, nreSettings.NRE_num_retrain_rounds + 1):
 
-        #### start NRE training section
+        ### start NRE training section ###
         root = f"{nreSettings.root}_round_{rd}"
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))
@@ -59,7 +59,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         else:
             network = Network(nreSettings=nreSettings)
         comm_gen.Barrier()
-        # load saved network
+        ### load saved network and save it in network_storage ###
         network.load_state_dict(torch.load(f"{root}/{nreSettings.neural_network_file}"))
         network.double()  # change to float64 precision of network
         trained_NRE = NRE_PolyChord(network=network, obs=obs)
@@ -67,7 +67,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         root_storage[f"round_{rd}"] = root
         logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
 
-        #### start polychord section
+        ### start polychord section ###
         polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
         polyset.file_root = nreSettings.file_root
         polyset.base_dir = root
@@ -75,11 +75,13 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         polyset.nfail = nreSettings.nlive_scan_run_per_feature * nreSettings.n_training_samples
         polyset.nprior = nreSettings.n_training_samples
         polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
-        # Run PolyChord
+        ### Run PolyChord ###
         pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=nreSettings.num_features,
                                   nDerived=nreSettings.nderived, settings=polyset,
                                   prior=trained_NRE.prior, dumper=trained_NRE.dumper)
         comm_gen.Barrier()
+
+        ### load deadpoints and compute KL divergence and reassign to training samples ###
         deadpoints = anesthetic.read_chains(root=f"{root}/{nreSettings.file_root}")
         if rd >= 1:
             DKL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
