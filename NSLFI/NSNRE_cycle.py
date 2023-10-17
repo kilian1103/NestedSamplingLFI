@@ -25,6 +25,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
     dkl_storage = list()
 
     if nreSettings.NRE_start_from_round > 0:
+        if nreSettings.NRE_start_from_round > nreSettings.NRE_num_retrain_rounds:
+            raise ValueError("NRE_start_from_round must be smaller than NRE_num_retrain_rounds")
         ### only execute this code when previous rounds are already trained ###
         for i in range(0, nreSettings.NRE_start_from_round):
             root = f"{nreSettings.root}_round_{i}"
