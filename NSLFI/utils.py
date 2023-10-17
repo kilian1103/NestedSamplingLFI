@@ -52,13 +52,11 @@ def compute_KL_divergence(nreSettings: NRE_Settings, network_storage: Dict[str, 
     return DKL, DKL_err
 
 
-def reload_data_for_plotting() -> Tuple[Dict[str, str], Dict[str, NRE_PolyChord], NRE_Settings, DataEnvironment]:
-    nreSettings = NRE_Settings()
-    dataEnv = DataEnvironment(nreSettings=nreSettings)
-    dataEnv.generate_data()
-    root = nreSettings.root
+def reload_data_for_plotting(nreSettings: NRE_Settings, dataEnv: DataEnvironment) -> Tuple[
+    Dict[str, str], Dict[str, NRE_PolyChord]]:
     network_storage = {}
     root_storage = {}
+    root = nreSettings.root
     for rd in range(nreSettings.NRE_num_retrain_rounds + 1):
         current_root = f"{root}_round_{rd}"
         current_network = Network(nreSettings=nreSettings)
@@ -67,4 +65,4 @@ def reload_data_for_plotting() -> Tuple[Dict[str, str], Dict[str, NRE_PolyChord]
         trained_NRE = NRE_PolyChord(network=current_network, obs=dataEnv.obs)
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = current_root
-    return root_storage, network_storage, nreSettings, dataEnv
+    return root_storage, network_storage

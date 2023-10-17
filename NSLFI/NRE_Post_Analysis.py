@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import swyft
 import torch
-from anesthetic import MCMCSamples, make_2d_axes
+from anesthetic import MCMCSamples, make_2d_axes, read_chains
 from swyft import collate_output as reformat_samples
 
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
@@ -13,8 +13,8 @@ from NSLFI.NSNRE_data_generation import DataEnvironment
 from NSLFI.utils import compute_KL_divergence
 
 
-def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
-                       nreSettings: NRE_Settings, dataEnv: DataEnvironment):
+def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
+                           nreSettings: NRE_Settings, dataEnv: DataEnvironment):
     # full prior samples of NSNRE
     full_prior_theta_samples = np.random.uniform(nreSettings.sim_prior_lower,
                                                  nreSettings.sim_prior_lower + nreSettings.prior_width,
@@ -106,7 +106,9 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
                                  ticks="outer")
         if nreSettings.true_contours_available:
             mcmc_true_ext = MCMCSamples(
-                data=torch.cat((posteriors[nreSettings.targetKey], posteriors[nreSettings.obsKey]), dim=1),
+                data=torch.cat(
+                    (torch.as_tensor(posteriors[nreSettings.targetKey]),
+                     torch.as_tensor(posteriors[nreSettings.obsKey])), dim=1),
                 logL=true_logLikes,
                 weights=weights_true, labels=params_labels_ext)
             mcmc_true_ext = mcmc_true_ext.compress(nreSettings.n_compressed_weighted_samples).drop_duplicates()
@@ -147,15 +149,24 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         plt.title("KL divergence between NRE rounds")
         plt.savefig(f"{root}/kl_divergence.pdf")
 
+    # plot quantile plot of training dataset
+    if nreSettings.plot_quantile_plot:
+        for i in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+            root = root_storage[f"round_{i}"]
+            samples = read_chains(root=f"{root}/{nreSettings.file_root}")
+            samples = samples.iloc[:, :nreSettings.num_features]
+            plot_quantile_plot(samples=samples, nreSettings=nreSettings, root=root)
 
-def plot_quantile_plot(samples, percentiles: np.ndarray, nreSettings: NRE_Settings, root: str):
+
+def plot_quantile_plot(samples, nreSettings: NRE_Settings, root: str):
     samples = samples.drop_weights()
-    quantiles = samples.quantile(percentiles)
+    quantiles = samples.quantile(nreSettings.percentiles_of_quantile_plot)
     plt.figure()
     for i in range(nreSettings.num_features):
-        plt.plot(percentiles, quantiles.iloc[:, i], label=rf"$z_{i}$")
+        plt.plot(nreSettings.percentiles_of_quantile_plot, quantiles.iloc[:, i], label=rf"$z_{i}$")
     plt.xlabel("quantile")
     plt.ylabel(rf"$z$ value")
+    plt.title("Quantile plot of training dataset")
     plt.legend()
     plt.savefig(f"{root}/quantile_plot.pdf")
 

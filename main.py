@@ -4,10 +4,11 @@ import numpy as np
 import torch
 from mpi4py import MPI
 
-from NSLFI.NRE_Post_Analysis import plot_NRE_posterior
+from NSLFI.NRE_Post_Analysis import plot_analysis_of_NSNRE
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NSNRE_cycle import execute_NSNRE_cycle
 from NSLFI.NSNRE_data_generation import DataEnvironment
+from NSLFI.utils import reload_data_for_plotting
 
 
 def execute():
@@ -28,15 +29,20 @@ def execute():
     # TODO merge prior framework, so far simulator has scipy, polychord has hypercube
     dataEnv = DataEnvironment(nreSettings=nreSettings)
     dataEnv.generate_data()
-    # retrain NRE and sample new samples with NS loop
-    execute_NSNRE_cycle(nreSettings=nreSettings,
-                        obs=dataEnv.obs, sim=dataEnv.sim,
-                        network_storage=network_storage,
-                        root_storage=root_storage, samples=dataEnv.samples)
-    # plot triangle plot
+    if not nreSettings.only_plot_mode:
+        ### execute main cycle of NSNRE
+        execute_NSNRE_cycle(nreSettings=nreSettings,
+                            obs=dataEnv.obs, sim=dataEnv.sim,
+                            network_storage=network_storage,
+                            root_storage=root_storage, samples=dataEnv.samples)
+    else:
+        # load data for plotting if data is already generated
+        root_storage, network_storage = reload_data_for_plotting(nreSettings=nreSettings, dataEnv=dataEnv)
+
     if rank_gen == 0:
-        plot_NRE_posterior(nreSettings=nreSettings, network_storage=network_storage, root_storage=root_storage,
-                           dataEnv=dataEnv)
+        # plot analysis of NSNSRE
+        plot_analysis_of_NSNRE(nreSettings=nreSettings, network_storage=network_storage, root_storage=root_storage,
+                               dataEnv=dataEnv)
     logger.info('Finished')
 
 
