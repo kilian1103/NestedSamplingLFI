@@ -10,7 +10,6 @@ from swyft import Simulator
 
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
-from NSLFI.NRE_Post_Analysis import plot_quantile_plot
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
 from NSLFI.utils import compute_KL_divergence
@@ -90,12 +89,6 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
             logger.info(f"DKL of rd {rd} is: {DKL}")
         comm_gen.Barrier()
         deadpoints = deadpoints.iloc[:, :nreSettings.num_features]
-        if rank_gen == 0:
-            ### analyse training data distribution
-            plot_quantile_plot(samples=deadpoints.copy(), percentiles=nreSettings.percentiles_of_quantile_plot,
-                               nreSettings=nreSettings,
-                               root=root)
-        comm_gen.Barrier()
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
         samples = deadpoints
