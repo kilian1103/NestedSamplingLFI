@@ -34,7 +34,7 @@ def execute():
         execute_NSNRE_cycle(nreSettings=nreSettings,
                             obs=dataEnv.obs, sim=dataEnv.sim,
                             network_storage=network_storage,
-                            root_storage=root_storage, samples=dataEnv.samples)
+                            root_storage=root_storage, training_samples=dataEnv.samples)
     else:
         # load data for plotting if data is already generated
         root_storage, network_storage = reload_data_for_plotting(nreSettings=nreSettings, dataEnv=dataEnv)

@@ -16,7 +16,7 @@ from NSLFI.utils import compute_KL_divergence
 
 
 def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
-                        obs: swyft.Sample, network_storage: dict, root_storage: dict, samples: torch.Tensor):
+                        obs: swyft.Sample, network_storage: dict, root_storage: dict, training_samples: torch.Tensor):
     # retrain NRE and sample new samples with NS loop
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
@@ -34,15 +34,14 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
             trained_NRE = NRE_PolyChord(network=current_network, obs=obs)
             network_storage[f"round_{i}"] = trained_NRE
             root_storage[f"round_{i}"] = root
-            if i >= 1:
+            if i > 0:
                 deadpoints = anesthetic.read_chains(root=f"{root}/{nreSettings.file_root}")
                 DKL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
-                                            current_samples=deadpoints, rd=i)
+                                            current_samples=deadpoints.copy(), rd=i)
                 dkl_storage.append(DKL)
-        deadpoints = anesthetic.read_chains(root=f"{root}/{nreSettings.file_root}")
         deadpoints = deadpoints.iloc[:, :nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
-        samples = deadpoints
+        training_samples = deadpoints
 
     ### main cycle
     for rd in range(nreSettings.NRE_start_from_round, nreSettings.NRE_num_retrain_rounds + 1):
@@ -55,7 +54,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
                 wandb.init(
                     # set the wandb project where this run will be logged
                     project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
-            network = retrain_next_round(root=root, training_data=samples,
+            network = retrain_next_round(root=root, training_data=training_samples,
                                          nreSettings=nreSettings, sim=sim, obs=obs)
         else:
             network = Network(nreSettings=nreSettings)
@@ -91,4 +90,4 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         deadpoints = deadpoints.iloc[:, :nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
-        samples = deadpoints
+        training_samples = deadpoints
