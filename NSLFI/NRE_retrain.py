@@ -16,7 +16,7 @@ from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
 
 
-def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Settings,
+def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settings,
                        sim: Simulator,
                        obs: swyft.Sample) -> Network:
     logger = logging.getLogger(nreSettings.logger_name)
@@ -26,12 +26,12 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
         logger.info("root folder already exists!")
     logger.info(f"Simulating new {nreSettings.obsKey} using NS samples {nreSettings.targetKey} with Simulator!")
     samples = []
-    for point in nextRoundPoints:
+    for point in training_data:
         cond = {nreSettings.targetKey: point.float()}
         sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
         samples.append(sample)
     samples = reformat_samples(samples)
-    nextRoundSwyftSamples = swyft.Samples(samples)
+    training_data_swyft = swyft.Samples(samples)
     logger.info("Simulation done!")
     logger.info("Setting up network for training!")
     early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
@@ -46,7 +46,7 @@ def retrain_next_round(root: str, nextRoundPoints: Tensor, nreSettings: NRE_Sett
                                  default_root_dir=nreSettings.root, logger=tb_logger,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
-    dm = swyft.SwyftDataModule(nextRoundSwyftSamples, fractions=nreSettings.datamodule_fractions, num_workers=0,
+    dm = swyft.SwyftDataModule(training_data_swyft, fractions=nreSettings.datamodule_fractions, num_workers=0,
                                batch_size=64)
     network = Network(nreSettings=nreSettings)
     # network = torch.compile(network)

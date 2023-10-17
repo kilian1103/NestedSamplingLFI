@@ -53,7 +53,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
                 wandb.init(
                     # set the wandb project where this run will be logged
                     project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
-            network = retrain_next_round(root=root, nextRoundPoints=samples,
+            network = retrain_next_round(root=root, training_data=samples,
                                          nreSettings=nreSettings, sim=sim, obs=obs)
         else:
             network = Network(nreSettings=nreSettings)
