@@ -41,7 +41,7 @@ class NRE_Settings:
         self.nderived = 0
         self.file_root = "samples"
         # plotting settings
-        self.only_plot_mode = True
+        self.only_plot_mode = False
         self.true_contours_available = True
         self.plot_triangle_plot = True
         self.plot_triangle_plot_ext = False
