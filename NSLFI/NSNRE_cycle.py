@@ -45,7 +45,10 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         samples = deadpoints
 
+    ### main cycle
     for rd in range(nreSettings.NRE_start_from_round, nreSettings.NRE_num_retrain_rounds + 1):
+
+        #### start NRE training section
         root = f"{nreSettings.root}_round_{rd}"
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))
@@ -65,7 +68,8 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = root
         logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
-        # start polychord section
+
+        #### start polychord section
         polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
         polyset.file_root = nreSettings.file_root
         polyset.base_dir = root
@@ -87,6 +91,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         comm_gen.Barrier()
         deadpoints = deadpoints.iloc[:, :nreSettings.num_features]
         if rank_gen == 0:
+            ### analyse training data distribution
             plot_quantile_plot(samples=deadpoints.copy(), percentiles=nreSettings.percentiles_of_quantile_plot,
                                nreSettings=nreSettings,
                                root=root)
