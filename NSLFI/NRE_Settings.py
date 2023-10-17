@@ -30,6 +30,7 @@ class NRE_Settings:
         self.early_stopping_patience = 3
         self.max_epochs = 50
         self.NRE_num_retrain_rounds = 5
+        self.NRE_start_from_round = 0
         self.learning_rate_init = 0.001
         self.learning_rate_decay = 0.1
         self.sim_prior_lower = -10

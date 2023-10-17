@@ -145,7 +145,7 @@ def plot_NRE_posterior(root_storage: Dict[str, str], network_storage: Dict[str, 
         plt.xlabel("round")
         plt.ylabel("KL divergence")
         plt.title("KL divergence between NRE rounds")
-        plt.savefig(f"{root}/kl_divergence_truth.pdf")
+        plt.savefig(f"{root}/kl_divergence.pdf")
 
 
 def plot_quantile_plot(samples, percentiles: np.ndarray, nreSettings: NRE_Settings, root: str):

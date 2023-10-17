@@ -1,7 +1,6 @@
 import logging
 
 import anesthetic
-import matplotlib.pyplot as plt
 import pypolychord
 import swyft
 import torch
@@ -25,7 +24,28 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
     size_gen = comm_gen.Get_size()
     logger = logging.getLogger(nreSettings.logger_name)
     dkl_storage = list()
-    for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+
+    if nreSettings.NRE_start_from_round > 0:
+        ### only execute this code when previous rounds are already trained
+        for i in range(0, nreSettings.NRE_start_from_round):
+            root = f"{nreSettings.root}_round_{i}"
+            current_network = Network(nreSettings=nreSettings)
+            current_network.load_state_dict(torch.load(f"{root}/{nreSettings.neural_network_file}"))
+            current_network.double()  # change to float64 precision of network
+            trained_NRE = NRE_PolyChord(network=current_network, obs=obs)
+            network_storage[f"round_{i}"] = trained_NRE
+            root_storage[f"round_{i}"] = root
+            if i >= 1:
+                deadpoints = anesthetic.read_chains(root=f"{root}/{nreSettings.file_root}")
+                DKL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
+                                            current_samples=deadpoints, rd=i)
+                dkl_storage.append(DKL)
+        deadpoints = anesthetic.read_chains(root=f"{root}/{nreSettings.file_root}")
+        deadpoints = deadpoints.iloc[:, :nreSettings.num_features]
+        deadpoints = torch.as_tensor(deadpoints.to_numpy())
+        samples = deadpoints
+
+    for rd in range(nreSettings.NRE_start_from_round, nreSettings.NRE_num_retrain_rounds + 1):
         root = f"{nreSettings.root}_round_{rd}"
         if rank_gen == 0:
             logger.info("retraining round: " + str(rd))
@@ -74,11 +94,3 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
         samples = deadpoints
-
-    ### plot KL divergence plot
-    plt.figure()
-    plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],
-                 yerr=[x[1] for x in dkl_storage])
-    plt.xlabel("round")
-    plt.ylabel("KL divergence")
-    plt.savefig(f"{root_storage['round_0']}/kl_divergence.pdf")
