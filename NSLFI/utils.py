@@ -4,6 +4,7 @@ from typing import Tuple
 
 import anesthetic
 import numpy as np
+import swyft
 import torch
 from anesthetic import NestedSamples
 from torch import Tensor
@@ -11,7 +12,6 @@ from torch import Tensor
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.NSNRE_data_generation import DataEnvironment
 
 
 def random_subset(dataset: Tensor, thinning_factor: float) -> Tensor:
@@ -52,7 +52,7 @@ def compute_KL_divergence(nreSettings: NRE_Settings, network_storage: Dict[str, 
     return DKL, DKL_err
 
 
-def reload_data_for_plotting(nreSettings: NRE_Settings, dataEnv: DataEnvironment) -> Tuple[
+def reload_data_for_plotting(nreSettings: NRE_Settings, obs: swyft.Sample) -> Tuple[
     Dict[str, str], Dict[str, NRE_PolyChord]]:
     network_storage = {}
     root_storage = {}
@@ -62,7 +62,7 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, dataEnv: DataEnvironment
         current_network = Network(nreSettings=nreSettings)
         current_network.load_state_dict(torch.load(f"{current_root}/{nreSettings.neural_network_file}"))
         current_network.double()  # change to float64 precision of network
-        trained_NRE = NRE_PolyChord(network=current_network, obs=dataEnv.obs)
+        trained_NRE = NRE_PolyChord(network=current_network, obs=obs)
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = current_root
     return root_storage, network_storage

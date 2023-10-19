@@ -9,12 +9,11 @@ from swyft import collate_output as reformat_samples
 
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.NSNRE_data_generation import DataEnvironment
 from NSLFI.utils import compute_KL_divergence
 
 
 def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
-                           nreSettings: NRE_Settings, dataEnv: DataEnvironment):
+                           nreSettings: NRE_Settings, sim: swyft.Simulator, obs: swyft.Sample):
     # full prior samples of NSNRE
     full_prior_theta_samples = np.random.uniform(nreSettings.sim_prior_lower,
                                                  nreSettings.sim_prior_lower + nreSettings.prior_width,
@@ -22,13 +21,13 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     full_prior_joints = []
     for theta in full_prior_theta_samples:
         cond = {nreSettings.targetKey: theta}
-        joint = dataEnv.sim.sample(conditions=cond)
+        joint = sim.sample(conditions=cond)
         full_prior_joints.append(joint)
     full_prior_joints = reformat_samples(full_prior_joints)
     full_prior_data_samples = full_prior_joints[nreSettings.obsKey]
     # NRE refactoring
     prior_samples_nre = {nreSettings.targetKey: torch.as_tensor(full_prior_theta_samples)}
-    obs = {nreSettings.obsKey: torch.tensor(dataEnv.obs[nreSettings.obsKey]).unsqueeze(0)}
+    obs = {nreSettings.obsKey: torch.tensor(obs[nreSettings.obsKey]).unsqueeze(0)}
 
     # set up labels for plotting
     params = [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)]
@@ -50,8 +49,8 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
 
         for theta in full_prior_theta_samples:
             cond_true = {nreSettings.targetKey: theta,
-                         nreSettings.obsKey: dataEnv.obs[nreSettings.obsKey]}
-            posterior = dataEnv.sim.sample(conditions=cond_true)
+                         nreSettings.obsKey: obs[nreSettings.obsKey]}
+            posterior = sim.sample(conditions=cond_true)
             posteriors.append(posterior)
         posteriors = reformat_samples(posteriors)
 

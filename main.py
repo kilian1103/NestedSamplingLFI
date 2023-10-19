@@ -1,13 +1,14 @@
 import logging
 
 import numpy as np
+import swyft
 import torch
 from mpi4py import MPI
 
 from NSLFI.NRE_Post_Analysis import plot_analysis_of_NSNRE
 from NSLFI.NRE_Settings import NRE_Settings
+from NSLFI.NRE_Simulator_MultiGauss import Simulator
 from NSLFI.NSNRE_cycle import execute_NSNRE_cycle
-from NSLFI.NSNRE_data_generation import DataEnvironment
 from NSLFI.utils import reload_data_for_plotting
 
 
@@ -27,22 +28,34 @@ def execute():
     network_storage = dict()
     root_storage = dict()
     # TODO merge prior framework, so far simulator has scipy, polychord has hypercube
-    dataEnv = DataEnvironment(nreSettings=nreSettings)
-    dataEnv.generate_data()
+    # instantiate swyft simulator
+    sim = Simulator(nreSettings=nreSettings)
+    # generate training dat aand obs
+    obs = swyft.Sample(x=np.array(nreSettings.num_features_dataset * [0]))
+    if rank_gen == 0:
+        training_samples = torch.as_tensor(
+            sim.sample(nreSettings.n_training_samples, targets=[nreSettings.targetKey])[
+                nreSettings.targetKey])
+    else:
+        training_samples = torch.empty((nreSettings.n_training_samples, nreSettings.num_features))
+    # broadcast samples to all ranks
+    training_samples = comm_gen.bcast(training_samples, root=0)
+    comm_gen.Barrier()
+
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         execute_NSNRE_cycle(nreSettings=nreSettings,
-                            obs=dataEnv.obs, sim=dataEnv.sim,
+                            obs=obs, sim=sim,
                             network_storage=network_storage,
-                            root_storage=root_storage, training_samples=dataEnv.samples)
+                            root_storage=root_storage, training_samples=training_samples)
     else:
         # load data for plotting if data is already generated
-        root_storage, network_storage = reload_data_for_plotting(nreSettings=nreSettings, dataEnv=dataEnv)
+        root_storage, network_storage = reload_data_for_plotting(nreSettings=nreSettings, obs=obs)
 
     if rank_gen == 0:
         # plot analysis of NSNSRE
         plot_analysis_of_NSNRE(nreSettings=nreSettings, network_storage=network_storage, root_storage=root_storage,
-                               dataEnv=dataEnv)
+                               sim=sim, obs=obs)
     logger.info('Finished')
 
 

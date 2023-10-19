@@ -6,7 +6,6 @@ import swyft
 import torch
 import wandb
 from mpi4py import MPI
-from swyft import Simulator
 
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
@@ -15,7 +14,7 @@ from NSLFI.NRE_retrain import retrain_next_round
 from NSLFI.utils import compute_KL_divergence
 
 
-def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: Simulator,
+def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: swyft.Simulator,
                         obs: swyft.Sample, network_storage: dict, root_storage: dict, training_samples: torch.Tensor):
     # retrain NRE and sample new samples with NS loop
     comm_gen = MPI.COMM_WORLD
