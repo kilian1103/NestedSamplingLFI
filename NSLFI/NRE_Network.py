@@ -10,9 +10,9 @@ class Network(swyft.SwyftModule):
         self.nreSettings = nreSettings
         #  self.logratios1 = swyft.LogRatioEstimator_1dim(num_features=2, num_params=2, varnames=targetkey,
         #  dropout=0.2, hidden_features=128)
-        self.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=nreSettings.learning_rate_init),
+        self.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=self.nreSettings.learning_rate_init),
                                                   torch.optim.lr_scheduler.ExponentialLR,
-                                                  dict(gamma=nreSettings.learning_rate_decay, verbose=True))
+                                                  dict(gamma=self.nreSettings.learning_rate_decay, verbose=True))
         self.logratios2 = swyft.LogRatioEstimator_Ndim(num_features=self.nreSettings.num_features_dataset, marginals=(
             tuple(dim for dim in range(self.nreSettings.num_features)),),
                                                        varnames=self.nreSettings.targetKey,
