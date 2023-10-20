@@ -32,7 +32,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: swyft.Simulator,
             current_network = untrained_network.get_new_network()
             current_network.load_state_dict(torch.load(f"{root}/{nreSettings.neural_network_file}"))
             current_network.double()  # change to float64 precision of network
-            trained_NRE = NRE_PolyChord(network=current_network, obs=obs)
+            trained_NRE = NRE_PolyChord(network=current_network, obs=obs, nreSettings=nreSettings)
             network_storage[f"round_{i}"] = trained_NRE
             root_storage[f"round_{i}"] = root
             if i > 0:
@@ -63,7 +63,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: swyft.Simulator,
         ### load saved network and save it in network_storage ###
         network.load_state_dict(torch.load(f"{root}/{nreSettings.neural_network_file}"))
         network.double()  # change to float64 precision of network
-        trained_NRE = NRE_PolyChord(network=network, obs=obs)
+        trained_NRE = NRE_PolyChord(network=network, obs=obs, nreSettings=nreSettings)
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = root
         logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")

@@ -62,7 +62,7 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, obs: swyft.Sample) -> Tu
         current_network = Network(nreSettings=nreSettings)
         current_network.load_state_dict(torch.load(f"{current_root}/{nreSettings.neural_network_file}"))
         current_network.double()  # change to float64 precision of network
-        trained_NRE = NRE_PolyChord(network=current_network, obs=obs)
+        trained_NRE = NRE_PolyChord(network=current_network, obs=obs, nreSettings=nreSettings)
         network_storage[f"round_{rd}"] = trained_NRE
         root_storage[f"round_{rd}"] = current_root
     return root_storage, network_storage
