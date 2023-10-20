@@ -12,13 +12,12 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output as reformat_samples, Simulator
 from torch import Tensor
 
-from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
 
 
 def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settings,
                        sim: Simulator,
-                       obs: swyft.Sample) -> Network:
+                       obs: swyft.Sample, untrained_network: swyft.SwyftModule) -> swyft.SwyftModule:
     logger = logging.getLogger(nreSettings.logger_name)
     try:
         os.makedirs(root)
@@ -48,7 +47,7 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
                                             checkpoint_callback])
     dm = swyft.SwyftDataModule(training_data_swyft, fractions=nreSettings.datamodule_fractions, num_workers=0,
                                batch_size=64)
-    network = Network(nreSettings=nreSettings)
+    network = untrained_network.get_new_network()
     # network = torch.compile(network)
     logger.info("Starting training!")
     trainer.fit(network, dm)

@@ -5,6 +5,7 @@ import swyft
 import torch
 from mpi4py import MPI
 
+from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Post_Analysis import plot_analysis_of_NSNRE
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_Simulator_MultiGauss import Simulator
@@ -41,13 +42,14 @@ def execute():
     # broadcast samples to all ranks
     training_samples = comm_gen.bcast(training_samples, root=0)
     comm_gen.Barrier()
-
+    untrained_network = Network(nreSettings=nreSettings)
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         execute_NSNRE_cycle(nreSettings=nreSettings,
                             obs=obs, sim=sim,
                             network_storage=network_storage,
-                            root_storage=root_storage, training_samples=training_samples)
+                            root_storage=root_storage, training_samples=training_samples,
+                            untrained_network=untrained_network)
     else:
         # load data for plotting if data is already generated
         root_storage, network_storage = reload_data_for_plotting(nreSettings=nreSettings, obs=obs)

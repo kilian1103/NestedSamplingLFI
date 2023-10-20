@@ -20,3 +20,6 @@ class Network(swyft.SwyftModule):
 
     def forward(self, A, B):
         return self.logratios2(A[self.nreSettings.obsKey], B[self.nreSettings.targetKey])
+
+    def get_new_network(self) -> swyft.SwyftModule:
+        return Network(nreSettings=self.nreSettings)

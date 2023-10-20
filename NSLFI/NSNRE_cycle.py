@@ -7,7 +7,6 @@ import torch
 import wandb
 from mpi4py import MPI
 
-from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
@@ -15,7 +14,8 @@ from NSLFI.utils import compute_KL_divergence
 
 
 def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: swyft.Simulator,
-                        obs: swyft.Sample, network_storage: dict, root_storage: dict, training_samples: torch.Tensor):
+                        obs: swyft.Sample, network_storage: dict, root_storage: dict, training_samples: torch.Tensor,
+                        untrained_network: swyft.SwyftModule):
     # retrain NRE and sample new samples with NS loop
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
@@ -29,7 +29,7 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: swyft.Simulator,
         ### only execute this code when previous rounds are already trained ###
         for i in range(0, nreSettings.NRE_start_from_round):
             root = f"{nreSettings.root}_round_{i}"
-            current_network = Network(nreSettings=nreSettings)
+            current_network = untrained_network.get_new_network()
             current_network.load_state_dict(torch.load(f"{root}/{nreSettings.neural_network_file}"))
             current_network.double()  # change to float64 precision of network
             trained_NRE = NRE_PolyChord(network=current_network, obs=obs)
@@ -56,9 +56,9 @@ def execute_NSNRE_cycle(nreSettings: NRE_Settings, sim: swyft.Simulator,
                     # set the wandb project where this run will be logged
                     project=nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
             network = retrain_next_round(root=root, training_data=training_samples,
-                                         nreSettings=nreSettings, sim=sim, obs=obs)
+                                         nreSettings=nreSettings, sim=sim, obs=obs, untrained_network=untrained_network)
         else:
-            network = Network(nreSettings=nreSettings)
+            network = untrained_network.get_new_network()
         comm_gen.Barrier()
         ### load saved network and save it in network_storage ###
         network.load_state_dict(torch.load(f"{root}/{nreSettings.neural_network_file}"))
