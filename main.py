@@ -57,6 +57,8 @@ def execute():
                                  default_root_dir=nreSettings.root,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
+    dm = swyft.SwyftDataModule(data=training_samples, fractions=nreSettings.datamodule_fractions, num_workers=0,
+                               batch_size=64, shuffle=False, lengths=None, on_after_load_sample=None)
     #### set up polychord settings
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
     polyset.file_root = nreSettings.file_root
@@ -66,7 +68,7 @@ def execute():
     polyset.nprior = nreSettings.n_training_samples
     polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
-                          untrained_network_wrapped=untrained_network_wrapped, trainer=trainer, polyset=polyset)
+                          untrained_network_wrapped=untrained_network_wrapped, trainer=trainer, polyset=polyset, dm=dm)
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         polySwyft.execute_NSNRE_cycle()

@@ -15,7 +15,7 @@ from NSLFI.NRE_Settings import NRE_Settings
 def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settings,
                        sim: Simulator,
                        obs: swyft.Sample, untrained_network: swyft.SwyftModule,
-                       trainer: swyft.SwyftTrainer) -> swyft.SwyftModule:
+                       trainer: swyft.SwyftTrainer, dm: swyft.SwyftDataModule) -> swyft.SwyftModule:
     logger = logging.getLogger(nreSettings.logger_name)
     try:
         os.makedirs(root)
@@ -31,11 +31,10 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     training_data_swyft = swyft.Samples(samples)
     logger.info("Simulation done!")
     logger.info("Setting up network for training!")
-    dm = swyft.SwyftDataModule(data=training_data_swyft, fractions=nreSettings.datamodule_fractions, num_workers=0,
-                               batch_size=64, shuffle=False, lengths=None, on_after_load_sample=None)
     network = untrained_network.get_new_network()
     # network = torch.compile(network)
     logger.info("Starting training!")
+    dm.data = training_data_swyft
     trainer.fit(network, dm)
     logger.info("Training done!")
     if nreSettings.activate_wandb:

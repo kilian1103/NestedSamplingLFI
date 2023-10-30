@@ -17,7 +17,8 @@ from NSLFI.utils import compute_KL_divergence
 class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, training_samples: torch.Tensor,
-                 untrained_network_wrapped: NRE_PolyChord, trainer: swyft.SwyftTrainer, polyset: PolyChordSettings):
+                 untrained_network_wrapped: NRE_PolyChord, trainer: swyft.SwyftTrainer, polyset: PolyChordSettings,
+                 dm: swyft.SwyftDataModule):
         self.nreSettings = nreSettings
         self.polyset = polyset
         self.sim = sim
@@ -25,6 +26,7 @@ class PolySwyft:
         self.training_samples = training_samples
         self.untrained_network_wrapped = untrained_network_wrapped
         self.trainer = trainer
+        self.dm = dm
         self.network_storage = dict()
         self.root_storage = dict()
         self.dkl_storage = list()
@@ -68,7 +70,7 @@ class PolySwyft:
                 network = retrain_next_round(root=root, training_data=self.training_samples,
                                              nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
                                              untrained_network=self.untrained_network_wrapped.network,
-                                             trainer=self.trainer)
+                                             trainer=self.trainer, dm=self.dm)
                 self.trainer.reset_train_dataloader()
                 self.trainer.reset_val_dataloader()
                 self.trainer.reset_test_dataloader()
