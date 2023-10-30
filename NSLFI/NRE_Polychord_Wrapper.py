@@ -9,15 +9,14 @@ from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
 
 
-class NRE_PolyChord:
+class NRE_PolyChord(Network):
     """Wrapper for the NRE to be used with PolyChord."""
 
     def __init__(self, network: Network, obs: swyft.Sample, nreSettings: NRE_Settings):
         """Initializes the NRE_PolyChord."""
+        super().__init__(nreSettings=nreSettings)
         self.network = network.eval()
-        self.nreSettings = nreSettings
-        self.obs = {
-            self.nreSettings.obsKey: torch.tensor(obs[self.nreSettings.obsKey]).unsqueeze(0)}
+        self.obs = obs
 
     def prior(self, cube) -> np.ndarray:
         """Transforms the unit cube to the prior cube."""
@@ -42,3 +41,7 @@ class NRE_PolyChord:
     def dumper(self, live, dead, logweights, logZ, logZerr):
         """Dumper Function for PolyChord for runtime progress access."""
         print("Last dead point: {}".format(dead[-1]))
+
+    def set_new_network(self, network: Network):
+        """Sets a new network for the NRE."""
+        self.network = network.eval()

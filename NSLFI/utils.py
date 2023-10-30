@@ -10,7 +10,6 @@ from anesthetic import NestedSamples
 from torch import Tensor
 
 from NSLFI.NRE_Network import Network
-from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 
 
@@ -40,20 +39,21 @@ def select_weighted_contour(data: NestedSamples, threshold: float) -> int:
     return index
 
 
-def compute_KL_divergence(nreSettings: NRE_Settings, network_storage: Dict[str, NRE_PolyChord],
-                          current_samples: anesthetic.Samples, rd: int) -> Tuple[float, float]:
+def compute_KL_divergence(nreSettings: NRE_Settings, network_storage: Dict[str, swyft.SwyftModule],
+                          current_samples: anesthetic.Samples, rd: int, obs: swyft.Sample) -> Tuple[float, float]:
     """Compute the KL divergence between the previous and current NRE."""
     previous_network = network_storage[f"round_{rd - 1}"]
+    samples = {nreSettings.targetKey: torch.as_tensor(current_samples.iloc[:, :nreSettings.num_features].to_numpy())}
+    predictions = previous_network(obs, samples)
     with torch.no_grad():
-        current_samples["logL_previous"] = \
-            previous_network.logLikelihood(current_samples.iloc[:, :nreSettings.num_features].to_numpy())[0]
+        current_samples["logL_previous"] = predictions.logratios.numpy().squeeze()
     DKL = (current_samples["logL"] - current_samples["logL_previous"]).mean()
     DKL_err = (current_samples["logL"] - current_samples["logL_previous"]).std()
     return DKL, DKL_err
 
 
-def reload_data_for_plotting(nreSettings: NRE_Settings, obs: swyft.Sample) -> Tuple[
-    Dict[str, str], Dict[str, NRE_PolyChord]]:
+def reload_data_for_plotting(nreSettings: NRE_Settings) -> Tuple[
+    Dict[str, str], Dict[str, swyft.SwyftModule]]:
     network_storage = {}
     root_storage = {}
     root = nreSettings.root
@@ -62,7 +62,10 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, obs: swyft.Sample) -> Tu
         current_network = Network(nreSettings=nreSettings)
         current_network.load_state_dict(torch.load(f"{current_root}/{nreSettings.neural_network_file}"))
         current_network.double()  # change to float64 precision of network
-        trained_NRE = NRE_PolyChord(network=current_network, obs=obs, nreSettings=nreSettings)
-        network_storage[f"round_{rd}"] = trained_NRE
+        network_storage[f"round_{rd}"] = current_network
         root_storage[f"round_{rd}"] = current_root
     return root_storage, network_storage
+
+
+def reformat_obs_to_nre_format(obs: swyft.Sample, nreSettings: NRE_Settings) -> Dict[str, torch.Tensor]:
+    return {nreSettings.obsKey: torch.tensor(obs[nreSettings.obsKey]).unsqueeze(0)}

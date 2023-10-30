@@ -7,12 +7,11 @@ import torch
 from anesthetic import MCMCSamples, make_2d_axes, read_chains
 from swyft import collate_output as reformat_samples
 
-from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.utils import compute_KL_divergence
 
 
-def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[str, NRE_PolyChord],
+def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[str, swyft.SwyftModule],
                            nreSettings: NRE_Settings, sim: swyft.Simulator, obs: swyft.Sample):
     # full prior samples of NSNRE
     full_prior_theta_samples = np.random.uniform(nreSettings.sim_prior_lower,
@@ -27,7 +26,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     full_prior_data_samples = full_prior_joints[nreSettings.obsKey]
     # NRE refactoring
     prior_samples_nre = {nreSettings.targetKey: torch.as_tensor(full_prior_theta_samples)}
-    obs = {nreSettings.obsKey: torch.tensor(obs[nreSettings.obsKey]).unsqueeze(0)}
+    # obs_nre = reformat_obs_to_nre_format(obs, nreSettings)
 
     # set up labels for plotting
     params = [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)]
@@ -69,7 +68,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
         # use trained NRE and evaluate on full prior samples
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             network = network_storage[f"round_{rd}"]
-            predictions = network.network(obs, prior_samples_nre)
+            predictions = network(obs, prior_samples_nre)
             samples, weights = swyft.get_weighted_samples(predictions, params)
             logLs = predictions.logratios.numpy().squeeze()
             weights = weights.numpy().squeeze()
@@ -100,7 +99,6 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
 
     # data and param triangle plot
     if nreSettings.plot_triangle_plot_ext:
-
         fig, axes = make_2d_axes(params_idx_ext, labels=params_labels_ext, lower=True, diagonal=True, upper=False,
                                  ticks="outer")
         if nreSettings.true_contours_available:
@@ -127,12 +125,12 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             if nreSettings.true_contours_available:
                 KDL_true = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
-                                                 current_samples=mcmc_true.copy(), rd=rd + 1)
+                                                 current_samples=mcmc_true.copy(), rd=rd + 1, obs=obs)
                 dkl_storage_true.append(KDL_true)
             if rd != 0:
                 mcmc = samples_storage[rd]
                 KDL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
-                                            current_samples=mcmc, rd=rd)
+                                            current_samples=mcmc, rd=rd, obs=obs)
                 dkl_storage.append(KDL)
         plt.figure()
         plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],

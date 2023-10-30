@@ -6,9 +6,6 @@ import numpy as np
 import swyft
 import torch
 import wandb
-from pytorch_lightning import loggers as pl_loggers
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output as reformat_samples, Simulator
 from torch import Tensor
 
@@ -17,7 +14,8 @@ from NSLFI.NRE_Settings import NRE_Settings
 
 def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settings,
                        sim: Simulator,
-                       obs: swyft.Sample, untrained_network: swyft.SwyftModule) -> swyft.SwyftModule:
+                       obs: swyft.Sample, untrained_network: swyft.SwyftModule,
+                       trainer: swyft.SwyftTrainer) -> swyft.SwyftModule:
     logger = logging.getLogger(nreSettings.logger_name)
     try:
         os.makedirs(root)
@@ -33,20 +31,8 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     training_data_swyft = swyft.Samples(samples)
     logger.info("Simulation done!")
     logger.info("Setting up network for training!")
-    early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
-                                            patience=nreSettings.early_stopping_patience, mode='min')
-    lr_monitor = LearningRateMonitor(logging_interval='step')
-    checkpoint_callback = ModelCheckpoint(monitor='val_loss', dirpath=root,
-                                          filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir=root)
-    trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
-                                 precision=64,
-                                 enable_progress_bar=True,
-                                 default_root_dir=nreSettings.root, logger=tb_logger,
-                                 callbacks=[early_stopping_callback, lr_monitor,
-                                            checkpoint_callback])
-    dm = swyft.SwyftDataModule(training_data_swyft, fractions=nreSettings.datamodule_fractions, num_workers=0,
-                               batch_size=64)
+    dm = swyft.SwyftDataModule(data=training_data_swyft, fractions=nreSettings.datamodule_fractions, num_workers=0,
+                               batch_size=64, shuffle=False, lengths=None, on_after_load_sample=None)
     network = untrained_network.get_new_network()
     # network = torch.compile(network)
     logger.info("Starting training!")
@@ -55,6 +41,7 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     if nreSettings.activate_wandb:
         wandb.finish()
     # get posterior samples
+    trainer.save_checkpoint(filepath=f"{root}")
     logger.info("Sampling from the prior using simulator!")
     # TODO prior of simulator is not full prior
     # prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[nreSettings.targetKey])
