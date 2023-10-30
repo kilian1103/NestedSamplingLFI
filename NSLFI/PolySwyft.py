@@ -43,10 +43,10 @@ class PolySwyft:
             ### only execute this code when previous rounds are already trained ###
             for i in range(0, self.nreSettings.NRE_start_from_round):
                 root = f"{self.nreSettings.root}_round_{i}"
-                current_network = self.network_wrapped.get_new_network()
-                current_network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
-                current_network.double()  # change to float64 precision of network
-                self.network_storage[f"round_{i}"] = current_network
+                network = self.network_wrapped.get_new_network()
+                network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
+                network.double()  # change to float64 precision of network
+                self.network_storage[f"round_{i}"] = network
                 self.root_storage[f"round_{i}"] = root
                 if i > 0:
                     deadpoints = anesthetic.read_chains(root=f"{root}/{self.nreSettings.file_root}")
