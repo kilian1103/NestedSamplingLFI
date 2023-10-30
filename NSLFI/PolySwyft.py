@@ -6,6 +6,7 @@ import swyft
 import torch
 import wandb
 from mpi4py import MPI
+from pypolychord import PolyChordSettings
 
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
@@ -16,8 +17,9 @@ from NSLFI.utils import compute_KL_divergence
 class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, training_samples: torch.Tensor,
-                 untrained_network_wrapped: NRE_PolyChord, trainer: swyft.SwyftTrainer):
+                 untrained_network_wrapped: NRE_PolyChord, trainer: swyft.SwyftTrainer, polyset: PolyChordSettings):
         self.nreSettings = nreSettings
+        self.polyset = polyset
         self.sim = sim
         self.obs = obs
         self.training_samples = training_samples
@@ -82,17 +84,11 @@ class PolySwyft:
             logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
 
             ### start polychord section ###
-            polyset = pypolychord.PolyChordSettings(self.nreSettings.num_features, nDerived=self.nreSettings.nderived)
-            polyset.file_root = self.nreSettings.file_root
-            polyset.base_dir = root
-            polyset.seed = self.nreSettings.seed
-            polyset.nfail = self.nreSettings.nlive_scan_run_per_feature * self.nreSettings.n_training_samples
-            polyset.nprior = self.nreSettings.n_training_samples
-            polyset.nlive = self.nreSettings.nlive_scan_run_per_feature * self.nreSettings.num_features
             ### Run PolyChord ###
+            self.polyset.base_dir = root
             trained_NRE = self.untrained_network_wrapped.set_new_network(network=network)
             pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=self.nreSettings.num_features,
-                                      nDerived=self.nreSettings.nderived, settings=polyset,
+                                      nDerived=self.nreSettings.nderived, settings=self.polyset,
                                       prior=trained_NRE.prior, dumper=trained_NRE.dumper)
             comm_gen.Barrier()
 

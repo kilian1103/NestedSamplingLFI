@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import pypolychord
 import swyft
 import torch
 from mpi4py import MPI
@@ -56,6 +57,13 @@ def execute():
                                  default_root_dir=nreSettings.root,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
+    polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
+    polyset.file_root = nreSettings.file_root
+    polyset.base_dir = nreSettings.root
+    polyset.seed = nreSettings.seed
+    polyset.nfail = nreSettings.nlive_scan_run_per_feature * nreSettings.n_training_samples
+    polyset.nprior = nreSettings.n_training_samples
+    polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
                           untrained_network_wrapped=untrained_network_wrapped, trainer=trainer)
     if not nreSettings.only_plot_mode:
