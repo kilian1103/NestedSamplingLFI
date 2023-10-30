@@ -2,7 +2,6 @@ import logging
 import os
 
 import matplotlib.pyplot as plt
-import numpy as np
 import swyft
 import torch
 import wandb
@@ -42,12 +41,7 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     # get posterior samples
     trainer.save_checkpoint(filepath=f"{root}")
     logger.info("Sampling from the prior using simulator!")
-    # TODO prior of simulator is not full prior
-    # prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[nreSettings.targetKey])
-    prior_samples = np.random.uniform(nreSettings.sim_prior_lower,
-                                      nreSettings.sim_prior_lower + nreSettings.prior_width,
-                                      size=(nreSettings.n_weighted_samples, nreSettings.num_features))
-    prior_samples = swyft.Samples({nreSettings.targetKey: prior_samples})
+    prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[nreSettings.targetKey])
     logger.info("Inferring posterior samples using the trained network!")
     predictions = trainer.infer(network, obs, prior_samples)
     logger.info("Plotting posterior inference results!")
