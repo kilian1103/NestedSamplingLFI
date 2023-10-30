@@ -9,6 +9,7 @@ from swyft import collate_output as reformat_samples, Simulator
 from torch import Tensor
 
 from NSLFI.NRE_Settings import NRE_Settings
+from NSLFI.utils import get_swyft_dataset_fractions
 
 
 def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settings,
@@ -34,6 +35,7 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     # network = torch.compile(network)
     logger.info("Starting training!")
     dm.data = training_data_swyft
+    dm.lengths = get_swyft_dataset_fractions(nreSettings.datamodule_fractions, len(training_data_swyft))
     trainer.fit(network, dm)
     logger.info("Training done!")
     if nreSettings.activate_wandb:

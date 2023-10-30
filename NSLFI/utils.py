@@ -69,3 +69,12 @@ def reload_data_for_plotting(nreSettings: NRE_Settings) -> Tuple[
 
 def reformat_obs_to_nre_format(obs: swyft.Sample, nreSettings: NRE_Settings) -> Dict[str, torch.Tensor]:
     return {nreSettings.obsKey: torch.tensor(obs[nreSettings.obsKey]).unsqueeze(0)}
+
+
+def get_swyft_dataset_fractions(fractions, N):
+    fractions = np.array(fractions)
+    fractions /= sum(fractions)
+    mu = N * fractions
+    n = np.floor(mu)
+    n[0] += N - sum(n)
+    return [int(v) for v in n]
