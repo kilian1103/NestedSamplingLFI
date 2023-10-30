@@ -17,14 +17,14 @@ from NSLFI.utils import compute_KL_divergence
 class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, training_samples: torch.Tensor,
-                 untrained_network_wrapped: NRE_PolyChord, trainer: swyft.SwyftTrainer, polyset: PolyChordSettings,
+                 network_wrapped: NRE_PolyChord, trainer: swyft.SwyftTrainer, polyset: PolyChordSettings,
                  dm: swyft.SwyftDataModule):
         self.nreSettings = nreSettings
         self.polyset = polyset
         self.sim = sim
         self.obs = obs
         self.training_samples = training_samples
-        self.untrained_network_wrapped = untrained_network_wrapped
+        self.network_wrapped = network_wrapped
         self.trainer = trainer
         self.dm = dm
         self.network_storage = dict()
@@ -43,7 +43,7 @@ class PolySwyft:
             ### only execute this code when previous rounds are already trained ###
             for i in range(0, self.nreSettings.NRE_start_from_round):
                 root = f"{self.nreSettings.root}_round_{i}"
-                current_network = self.untrained_network_wrapped.get_new_network()
+                current_network = self.network_wrapped.get_new_network()
                 current_network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
                 current_network.double()  # change to float64 precision of network
                 self.network_storage[f"round_{i}"] = current_network
@@ -69,14 +69,14 @@ class PolySwyft:
                         project=self.nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
                 network = retrain_next_round(root=root, training_data=self.training_samples,
                                              nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
-                                             untrained_network=self.untrained_network_wrapped.network,
+                                             untrained_network=self.network_wrapped.network,
                                              trainer=self.trainer, dm=self.dm)
                 self.trainer.reset_train_dataloader()
                 self.trainer.reset_val_dataloader()
                 self.trainer.reset_test_dataloader()
                 self.trainer.reset_predict_dataloader()
             else:
-                network = self.untrained_network_wrapped.get_new_network()
+                network = self.network_wrapped.get_new_network()
             comm_gen.Barrier()
             ### load saved network and save it in network_storage ###
             network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
@@ -88,10 +88,11 @@ class PolySwyft:
             ### start polychord section ###
             ### Run PolyChord ###
             self.polyset.base_dir = root
-            trained_NRE = self.untrained_network_wrapped.set_new_network(network=network)
-            pypolychord.run_polychord(loglikelihood=trained_NRE.logLikelihood, nDims=self.nreSettings.num_features,
+            trained_NRE_wrapped = self.network_wrapped.set_network(network=network)
+            pypolychord.run_polychord(loglikelihood=trained_NRE_wrapped.logLikelihood,
+                                      nDims=self.nreSettings.num_features,
                                       nDerived=self.nreSettings.nderived, settings=self.polyset,
-                                      prior=trained_NRE.prior, dumper=trained_NRE.dumper)
+                                      prior=trained_NRE_wrapped.prior, dumper=trained_NRE_wrapped.dumper)
             comm_gen.Barrier()
 
             ### load deadpoints and compute KL divergence and reassign to training samples ###
@@ -106,5 +107,5 @@ class PolySwyft:
             deadpoints = torch.as_tensor(deadpoints.to_numpy())
             logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
             self.training_samples = deadpoints
-            self.untrained_network_wrapped.set_new_network(
-                network=self.untrained_network_wrapped.get_new_network())
+            network = self.network_wrapped.get_new_network()
+            self.network_wrapped.set_new_network(network=network)

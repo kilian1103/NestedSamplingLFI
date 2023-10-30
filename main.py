@@ -44,8 +44,8 @@ def execute():
     # broadcast samples to all ranks
     training_samples = comm_gen.bcast(training_samples, root=0)
     comm_gen.Barrier()
-    untrained_network = Network(nreSettings=nreSettings)
-    untrained_network_wrapped = NRE_PolyChord(network=untrained_network, obs=obs, nreSettings=nreSettings)
+    network = Network(nreSettings=nreSettings)
+    network_wrapped = NRE_PolyChord(network=network, obs=obs, nreSettings=nreSettings)
     early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
                                             patience=nreSettings.early_stopping_patience, mode='min')
     lr_monitor = LearningRateMonitor(logging_interval='step')
@@ -68,7 +68,7 @@ def execute():
     polyset.nprior = nreSettings.n_training_samples
     polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
-                          untrained_network_wrapped=untrained_network_wrapped, trainer=trainer, polyset=polyset, dm=dm)
+                          network_wrapped=network_wrapped, trainer=trainer, polyset=polyset, dm=dm)
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         polySwyft.execute_NSNRE_cycle()

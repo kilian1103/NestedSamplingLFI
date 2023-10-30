@@ -42,6 +42,6 @@ class NRE_PolyChord(Network):
         """Dumper Function for PolyChord for runtime progress access."""
         print("Last dead point: {}".format(dead[-1]))
 
-    def set_new_network(self, network: Network):
-        """Sets a new network for the NRE."""
+    def set_network(self, network: Network):
+        """Sets a network for PolySwyft."""
         self.network = network.eval()
