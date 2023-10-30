@@ -1,11 +1,10 @@
 from typing import Dict
 
+import anesthetic
 import matplotlib.pyplot as plt
-import numpy as np
 import swyft
 import torch
 from anesthetic import MCMCSamples, make_2d_axes, read_chains
-from swyft import collate_output as reformat_samples
 
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.utils import compute_KL_divergence
@@ -13,21 +12,6 @@ from NSLFI.utils import compute_KL_divergence
 
 def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[str, swyft.SwyftModule],
                            nreSettings: NRE_Settings, sim: swyft.Simulator, obs: swyft.Sample):
-    # full prior samples of NSNRE
-    full_prior_theta_samples = np.random.uniform(nreSettings.sim_prior_lower,
-                                                 nreSettings.sim_prior_lower + nreSettings.prior_width,
-                                                 (nreSettings.n_weighted_samples, nreSettings.num_features))
-    full_prior_joints = []
-    for theta in full_prior_theta_samples:
-        cond = {nreSettings.targetKey: theta}
-        joint = sim.sample(conditions=cond)
-        full_prior_joints.append(joint)
-    full_prior_joints = reformat_samples(full_prior_joints)
-    full_prior_data_samples = full_prior_joints[nreSettings.obsKey]
-    # NRE refactoring
-    prior_samples_nre = {nreSettings.targetKey: torch.as_tensor(full_prior_theta_samples)}
-    # obs_nre = reformat_obs_to_nre_format(obs, nreSettings)
-
     # set up labels for plotting
     params = [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)]
     params_idx = [i for i in range(0, nreSettings.num_features)]
@@ -42,44 +26,26 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     dkl_storage = []
     root = root_storage[f"round_{nreSettings.NRE_num_retrain_rounds}"]
 
+    # load data for plots
+    for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+        samples = anesthetic.read_chains(root=f"{root_storage[f'round_{rd}']}/{nreSettings.file_root}")
+        samples_storage.append(samples)
+
     if nreSettings.true_contours_available:
         dkl_storage_true = []
-        posteriors = []
+        full_joint = sim.sample(nreSettings.n_compressed_weighted_samples)
+        true_logLikes = torch.as_tensor(full_joint[nreSettings.contourKey])
+        posterior = full_joint[nreSettings.posteriorsKey]
+        posterior_theta = torch.empty(size=(len(posterior), nreSettings.num_features))
+        weights = torch.empty(size=(len(posterior), 1))
+        for i, sample in enumerate(posterior):
+            theta, weight = sample
+            posterior_theta[i, :] = theta
+            weights[i] = weight
 
-        for theta in full_prior_theta_samples:
-            cond_true = {nreSettings.targetKey: theta,
-                         nreSettings.obsKey: obs[nreSettings.obsKey]}
-            posterior = sim.sample(conditions=cond_true)
-            posteriors.append(posterior)
-        posteriors = reformat_samples(posteriors)
-
-        true_logLikes = torch.as_tensor(posteriors[nreSettings.contourKey])
-        # true posterior
-        weights_total_true = torch.exp(true_logLikes - true_logLikes.max()).sum()
-        weights_true = torch.exp(true_logLikes - true_logLikes.max()) / weights_total_true * len(true_logLikes)
-        weights_true = weights_true.numpy()
-
-        mcmc_true = MCMCSamples(data=posteriors[nreSettings.posteriorsKey], logL=true_logLikes, weights=weights_true,
-                                labels=params_labels)
-        mcmc_true = mcmc_true.compress(nreSettings.n_compressed_weighted_samples).drop_duplicates()
-
-    # load data for plots
-    with torch.no_grad():
-        # use trained NRE and evaluate on full prior samples
-        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-            network = network_storage[f"round_{rd}"]
-            predictions = network(obs, prior_samples_nre)
-            samples, weights = swyft.get_weighted_samples(predictions, params)
-            logLs = predictions.logratios.numpy().squeeze()
-            weights = weights.numpy().squeeze()
-            samples = samples.numpy().squeeze()
-            mcmc = MCMCSamples(
-                data=torch.cat((torch.as_tensor(samples), torch.as_tensor(full_prior_data_samples)), dim=1),
-                logL=logLs,
-                weights=weights,
-                labels=params_labels_ext)
-            mcmc = mcmc.compress(nreSettings.n_compressed_weighted_samples).drop_duplicates()
-            samples_storage.append(mcmc)
+        mcmc_true = MCMCSamples(
+            data=posterior_theta, weights=weights.squeeze(),
+            logL=true_logLikes, labels=params_labels)
 
     # triangle plot
     if nreSettings.plot_triangle_plot:
@@ -90,9 +56,9 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
                               kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
 
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-            mcmc = samples_storage[rd]
-            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
-                         kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+            nested = samples_storage[rd]
+            nested.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
+                           kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
         fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
@@ -102,20 +68,21 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
         fig, axes = make_2d_axes(params_idx_ext, labels=params_labels_ext, lower=True, diagonal=True, upper=False,
                                  ticks="outer")
         if nreSettings.true_contours_available:
+            # TODO fix this
             mcmc_true_ext = MCMCSamples(
                 data=torch.cat(
-                    (torch.as_tensor(posteriors[nreSettings.targetKey]),
-                     torch.as_tensor(posteriors[nreSettings.obsKey])), dim=1),
+                    (torch.as_tensor(full_joint[nreSettings.targetKey]),
+                     torch.as_tensor(full_joint[nreSettings.obsKey])), dim=1),
                 logL=true_logLikes,
-                weights=weights_true, labels=params_labels_ext)
+                weights=weights, labels=params_labels_ext)
             mcmc_true_ext = mcmc_true_ext.compress(nreSettings.n_compressed_weighted_samples).drop_duplicates()
             mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
                                   kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
 
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-            mcmc = samples_storage[rd]
-            mcmc.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
-                         kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+            nested = samples_storage[rd]
+            nested.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
+                           kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
         fig.savefig(f"{root}/NRE_triangle_posterior_ext.pdf")
@@ -128,9 +95,9 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
                                                  current_samples=mcmc_true.copy(), rd=rd + 1, obs=obs)
                 dkl_storage_true.append(KDL_true)
             if rd != 0:
-                mcmc = samples_storage[rd]
+                nested = samples_storage[rd]
                 KDL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
-                                            current_samples=mcmc, rd=rd, obs=obs)
+                                            current_samples=nested, rd=rd, obs=obs)
                 dkl_storage.append(KDL)
         plt.figure()
         plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],

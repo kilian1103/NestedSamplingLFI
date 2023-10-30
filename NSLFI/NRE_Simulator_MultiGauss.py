@@ -30,16 +30,18 @@ class Simulator(swyft.Simulator):
         logratio = loglike - logevidence
         return logratio
 
-    def zgivenx(self, x):
+    def zgivenx(self, x, z):
         """Posterior sampling"""
-        return stats.multivariate_normal(mean=(self.Sigma_inv + self.M.T @ self.C_inv @ self.M).inverse() @ (
+        post = stats.multivariate_normal(mean=(self.Sigma_inv + self.M.T @ self.C_inv @ self.M).inverse() @ (
                 self.Sigma_inv @ self.mu + self.M.T @ self.C_inv @ (torch.as_tensor(x).float() - self.m)),
                                          cov=(
                                                  self.Sigma_inv + self.M.T @ self.C_inv @
-                                                 self.M).inverse()).rvs()
+                                                 self.M).inverse())
+        posterior = (post.rvs(), post.logpdf(z))
+        return posterior
 
     def build(self, graph):
         z = graph.node(self.nreSettings.targetKey, self.z_sampler)
         x = graph.node(self.nreSettings.obsKey, self.xgivenz, z)
         l = graph.node(self.nreSettings.contourKey, self.logratio, x, z)
-        post = graph.node(self.nreSettings.posteriorsKey, self.zgivenx, x)
+        post = graph.node(self.nreSettings.posteriorsKey, self.zgivenx, x, z)
