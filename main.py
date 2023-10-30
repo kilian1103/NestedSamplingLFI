@@ -31,7 +31,7 @@ def execute():
     nreSettings.logger = logger
     logger.info('Started')
     # TODO merge prior framework, so far simulator has scipy, polychord has hypercube
-    # instantiate swyft simulator
+    #### instantiate swyft simulator
     sim = Simulator(nreSettings=nreSettings)
     # generate training dat aand obs
     obs = swyft.Sample(x=np.array(nreSettings.num_features_dataset * [0]))
@@ -57,6 +57,7 @@ def execute():
                                  default_root_dir=nreSettings.root,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
+    #### set up polychord settings
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
     polyset.file_root = nreSettings.file_root
     polyset.base_dir = nreSettings.root
@@ -65,7 +66,7 @@ def execute():
     polyset.nprior = nreSettings.n_training_samples
     polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
-                          untrained_network_wrapped=untrained_network_wrapped, trainer=trainer)
+                          untrained_network_wrapped=untrained_network_wrapped, trainer=trainer, polyset=polyset)
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         polySwyft.execute_NSNRE_cycle()
