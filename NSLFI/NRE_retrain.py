@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import swyft
 import torch
 import wandb
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output as reformat_samples, Simulator
 from torch import Tensor
 
@@ -15,7 +17,7 @@ from NSLFI.utils import get_swyft_dataset_fractions
 def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settings,
                        sim: Simulator,
                        obs: swyft.Sample, untrained_network: swyft.SwyftModule,
-                       trainer: swyft.SwyftTrainer, dm: swyft.SwyftDataModule) -> swyft.SwyftModule:
+                       dm: swyft.SwyftDataModule) -> swyft.SwyftModule:
     logger = logging.getLogger(nreSettings.logger_name)
     try:
         os.makedirs(root)
@@ -34,6 +36,17 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     network = untrained_network.get_new_network()
     # network = torch.compile(network)
     logger.info("Starting training!")
+    early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
+                                            patience=nreSettings.early_stopping_patience, mode='min')
+    lr_monitor = LearningRateMonitor(logging_interval='step')
+    checkpoint_callback = ModelCheckpoint(monitor='val_loss',
+                                          filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
+    trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
+                                 precision=64,
+                                 enable_progress_bar=True,
+                                 default_root_dir=nreSettings.root,
+                                 callbacks=[early_stopping_callback, lr_monitor,
+                                            checkpoint_callback])
     dm.data = training_data_swyft
     dm.lengths = get_swyft_dataset_fractions(nreSettings.datamodule_fractions, len(training_data_swyft))
     trainer.fit(network, dm)

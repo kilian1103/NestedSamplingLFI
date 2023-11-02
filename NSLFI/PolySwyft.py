@@ -17,16 +17,14 @@ from NSLFI.utils import compute_KL_divergence
 class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, training_samples: torch.Tensor,
-                 network_wrapped: NRE_PolyChord, trainer: swyft.SwyftTrainer, polyset: PolyChordSettings,
-                 dm: swyft.SwyftDataModule):
+                 network_wrapped: NRE_PolyChord, polyset: PolyChordSettings, dm: swyft.SwyftDataModule):
         self.nreSettings = nreSettings
         self.polyset = polyset
         self.sim = sim
         self.obs = obs
+        self.dm = dm
         self.training_samples = training_samples
         self.network_wrapped = network_wrapped
-        self.trainer = trainer
-        self.dm = dm
         self.network_storage = dict()
         self.root_storage = dict()
         self.dkl_storage = list()
@@ -69,11 +67,7 @@ class PolySwyft:
                         project=self.nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
                 network = retrain_next_round(root=root, training_data=self.training_samples,
                                              nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
-                                             untrained_network=self.network_wrapped.network,
-                                             trainer=self.trainer, dm=self.dm)
-                self.trainer.reset_train_dataloader()
-                self.trainer.reset_val_dataloader()
-                self.trainer.reset_test_dataloader()
+                                             untrained_network=self.network_wrapped.network, dm=self.dm)
             else:
                 network = self.network_wrapped.get_new_network()
             comm_gen.Barrier()
@@ -106,5 +100,3 @@ class PolySwyft:
             deadpoints = torch.as_tensor(deadpoints.to_numpy())
             logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
             self.training_samples = deadpoints
-            network = self.network_wrapped.get_new_network()
-            self.network_wrapped.set_network(network=network)

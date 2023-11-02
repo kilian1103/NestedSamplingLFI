@@ -5,8 +5,6 @@ import pypolychord
 import swyft
 import torch
 from mpi4py import MPI
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
@@ -46,17 +44,6 @@ def execute():
     #### instantiate swyft network
     network = Network(nreSettings=nreSettings)
     network_wrapped = NRE_PolyChord(network=network, obs=obs, nreSettings=nreSettings)
-    early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
-                                            patience=nreSettings.early_stopping_patience, mode='min')
-    lr_monitor = LearningRateMonitor(logging_interval='step')
-    checkpoint_callback = ModelCheckpoint(monitor='val_loss',
-                                          filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
-    trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
-                                 precision=64,
-                                 enable_progress_bar=True,
-                                 default_root_dir=nreSettings.root,
-                                 callbacks=[early_stopping_callback, lr_monitor,
-                                            checkpoint_callback])
     dm = swyft.SwyftDataModule(data=training_samples, fractions=nreSettings.datamodule_fractions, num_workers=0,
                                batch_size=64, shuffle=False, lengths=None, on_after_load_sample=None)
     #### set up polychord settings
@@ -68,7 +55,7 @@ def execute():
     polyset.nprior = nreSettings.n_training_samples
     polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
-                          network_wrapped=network_wrapped, trainer=trainer, polyset=polyset, dm=dm)
+                          network_wrapped=network_wrapped, polyset=polyset, dm=dm)
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         polySwyft.execute_NSNRE_cycle()
