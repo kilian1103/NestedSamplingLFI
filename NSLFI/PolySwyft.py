@@ -74,7 +74,6 @@ class PolySwyft:
                 self.trainer.reset_train_dataloader()
                 self.trainer.reset_val_dataloader()
                 self.trainer.reset_test_dataloader()
-                self.trainer.reset_predict_dataloader()
             else:
                 network = self.network_wrapped.get_new_network()
             comm_gen.Barrier()
@@ -88,11 +87,11 @@ class PolySwyft:
             ### start polychord section ###
             ### Run PolyChord ###
             self.polyset.base_dir = root
-            trained_NRE_wrapped = self.network_wrapped.set_network(network=network)
-            pypolychord.run_polychord(loglikelihood=trained_NRE_wrapped.logLikelihood,
+            self.network_wrapped.set_network(network=network)
+            pypolychord.run_polychord(loglikelihood=self.network_wrapped.logLikelihood,
                                       nDims=self.nreSettings.num_features,
                                       nDerived=self.nreSettings.nderived, settings=self.polyset,
-                                      prior=trained_NRE_wrapped.prior, dumper=trained_NRE_wrapped.dumper)
+                                      prior=self.network_wrapped.prior, dumper=self.network_wrapped.dumper)
             comm_gen.Barrier()
 
             ### load deadpoints and compute KL divergence and reassign to training samples ###
@@ -108,4 +107,4 @@ class PolySwyft:
             logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
             self.training_samples = deadpoints
             network = self.network_wrapped.get_new_network()
-            self.network_wrapped.set_new_network(network=network)
+            self.network_wrapped.set_network(network=network)

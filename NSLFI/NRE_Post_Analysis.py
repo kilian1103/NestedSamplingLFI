@@ -2,6 +2,7 @@ from typing import Dict
 
 import anesthetic
 import matplotlib.pyplot as plt
+import numpy as np
 import swyft
 import torch
 from anesthetic import MCMCSamples, make_2d_axes, read_chains
@@ -36,8 +37,8 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
         full_joint = sim.sample(nreSettings.n_compressed_weighted_samples)
         true_logLikes = torch.as_tensor(full_joint[nreSettings.contourKey])
         posterior = full_joint[nreSettings.posteriorsKey]
-        posterior_theta = torch.empty(size=(len(posterior), nreSettings.num_features))
-        weights = torch.empty(size=(len(posterior), 1))
+        posterior_theta = np.empty(shape=(len(posterior), nreSettings.num_features))
+        weights = np.empty(shape=len(posterior))
         for i, sample in enumerate(posterior):
             theta, weight = sample
             posterior_theta[i, :] = theta

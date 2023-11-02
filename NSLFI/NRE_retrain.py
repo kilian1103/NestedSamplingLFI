@@ -41,7 +41,6 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     if nreSettings.activate_wandb:
         wandb.finish()
     # get posterior samples
-    trainer.save_checkpoint(filepath=f"{root}")
     logger.info("Sampling from the prior using simulator!")
     prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[nreSettings.targetKey])
     logger.info("Inferring posterior samples using the trained network!")

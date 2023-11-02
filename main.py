@@ -30,11 +30,10 @@ def execute():
     logger = logging.getLogger()
     nreSettings.logger = logger
     logger.info('Started')
-    # TODO merge prior framework, so far simulator has scipy, polychord has hypercube
     #### instantiate swyft simulator
     sim = Simulator(nreSettings=nreSettings)
-    # generate training dat aand obs
-    obs = swyft.Sample(x=np.array(nreSettings.num_features_dataset * [0]))
+    # generate training dat and obs
+    obs = swyft.Sample(x=torch.tensor([nreSettings.num_features_dataset * [0]]))
     if rank_gen == 0:
         training_samples = torch.as_tensor(
             sim.sample(nreSettings.n_training_samples, targets=[nreSettings.targetKey])[
@@ -44,6 +43,7 @@ def execute():
     # broadcast samples to all ranks
     training_samples = comm_gen.bcast(training_samples, root=0)
     comm_gen.Barrier()
+    #### instantiate swyft network
     network = Network(nreSettings=nreSettings)
     network_wrapped = NRE_PolyChord(network=network, obs=obs, nreSettings=nreSettings)
     early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
