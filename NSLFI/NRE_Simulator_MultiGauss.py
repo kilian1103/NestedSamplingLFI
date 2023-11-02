@@ -31,13 +31,14 @@ class Simulator(swyft.Simulator):
         return logratio
 
     def zgivenx(self, x, z):
-        """Posterior sampling"""
+        """Posterior weights"""
         post = stats.multivariate_normal(mean=(self.Sigma_inv + self.M.T @ self.C_inv @ self.M).inverse() @ (
                 self.Sigma_inv @ self.mu + self.M.T @ self.C_inv @ (torch.as_tensor(x).float() - self.m)),
                                          cov=(
                                                  self.Sigma_inv + self.M.T @ self.C_inv @
                                                  self.M).inverse())
-        posterior = (post.rvs(), post.logpdf(z))
+
+        posterior = (z, post.logpdf(z))
         return posterior
 
     def build(self, graph):
