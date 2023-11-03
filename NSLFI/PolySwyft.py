@@ -1,3 +1,4 @@
+import copy
 import logging
 
 import anesthetic
@@ -17,7 +18,8 @@ from NSLFI.utils import compute_KL_divergence
 class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, training_samples: torch.Tensor,
-                 network_wrapped: NRE_PolyChord, polyset: PolyChordSettings, dm: swyft.SwyftDataModule):
+                 network_wrapped: NRE_PolyChord, polyset: PolyChordSettings, dm: swyft.SwyftDataModule,
+                 trainer: swyft.SwyftTrainer):
         self.nreSettings = nreSettings
         self.polyset = polyset
         self.sim = sim
@@ -65,9 +67,11 @@ class PolySwyft:
                     wandb.init(
                         # set the wandb project where this run will be logged
                         project=self.nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
+                new_trainer = copy.deepcopy(self.trainer)
                 network = retrain_next_round(root=root, training_data=self.training_samples,
                                              nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
-                                             untrained_network=self.network_wrapped.network, dm=self.dm)
+                                             untrained_network=self.network_wrapped.network, dm=self.dm,
+                                             trainer=new_trainer)
             else:
                 network = self.network_wrapped.get_new_network()
             comm_gen.Barrier()
