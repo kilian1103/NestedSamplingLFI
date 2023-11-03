@@ -25,6 +25,7 @@ class PolySwyft:
         self.sim = sim
         self.obs = obs
         self.dm = dm
+        self.trainer = trainer
         self.training_samples = training_samples
         self.network_wrapped = network_wrapped
         self.network_storage = dict()
@@ -68,9 +69,10 @@ class PolySwyft:
                         # set the wandb project where this run will be logged
                         project=self.nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
                 new_trainer = copy.deepcopy(self.trainer)
+                network = self.network_wrapped.get_new_network()
                 network = retrain_next_round(root=root, training_data=self.training_samples,
                                              nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
-                                             untrained_network=self.network_wrapped.network, dm=self.dm,
+                                             network=network, dm=self.dm,
                                              trainer=new_trainer)
             else:
                 network = self.network_wrapped.get_new_network()

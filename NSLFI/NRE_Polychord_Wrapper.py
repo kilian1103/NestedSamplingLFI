@@ -44,3 +44,6 @@ class NRE_PolyChord(Network):
     def set_network(self, network: Network):
         """Sets a network for PolySwyft."""
         self.network = network.eval()
+
+    def get_new_network(self):
+        return Network(nreSettings=self.nreSettings)

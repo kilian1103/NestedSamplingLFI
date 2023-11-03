@@ -14,7 +14,7 @@ from NSLFI.utils import get_swyft_dataset_fractions
 
 def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settings,
                        sim: Simulator,
-                       obs: swyft.Sample, untrained_network: swyft.SwyftModule,
+                       obs: swyft.Sample, network: swyft.SwyftModule,
                        dm: swyft.SwyftDataModule, trainer: swyft.SwyftTrainer) -> swyft.SwyftModule:
     logger = logging.getLogger(nreSettings.logger_name)
     try:
@@ -31,7 +31,6 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     training_data_swyft = swyft.Samples(samples)
     logger.info("Simulation done!")
     logger.info("Setting up network for training!")
-    network = untrained_network.get_new_network()
     # network = torch.compile(network)
     logger.info("Starting training!")
     dm.data = training_data_swyft
@@ -44,7 +43,8 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     logger.info("Sampling from the prior using simulator!")
     prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[nreSettings.targetKey])
     logger.info("Inferring posterior samples using the trained network!")
-    predictions = trainer.infer(network, obs, prior_samples)
+    with torch.no_grad():
+        predictions = trainer.infer(network, obs, prior_samples)
     logger.info("Plotting posterior inference results!")
     plt.figure()
     swyft.corner(predictions, [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)], bins=50,
