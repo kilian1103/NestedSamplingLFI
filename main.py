@@ -81,7 +81,7 @@ def execute():
         # plot analysis of NSNSRE
         plot_analysis_of_NSNRE(nreSettings=nreSettings, network_storage=polySwyft.network_storage,
                                root_storage=polySwyft.root_storage,
-                               sim=sim, obs=obs)
+                               sim=sim, obs=obs, polyset=polyset)
     logger.info('Finished')
 
 

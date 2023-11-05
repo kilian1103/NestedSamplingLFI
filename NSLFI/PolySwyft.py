@@ -46,7 +46,7 @@ class PolySwyft:
                 self.network_storage[f"round_{i}"] = new_network
                 self.root_storage[f"round_{i}"] = root
                 if i > 0:
-                    deadpoints = anesthetic.read_chains(root=f"{root}/{self.nreSettings.file_root}")
+                    deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
                     DKL = compute_KL_divergence(nreSettings=self.nreSettings, network_storage=self.network_storage,
                                                 current_samples=deadpoints.copy(), rd=i, obs=self.obs)
                     self.dkl_storage.append(DKL)
@@ -112,7 +112,7 @@ class PolySwyft:
         comm_gen.Barrier()
 
         ### load deadpoints and compute KL divergence and reassign to training samples ###
-        deadpoints = anesthetic.read_chains(root=f"{root}/{self.nreSettings.file_root}")
+        deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
         if rd >= 1:
             DKL = compute_KL_divergence(nreSettings=self.nreSettings, network_storage=self.network_storage,
                                         current_samples=deadpoints, rd=rd, obs=self.obs)

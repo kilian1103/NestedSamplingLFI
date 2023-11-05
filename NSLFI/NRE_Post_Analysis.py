@@ -6,13 +6,15 @@ import numpy as np
 import swyft
 import torch
 from anesthetic import MCMCSamples, make_2d_axes, read_chains
+from pypolychord import PolyChordSettings
 
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.utils import compute_KL_divergence
 
 
 def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[str, swyft.SwyftModule],
-                           nreSettings: NRE_Settings, sim: swyft.Simulator, obs: swyft.Sample):
+                           nreSettings: NRE_Settings, polyset: PolyChordSettings, sim: swyft.Simulator,
+                           obs: swyft.Sample):
     # set up labels for plotting
     params = [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)]
     params_idx = [i for i in range(0, nreSettings.num_features)]
@@ -29,7 +31,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
 
     # load data for plots
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-        samples = anesthetic.read_chains(root=f"{root_storage[f'round_{rd}']}/{nreSettings.file_root}")
+        samples = anesthetic.read_chains(root=f"{root_storage[f'round_{rd}']}/{polyset.file_root}")
         samples_storage.append(samples)
 
     if nreSettings.true_contours_available:
@@ -118,7 +120,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     if nreSettings.plot_quantile_plot:
         for i in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             root = root_storage[f"round_{i}"]
-            samples = read_chains(root=f"{root}/{nreSettings.file_root}")
+            samples = read_chains(root=f"{root}/{polyset.file_root}")
             samples = samples.iloc[:, :nreSettings.num_features]
             plot_quantile_plot(samples=samples, nreSettings=nreSettings, root=root)
 
