@@ -36,6 +36,7 @@ class NRE_Settings:
         self.learning_rate_init = 0.001
         self.learning_rate_decay = 0.1
         self.datamodule_fractions = [0.8, 0.1, 0.1]
+        self.cyclic_rounds = True
         # polychord settings
         self.nlive_scan_run_per_feature = 1000
         self.nderived = 0
