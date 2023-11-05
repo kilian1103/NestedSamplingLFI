@@ -1,9 +1,9 @@
 from typing import Tuple, List, Any
 
 import numpy as np
+import scipy.stats as stats
 import swyft
 import torch
-from pypolychord.priors import UniformPrior
 
 from NSLFI.NRE_Settings import NRE_Settings
 
@@ -26,9 +26,7 @@ class Network(swyft.SwyftModule):
 
     def prior(self, cube) -> np.ndarray:
         """Transforms the unit cube to the prior cube."""
-        theta = np.zeros_like(cube)
-        for i in range(len(cube)):
-            theta[i] = UniformPrior(-2, 2)(cube[i])
+        theta = stats.norm(loc=0, scale=1).ppf(cube)
         return theta
 
     def logLikelihood(self, theta: np.ndarray) -> Tuple[Any, List]:
