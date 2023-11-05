@@ -9,7 +9,6 @@ import torch
 from anesthetic import NestedSamples
 from torch import Tensor
 
-from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Settings import NRE_Settings
 
 
@@ -52,17 +51,16 @@ def compute_KL_divergence(nreSettings: NRE_Settings, network_storage: Dict[str, 
     return DKL, DKL_err
 
 
-def reload_data_for_plotting(nreSettings: NRE_Settings) -> Tuple[
+def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule) -> Tuple[
     Dict[str, str], Dict[str, swyft.SwyftModule]]:
     network_storage = {}
     root_storage = {}
     root = nreSettings.root
     for rd in range(nreSettings.NRE_num_retrain_rounds + 1):
         current_root = f"{root}_round_{rd}"
-        current_network = Network(nreSettings=nreSettings)
-        current_network.load_state_dict(torch.load(f"{current_root}/{nreSettings.neural_network_file}"))
-        current_network.double()  # change to float64 precision of network
-        network_storage[f"round_{rd}"] = current_network
+        network.load_state_dict(torch.load(f"{current_root}/{nreSettings.neural_network_file}"))
+        network.double()  # change to float64 precision of network
+        network_storage[f"round_{rd}"] = network
         root_storage[f"round_{rd}"] = current_root
     return root_storage, network_storage
 

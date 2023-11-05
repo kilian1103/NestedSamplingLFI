@@ -73,7 +73,7 @@ def execute():
         polySwyft.execute_NSNRE_cycle()
     else:
         # load data for plotting if data is already generated
-        root_storage, network_storage = reload_data_for_plotting(nreSettings=nreSettings)
+        root_storage, network_storage = reload_data_for_plotting(nreSettings=nreSettings, network=network)
         polySwyft.root_storage = root_storage
         polySwyft.network_storage = network_storage
 
