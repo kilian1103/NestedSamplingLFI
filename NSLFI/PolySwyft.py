@@ -35,7 +35,8 @@ class PolySwyft:
         # retrain NRE and sample new samples with NS loop
         self.logger = logging.getLogger(self.nreSettings.logger_name)
         if self.nreSettings.NRE_start_from_round > 0:
-            if self.nreSettings.NRE_start_from_round > self.nreSettings.NRE_num_retrain_rounds:
+            if (self.nreSettings.NRE_start_from_round > self.nreSettings.NRE_num_retrain_rounds and
+                    self.nreSettings.cyclic_rounds):
                 raise ValueError("NRE_start_from_round must be smaller than NRE_num_retrain_rounds")
             ### only execute this code when previous rounds are already trained ###
             for i in range(0, self.nreSettings.NRE_start_from_round):
@@ -45,8 +46,8 @@ class PolySwyft:
                 new_network.double()  # change to float64 precision of network
                 self.network_storage[f"round_{i}"] = new_network
                 self.root_storage[f"round_{i}"] = root
+                deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
                 if i > 0:
-                    deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
                     DKL = compute_KL_divergence(nreSettings=self.nreSettings, network_storage=self.network_storage,
                                                 current_samples=deadpoints.copy(), rd=i, obs=self.obs)
                     self.dkl_storage.append(DKL)
@@ -67,10 +68,14 @@ class PolySwyft:
 
     def _cyclic_kl(self):
         DKL = 10
-        rd = 0
-        while abs(DKL) >= 0.1:
-            DKL = self._cycle(DKL, rd)
+        if self.nreSettings.NRE_start_from_round > 0:
+            rd = self.nreSettings.NRE_start_from_round
+        else:
+            rd = 0
+        while abs(DKL) >= self.nreSettings.termination_abs_dkl:
+            DKL, DKL_std = self._cycle(DKL, rd)
             rd += 1
+        self.nreSettings.NRE_num_retrain_rounds = rd - 1
 
     def _cycle(self, DKL, rd):
         comm_gen = MPI.COMM_WORLD
