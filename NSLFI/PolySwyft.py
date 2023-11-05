@@ -67,13 +67,11 @@ class PolySwyft:
             _ = self._cycle(DKL, rd)
 
     def _cyclic_kl(self):
-        DKL = 10
-        if self.nreSettings.NRE_start_from_round > 0:
-            rd = self.nreSettings.NRE_start_from_round
-        else:
-            rd = 0
+        DKL_info = (10, 10)
+        DKL, DKL_std = DKL_info
+        rd = self.nreSettings.NRE_start_from_round
         while abs(DKL) >= self.nreSettings.termination_abs_dkl:
-            DKL, DKL_std = self._cycle(DKL, rd)
+            DKL, DKL_std = self._cycle(DKL_info, rd)
             rd += 1
         self.nreSettings.NRE_num_retrain_rounds = rd - 1
 
