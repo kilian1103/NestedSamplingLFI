@@ -43,9 +43,9 @@ def compute_KL_divergence(nreSettings: NRE_Settings, network_storage: Dict[str, 
     """Compute the KL divergence between the previous and current NRE."""
     previous_network = network_storage[f"round_{rd - 1}"]
     samples = {nreSettings.targetKey: torch.as_tensor(current_samples.iloc[:, :nreSettings.num_features].to_numpy())}
-    predictions = previous_network(obs, samples)
     with torch.no_grad():
-        current_samples["logL_previous"] = predictions.logratios.numpy().squeeze()
+        predictions = previous_network(obs, samples)
+    current_samples["logL_previous"] = predictions.logratios.numpy().squeeze()
     DKL = (current_samples["logL"] - current_samples["logL_previous"]).mean()
     DKL_err = (current_samples["logL"] - current_samples["logL_previous"]).std()
     return DKL, DKL_err
