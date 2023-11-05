@@ -1,14 +1,14 @@
 import logging
 from typing import Tuple, Dict, Any
 
+import swyft
 import torch
 from torch import Tensor
 
-from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Settings import NRE_Settings
 
 
-def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, NRE_PolyChord],
+def intersect_samples(nreSettings: NRE_Settings, network_storage: Dict[str, swyft.SwyftModule],
                       root_storage: Dict[str, Any], rd: int,
                       boundarySample: Tensor, previous_samples: Tensor, current_samples: Tensor) -> Tuple[Tensor, ...]:
     """Intersect samples from two NREs.

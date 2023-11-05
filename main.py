@@ -9,7 +9,6 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 from NSLFI.NRE_Network import Network
-from NSLFI.NRE_Polychord_Wrapper import NRE_PolyChord
 from NSLFI.NRE_Post_Analysis import plot_analysis_of_NSNRE
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_Simulator_MultiGauss import Simulator
@@ -44,8 +43,7 @@ def execute():
     training_samples = comm_gen.bcast(training_samples, root=0)
     comm_gen.Barrier()
     #### instantiate swyft network
-    network = Network(nreSettings=nreSettings)
-    network_wrapped = NRE_PolyChord(network=network, obs=obs, nreSettings=nreSettings)
+    network = Network(nreSettings=nreSettings, obs=obs)
     dm = swyft.SwyftDataModule(data=training_samples, fractions=nreSettings.datamodule_fractions, num_workers=0,
                                batch_size=64, shuffle=False, lengths=None, on_after_load_sample=None)
     early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
@@ -68,7 +66,7 @@ def execute():
     polyset.nprior = nreSettings.n_training_samples
     polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
-                          network_wrapped=network_wrapped, polyset=polyset, dm=dm, trainer=trainer)
+                          network=network, polyset=polyset, dm=dm, trainer=trainer)
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         polySwyft.execute_NSNRE_cycle()
