@@ -58,13 +58,14 @@ def execute():
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
     #### set up polychord settings
+    nlive_per_dim = 1000
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
-    polyset.file_root = nreSettings.file_root
+    polyset.file_root = "samples"
     polyset.base_dir = nreSettings.root
     polyset.seed = nreSettings.seed
-    polyset.nfail = nreSettings.nlive_scan_run_per_feature * nreSettings.n_training_samples
+    polyset.nfail = nlive_per_dim * nreSettings.n_training_samples
     polyset.nprior = nreSettings.n_training_samples
-    polyset.nlive = nreSettings.nlive_scan_run_per_feature * nreSettings.num_features
+    polyset.nlive = nlive_per_dim * nreSettings.num_features
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
                           network=network, polyset=polyset, dm=dm, trainer=trainer)
     if not nreSettings.only_plot_mode:
