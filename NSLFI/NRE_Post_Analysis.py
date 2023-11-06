@@ -36,7 +36,8 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
 
     if nreSettings.true_contours_available:
         dkl_storage_true = []
-        full_joint = sim.sample(nreSettings.n_compressed_weighted_samples)
+        cond = {nreSettings.obsKey: obs[nreSettings.obsKey].numpy().squeeze()}
+        full_joint = sim.sample(nreSettings.n_weighted_samples, conditions=cond)
         true_logLikes = torch.as_tensor(full_joint[nreSettings.contourKey])
         posterior = full_joint[nreSettings.posteriorsKey]
         posterior_theta = np.empty(shape=(len(posterior), nreSettings.num_features))
