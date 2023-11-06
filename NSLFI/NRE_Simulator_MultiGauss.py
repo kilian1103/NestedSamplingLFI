@@ -23,26 +23,28 @@ class Simulator(swyft.Simulator):
     def xgivenz(self, z):
         return stats.multivariate_normal(mean=(self.m + self.M @ z), cov=self.C).rvs()
 
-    def logratio(self, x, z):
+    def logratio(self, x, post):
+        z, w = post
         loglike = stats.multivariate_normal(mean=(self.m + self.M @ z), cov=self.C).logpdf(x)
         logevidence = stats.multivariate_normal(mean=(self.m + self.M @ self.mu),
                                                 cov=(self.C + self.M @ self.Sigma @ self.M.T)).logpdf(x)
         logratio = loglike - logevidence
         return logratio
 
-    def zgivenx(self, x, z):
+    def zgivenx(self, x):
         """Posterior weights"""
         post = stats.multivariate_normal(mean=(self.Sigma_inv + self.M.T @ self.C_inv @ self.M).inverse() @ (
                 self.Sigma_inv @ self.mu + self.M.T @ self.C_inv @ (torch.as_tensor(x).float() - self.m)),
                                          cov=(
                                                  self.Sigma_inv + self.M.T @ self.C_inv @
                                                  self.M).inverse())
-
+        z = post.rvs()
         posterior = (z, post.logpdf(z))
         return posterior
 
     def build(self, graph):
         z = graph.node(self.nreSettings.targetKey, self.z_sampler)
         x = graph.node(self.nreSettings.obsKey, self.xgivenz, z)
-        l = graph.node(self.nreSettings.contourKey, self.logratio, x, z)
-        post = graph.node(self.nreSettings.posteriorsKey, self.zgivenx, x, z)
+        # l = graph.node(self.nreSettings.contourKey, self.logratio, x, z)
+        post = graph.node(self.nreSettings.posteriorsKey, self.zgivenx, x)
+        l = graph.node(self.nreSettings.contourKey, self.logratio, x, post)
