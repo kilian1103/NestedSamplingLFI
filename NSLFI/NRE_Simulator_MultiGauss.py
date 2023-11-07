@@ -45,6 +45,5 @@ class Simulator(swyft.Simulator):
     def build(self, graph):
         z = graph.node(self.nreSettings.targetKey, self.z_sampler)
         x = graph.node(self.nreSettings.obsKey, self.xgivenz, z)
-        # l = graph.node(self.nreSettings.contourKey, self.logratio, x, z)
         post = graph.node(self.nreSettings.posteriorsKey, self.zgivenx, x)
         l = graph.node(self.nreSettings.contourKey, self.logratio, x, post)

@@ -38,6 +38,7 @@ class NRE_Settings:
         self.cyclic_rounds = True
         self.NRE_num_retrain_rounds = 5
         self.NRE_start_from_round = 0
+        self.termination_abs_dkl = 0.2
         # plotting settings
         self.only_plot_mode = False
         self.true_contours_available = True
