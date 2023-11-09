@@ -4,6 +4,7 @@ import numpy as np
 import pypolychord
 import swyft
 import torch
+from margarine.clustered import clusterMAF as MAF
 from mpi4py import MPI
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -11,7 +12,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Post_Analysis import plot_analysis_of_NSNRE
 from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.NRE_Simulator_MultiGauss import Simulator
+from NSLFI.NRE_Simulator_MixGauss import Simulator
 from NSLFI.PolySwyft import PolySwyft
 from NSLFI.utils import reload_data_for_plotting
 
@@ -29,6 +30,7 @@ def execute():
     logger = logging.getLogger()
     nreSettings.logger = logger
     logger.info('Started')
+
     #### instantiate swyft simulator
     sim = Simulator(nreSettings=nreSettings)
     # generate training dat and obs
@@ -42,6 +44,24 @@ def execute():
     # broadcast samples to all ranks
     training_samples = comm_gen.bcast(training_samples, root=0)
     comm_gen.Barrier()
+
+    #### set up margarine for PolyChord Prior
+    if rank_gen == 0:
+        training_samples_maf = sim.sample(nreSettings.n_weighted_samples)[nreSettings.targetKey]
+        weights = sim.model.prior().logpdf(training_samples_maf)
+    else:
+        training_samples_maf = torch.empty((nreSettings.n_weighted_samples, nreSettings.num_features))
+        weights = torch.empty((nreSettings.n_weighted_samples, 1))
+    training_samples_maf = comm_gen.bcast(training_samples_maf, root=0)
+    weights = comm_gen.bcast(weights, root=0)
+    flow = MAF(training_samples_maf, weights=weights)
+    comm_gen.Barrier()
+    if rank_gen == 0:
+        flow.train(epochs=100, early_stop=True)
+        flow.save(filename="flow.pkl")
+    comm_gen.Barrier()
+    flow = MAF.load(filename="flow.pkl")
+    nreSettings.flow = flow
     #### instantiate swyft network
     network = Network(nreSettings=nreSettings, obs=obs)
     dm = swyft.SwyftDataModule(data=training_samples, fractions=nreSettings.datamodule_fractions, num_workers=0,
@@ -57,6 +77,7 @@ def execute():
                                  default_root_dir=nreSettings.root,
                                  callbacks=[early_stopping_callback, lr_monitor,
                                             checkpoint_callback])
+
     #### set up polychord settings
     nlive_per_dim = 1000
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
@@ -68,6 +89,7 @@ def execute():
     polyset.nlive = nlive_per_dim * nreSettings.num_features
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
                           network=network, polyset=polyset, dm=dm, trainer=trainer)
+
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         polySwyft.execute_NSNRE_cycle()

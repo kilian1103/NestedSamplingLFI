@@ -1,7 +1,6 @@
 from typing import Tuple, List, Any
 
 import numpy as np
-import scipy.stats as stats
 import swyft
 import torch
 
@@ -9,8 +8,9 @@ from NSLFI.NRE_Settings import NRE_Settings
 
 
 class Network(swyft.SwyftModule):
-    def __init__(self, nreSettings: NRE_Settings, obs: swyft.Sample):
+    def __init__(self, nreSettings: NRE_Settings, obs: swyft.Sample, **kwargs):
         super().__init__()
+        self.flow = kwargs.pop("flow", None)
         self.nreSettings = nreSettings
         self.obs = obs
         self.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=self.nreSettings.learning_rate_init),
@@ -26,8 +26,7 @@ class Network(swyft.SwyftModule):
 
     def prior(self, cube) -> np.ndarray:
         """Transforms the unit cube to the prior cube."""
-        theta = stats.norm(loc=0, scale=1).ppf(cube)
-        return theta
+        return self.nreSettings.flow(cube.reshape(1, self.nreSettings.num_features)).numpy().squeeze()
 
     def logLikelihood(self, theta: np.ndarray) -> Tuple[Any, List]:
         """Computes the loglikelihood ("NRE") of the given theta."""

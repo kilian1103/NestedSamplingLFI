@@ -7,6 +7,7 @@ import swyft
 import torch
 from anesthetic import MCMCSamples, make_2d_axes, read_chains
 from pypolychord import PolyChordSettings
+from swyft import collate_output as reformat_samples
 
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.utils import compute_KL_divergence
@@ -21,10 +22,9 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     params_labels = {i: rf"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)}
 
     params_labels_ext = params_labels.copy()
-    params_labels_ext.update({nreSettings.num_features + j: rf"$D_{j}$" for j in
-                              range(nreSettings.num_features_dataset)})
+    params_labels_ext.update(
+        {nreSettings.num_features + j: rf"$D_{j}$" for j in range(nreSettings.num_features_dataset)})
     params_idx_ext = [i for i in range(0, nreSettings.num_features + nreSettings.num_features_dataset)]
-
     samples_storage = []
     dkl_storage = []
     root = root_storage[f"round_{nreSettings.NRE_num_retrain_rounds}"]
@@ -85,8 +85,19 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
 
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             nested = samples_storage[rd]
-            nested.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
-                           kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+            theta = nested.iloc[:, :nreSettings.num_features]
+            theta = torch.as_tensor(theta.to_numpy())
+            joints = []
+            for point in theta:
+                cond = {nreSettings.targetKey: point.float()}
+                sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
+                joints.append(sample)
+            joints = reformat_samples(joints)
+            joints = joints[nreSettings.obsKey]
+            for nd in range(nreSettings.num_features, nreSettings.num_features + nreSettings.num_features_dataset):
+                nested[nd] = joints[:, nd - nreSettings.num_features]
+            nested.plot_2d(axes=axes, alpha=0.4, label=f"rd_{rd}", kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
         fig.savefig(f"{root}/NRE_triangle_posterior_ext.pdf")
