@@ -106,13 +106,15 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     if nreSettings.plot_KL_divergence:
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             if nreSettings.true_contours_available:
-                KDL_true = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
-                                                 current_samples=mcmc_true.copy(), rd=rd + 1, obs=obs)
+                previous_network = network_storage[f"round_{rd}"]
+                KDL_true = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network,
+                                                 current_samples=mcmc_true.copy(), obs=obs)
                 dkl_storage_true.append(KDL_true)
             if rd != 0:
                 nested = samples_storage[rd]
-                KDL = compute_KL_divergence(nreSettings=nreSettings, network_storage=network_storage,
-                                            current_samples=nested, rd=rd, obs=obs)
+                previous_network = network_storage[f"round_{rd - 1}"]
+                KDL = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network,
+                                            current_samples=nested, obs=obs)
                 dkl_storage.append(KDL)
         plt.figure()
         plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],

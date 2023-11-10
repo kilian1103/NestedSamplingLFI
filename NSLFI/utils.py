@@ -39,10 +39,10 @@ def select_weighted_contour(data: NestedSamples, threshold: float) -> int:
     return index
 
 
-def compute_KL_divergence(nreSettings: NRE_Settings, network_storage: Dict[str, swyft.SwyftModule],
-                          current_samples: anesthetic.Samples, rd: int, obs: swyft.Sample) -> Tuple[float, float]:
+def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.SwyftModule,
+                          current_samples: anesthetic.Samples, obs: swyft.Sample) -> Tuple[float, float]:
     """Compute the KL divergence between the previous and current NRE."""
-    previous_network = network_storage[f"round_{rd - 1}"]
+
     samples = {nreSettings.targetKey: torch.as_tensor(current_samples.iloc[:, :nreSettings.num_features].to_numpy())}
     with torch.no_grad():
         predictions = previous_network(obs, samples)
