@@ -7,6 +7,7 @@ import numpy as np
 import swyft
 import torch
 from anesthetic import NestedSamples
+from scipy.special import logsumexp
 from torch import Tensor
 
 from NSLFI.NRE_Settings import NRE_Settings
@@ -46,8 +47,17 @@ def compute_KL_divergence(nreSettings: NRE_Settings, network_storage: Dict[str, 
     with torch.no_grad():
         predictions = previous_network(obs, samples)
     current_samples["logL_previous"] = predictions.logratios.numpy().squeeze()
-    DKL = (current_samples["logL"] - current_samples["logL_previous"]).mean()
-    DKL_err = (current_samples["logL"] - current_samples["logL_previous"]).std()
+
+    # DKL = (current_samples["logL"] - current_samples["logL_previous"]).mean()
+    # DKL_err = (current_samples["logL"] - current_samples["logL_previous"]).std()
+
+    current_samples["log_pq"] = current_samples["logL"] - current_samples["logL_previous"]
+    logw = current_samples.logw(nreSettings.n_DKL_estimates)
+    logw -= logsumexp(logw, axis=0)
+    DKL_estimates = (np.exp(logw).T * current_samples["log_pq"]).sum(axis=1)
+    DKL = DKL_estimates.mean()
+    DKL_err = DKL_estimates.std()
+
     return DKL, DKL_err
 
 
