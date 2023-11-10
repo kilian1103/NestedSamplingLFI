@@ -48,16 +48,18 @@ def compute_KL_divergence(nreSettings: NRE_Settings, network_storage: Dict[str, 
         predictions = previous_network(obs, samples)
     current_samples["logL_previous"] = predictions.logratios.numpy().squeeze()
 
-    # DKL = (current_samples["logL"] - current_samples["logL_previous"]).mean()
-    # DKL_err = (current_samples["logL"] - current_samples["logL_previous"]).std()
-
-    current_samples["log_pq"] = current_samples["logL"] - current_samples["logL_previous"]
-    logw = current_samples.logw(nreSettings.n_DKL_estimates)
-    logw -= logsumexp(logw, axis=0)
-    DKL_estimates = (np.exp(logw).T * current_samples["log_pq"]).sum(axis=1)
-    DKL = DKL_estimates.mean()
-    DKL_err = DKL_estimates.std()
-
+    if isinstance(current_samples, anesthetic.MCMCSamples):
+        # MCMC samples for true samples do not have logw functionality
+        DKL = (current_samples["logL"] - current_samples["logL_previous"]).mean()
+        DKL_err = (current_samples["logL"] - current_samples["logL_previous"]).std() / np.sqrt(
+            len(current_samples["logL"]))
+    else:
+        current_samples["log_pq"] = current_samples["logL"] - current_samples["logL_previous"]
+        logw = current_samples.logw(nreSettings.n_DKL_estimates)
+        logw -= logsumexp(logw, axis=0)
+        DKL_estimates = (np.exp(logw).T * current_samples["log_pq"]).sum(axis=1)
+        DKL = DKL_estimates.mean()
+        DKL_err = DKL_estimates.std()
     return DKL, DKL_err
 
 
