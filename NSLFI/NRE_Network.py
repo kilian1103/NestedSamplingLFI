@@ -19,7 +19,7 @@ class Network(swyft.SwyftModule):
         self.network = swyft.LogRatioEstimator_Ndim(num_features=self.nreSettings.num_features_dataset, marginals=(
             tuple(dim for dim in range(self.nreSettings.num_features)),),
                                                     varnames=self.nreSettings.targetKey,
-                                                    dropout=self.nreSettings.dropout, hidden_features=128, Lmax=8)
+                                                    dropout=self.nreSettings.dropout, hidden_features=128, Lmax=0)
 
     def forward(self, A, B):
         return self.network(A[self.nreSettings.obsKey], B[self.nreSettings.targetKey])
