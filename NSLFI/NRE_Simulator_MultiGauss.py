@@ -1,3 +1,4 @@
+import numpy as np
 import scipy.stats as stats
 import swyft
 import torch
@@ -14,6 +15,7 @@ class Simulator(swyft.Simulator):
         self.m = torch.zeros(self.d)  # mean vec of dataset
         self.M = torch.eye(n=self.d, m=self.n)  # transform matrix of dataset to parameter vee
         self.C = torch.eye(self.d)  # cov matrix of dataset
+        # C very small, or Sigma very big
         self.mu = torch.zeros(self.n)  # mean vec of parameter prior
         self.Sigma = torch.eye(self.n)  # cov matrix of parameter prior
         self.Sigma_inv = torch.inverse(self.Sigma)
@@ -33,11 +35,10 @@ class Simulator(swyft.Simulator):
 
     def zgivenx(self, x):
         """Posterior weights"""
-        post = stats.multivariate_normal(mean=(self.Sigma_inv + self.M.T @ self.C_inv @ self.M).inverse() @ (
-                self.Sigma_inv @ self.mu + self.M.T @ self.C_inv @ (torch.as_tensor(x).float() - self.m)),
-                                         cov=(
-                                                 self.Sigma_inv + self.M.T @ self.C_inv @
-                                                 self.M).inverse())
+        D0 = self.m + self.M @ self.mu
+        mean = self.mu + self.Sigma @ self.M.T @ np.linalg.inv(self.C) @ (torch.as_tensor(x).float() - D0)
+        post = stats.multivariate_normal(mean=mean, cov=(self.Sigma_inv + self.M.T @ self.C_inv @
+                                                         self.M).inverse())
         z = post.rvs()
         posterior = (z, post.logpdf(z))
         return posterior
