@@ -43,9 +43,9 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
         posterior_theta = np.empty(shape=(len(posterior), nreSettings.num_features))
         weights = np.empty(shape=len(posterior))
         for i, sample in enumerate(posterior):
-            theta, weight = sample
+            theta, logweight = sample
             posterior_theta[i, :] = theta
-            weights[i] = weight
+            weights[i] = np.exp(logweight)
 
         mcmc_true = MCMCSamples(
             data=posterior_theta, weights=weights.squeeze(),
@@ -53,22 +53,27 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
 
     # triangle plot
     if nreSettings.plot_triangle_plot:
-        fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=False,
+        kinds = {'lower': 'kde_2d', 'diagonal': 'kde_1d', 'upper': "scatter_2d"}
+        fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=True,
                                  ticks="outer")
-        if nreSettings.true_contours_available:
-            mcmc_true.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
-                              kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
-
+        last_round_samples = samples_storage[nreSettings.NRE_num_retrain_rounds]
+        prior = last_round_samples.prior()
+        prior.plot_2d(axes=axes, alpha=0.4, label="prior", kinds=kinds)
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             nested = samples_storage[rd]
-            nested.plot_2d(axes=axes, alpha=0.4, label=f"rd {rd}",
-                           kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+            nested.plot_2d(axes=axes, alpha=0.4, label=fr"$p(\theta|D)_{rd}$",
+                           kinds=kinds)
+        if nreSettings.true_contours_available:
+            mcmc_true.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
+                              kinds=kinds)
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
+        # load prior from last round
         fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
 
     # data and param triangle plot
     if nreSettings.plot_triangle_plot_ext:
+        kinds = {'lower': 'scatter_2d', 'diagonal': 'kde_1d'}
         fig, axes = make_2d_axes(params_idx_ext, labels=params_labels_ext, lower=True, diagonal=True, upper=False,
                                  ticks="outer")
         if nreSettings.true_contours_available:
@@ -96,7 +101,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
             joints = joints[nreSettings.obsKey]
             for nd in range(nreSettings.num_features, nreSettings.num_features + nreSettings.num_features_dataset):
                 nested[nd] = joints[:, nd - nreSettings.num_features]
-            nested.plot_2d(axes=axes, alpha=0.4, label=f"rd_{rd}", kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
+            nested.plot_2d(axes=axes, alpha=0.4, label=f"rd_{rd}", kinds=kinds)
 
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
