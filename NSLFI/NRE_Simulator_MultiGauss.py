@@ -17,7 +17,7 @@ class Simulator(swyft.Simulator):
         self.C = torch.eye(self.d)  # cov matrix of dataset
         # C very small, or Sigma very big
         self.mu = torch.zeros(self.n)  # mean vec of parameter prior
-        self.Sigma = torch.eye(self.n)  # cov matrix of parameter prior
+        self.Sigma = 100 * torch.eye(self.n)  # cov matrix of parameter prior
         self.Sigma_inv = torch.inverse(self.Sigma)
         self.C_inv = torch.inverse(self.C)
         self.z_sampler = stats.multivariate_normal(mean=self.mu, cov=self.Sigma).rvs
@@ -25,8 +25,7 @@ class Simulator(swyft.Simulator):
     def xgivenz(self, z):
         return stats.multivariate_normal(mean=(self.m + self.M @ z), cov=self.C).rvs()
 
-    def logratio(self, x, post):
-        z, w = post
+    def logratio(self, x, z):
         loglike = stats.multivariate_normal(mean=(self.m + self.M @ z), cov=self.C).logpdf(x)
         logevidence = stats.multivariate_normal(mean=(self.m + self.M @ self.mu),
                                                 cov=(self.C + self.M @ self.Sigma @ self.M.T)).logpdf(x)
@@ -39,9 +38,8 @@ class Simulator(swyft.Simulator):
         mean = self.mu + self.Sigma @ self.M.T @ np.linalg.inv(self.C) @ (torch.as_tensor(x).float() - D0)
         post = stats.multivariate_normal(mean=mean, cov=(self.Sigma_inv + self.M.T @ self.C_inv @
                                                          self.M).inverse())
-        z = post.rvs()
-        posterior = (z, post.logpdf(z))
-        return posterior
+
+        return post.rvs()
 
     def build(self, graph):
         z = graph.node(self.nreSettings.targetKey, self.z_sampler)

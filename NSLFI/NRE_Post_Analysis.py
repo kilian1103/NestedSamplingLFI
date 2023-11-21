@@ -38,18 +38,16 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
         dkl_storage_true = []
         cond = {nreSettings.obsKey: obs[nreSettings.obsKey].numpy().squeeze()}
         full_joint = sim.sample(nreSettings.n_weighted_samples, conditions=cond)
-        true_logLikes = torch.as_tensor(full_joint[nreSettings.contourKey])
+        true_logratios = torch.as_tensor(full_joint[nreSettings.contourKey])
         posterior = full_joint[nreSettings.posteriorsKey]
         posterior_theta = np.empty(shape=(len(posterior), nreSettings.num_features))
-        weights = np.empty(shape=len(posterior))
+        weights = np.ones(shape=len(posterior))  # direct samples from posterior have weights 1
         for i, sample in enumerate(posterior):
-            theta, logweight = sample
-            posterior_theta[i, :] = theta
-            weights[i] = np.exp(logweight)
+            posterior_theta[i, :] = sample
 
         mcmc_true = MCMCSamples(
             data=posterior_theta, weights=weights.squeeze(),
-            logL=true_logLikes, labels=params_labels)
+            logL=true_logratios, labels=params_labels)
 
     # triangle plot
     if nreSettings.plot_triangle_plot:
@@ -82,7 +80,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
                 data=torch.cat(
                     (torch.as_tensor(full_joint[nreSettings.targetKey]),
                      torch.as_tensor(full_joint[nreSettings.obsKey])), dim=1),
-                logL=true_logLikes,
+                logL=true_logratios,
                 weights=weights, labels=params_labels_ext)
             mcmc_true_ext = mcmc_true_ext.compress(nreSettings.n_compressed_weighted_samples).drop_duplicates()
             mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
