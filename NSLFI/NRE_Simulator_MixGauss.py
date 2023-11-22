@@ -51,16 +51,13 @@ class Simulator(swyft.Simulator):
         rv = stats.multivariate_normal(mean=mean.squeeze(), cov=cov.squeeze()).rvs()
         return rv
 
-    def logratio(self, x, post):
-        z, w = post
+    def logratio(self, x, z):
         logratio = self.model.likelihood(z).logpdf(x) - self.model.evidence().logpdf(x)
         return logratio
 
     def posterior(self, x):
         post = self.model.posterior(x)
-        z = post.rvs()
-        posterior = (z, post.logpdf(z))
-        return posterior
+        return post.rvs()
 
     def prior(self):
         return self.model.prior().rvs()
