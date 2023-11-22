@@ -24,9 +24,18 @@ class Network(swyft.SwyftModule):
     def forward(self, A, B):
         return self.network(A[self.nreSettings.obsKey], B[self.nreSettings.targetKey])
 
-    def prior(self, cube) -> np.ndarray:
+    def prior_flow(self, cube) -> np.ndarray:
         """Transforms the unit cube to the prior cube."""
         return self.nreSettings.flow(cube.reshape(1, self.nreSettings.num_features)).numpy().squeeze()
+
+    def prior(self, cube) -> np.ndarray:
+        """Transforms the unit cube to the prior cube."""
+        theta = self.nreSettings.model.prior().bijector(x=cube)
+        return theta
+
+    # def prior(self, cube) -> np.ndarray:
+    #     theta = scipy.stats.norm(loc=0, scale=10).ppf(cube)
+    #     return theta
 
     def logLikelihood(self, theta: np.ndarray) -> Tuple[Any, List]:
         """Computes the loglikelihood ("NRE") of the given theta."""

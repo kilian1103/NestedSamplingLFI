@@ -21,8 +21,8 @@ class NRE_Settings:
         self.targetKey = "z"
         self.contourKey = "l"
         self.posteriorsKey = "post"
-        self.num_features = 4
-        self.num_features_dataset = 10
+        self.num_features = 5
+        self.num_features_dataset = 15
         self.num_mixture_components = 4
         # network settings
         self.device = "cpu"
@@ -34,11 +34,14 @@ class NRE_Settings:
         self.datamodule_fractions = [0.8, 0.1, 0.1]
         # polychord settings
         self.nderived = 0
+        self.flow = None
+        self.model = None
         # NSNRE settings
         self.cyclic_rounds = True
         self.NRE_num_retrain_rounds = 5
         self.NRE_start_from_round = 0
         self.termination_abs_dkl = 0.2
+        self.n_DKL_estimates = 100
         # plotting settings
         self.only_plot_mode = False
         self.true_contours_available = True

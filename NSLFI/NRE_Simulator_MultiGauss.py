@@ -1,7 +1,6 @@
-import numpy as np
-import scipy.stats as stats
 import swyft
 import torch
+from lsbi.model import LinearModel
 
 from NSLFI.NRE_Settings import NRE_Settings
 
@@ -20,26 +19,31 @@ class Simulator(swyft.Simulator):
         self.Sigma = 100 * torch.eye(self.n)  # cov matrix of parameter prior
         self.Sigma_inv = torch.inverse(self.Sigma)
         self.C_inv = torch.inverse(self.C)
-        self.z_sampler = stats.multivariate_normal(mean=self.mu, cov=self.Sigma).rvs
+        self.model = LinearModel(M=self.M, C=self.C, Sigma=self.Sigma, mu=self.mu, m=self.m, n=self.n, d=self.d)
+        # self.z_sampler = stats.multivariate_normal(mean=self.mu, cov=self.Sigma).rvs
+        self.z_sampler = self.model.prior().rvs
 
     def xgivenz(self, z):
-        return stats.multivariate_normal(mean=(self.m + self.M @ z), cov=self.C).rvs()
+        # return stats.multivariate_normal(mean=(self.m + self.M @ z), cov=self.C).rvs()
+        return self.model.likelihood(z).rvs()
 
     def logratio(self, x, z):
-        loglike = stats.multivariate_normal(mean=(self.m + self.M @ z), cov=self.C).logpdf(x)
-        logevidence = stats.multivariate_normal(mean=(self.m + self.M @ self.mu),
-                                                cov=(self.C + self.M @ self.Sigma @ self.M.T)).logpdf(x)
-        logratio = loglike - logevidence
+        # loglike = stats.multivariate_normal(mean=(self.m + self.M @ z), cov=self.C).logpdf(x)
+        # logevidence = stats.multivariate_normal(mean=(self.m + self.M @ self.mu),
+        #                                         cov=(self.C + self.M @ self.Sigma @ self.M.T)).logpdf(x)
+        # logratio = loglike - logevidence
+        logratio = self.model.likelihood(z).logpdf(x) - self.model.evidence().logpdf(x)
         return logratio
 
     def zgivenx(self, x):
         """Posterior weights"""
-        D0 = self.m + self.M @ self.mu
-        mean = self.mu + self.Sigma @ self.M.T @ np.linalg.inv(self.C) @ (torch.as_tensor(x).float() - D0)
-        post = stats.multivariate_normal(mean=mean, cov=(self.Sigma_inv + self.M.T @ self.C_inv @
-                                                         self.M).inverse())
-
-        return post.rvs()
+        # D0 = self.m + self.M @ self.mu
+        # mean = self.mu + self.Sigma @ self.M.T @ np.linalg.inv(self.C) @ (torch.as_tensor(x).float() - D0)
+        # post = stats.multivariate_normal(mean=mean, cov=(self.Sigma_inv + self.M.T @ self.C_inv @
+        #                                                  self.M).inverse())
+        #
+        # return post.rvs()
+        return self.model.posterior(x).rvs()
 
     def build(self, graph):
         z = graph.node(self.nreSettings.targetKey, self.z_sampler)
