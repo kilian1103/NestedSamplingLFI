@@ -32,7 +32,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     # load data for plots
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
         samples = anesthetic.read_chains(root=f"{root_storage[f'round_{rd}']}/{polyset.file_root}")
-        samples_storage.append(samples)
+        samples_storage.append(samples.copy())
 
     if nreSettings.true_contours_available:
         dkl_storage_true = []
@@ -55,6 +55,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
         fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=True,
                                  ticks="outer")
         last_round_samples = samples_storage[nreSettings.NRE_num_retrain_rounds]
+        # load prior from last round
         prior = last_round_samples.prior()
         prior.plot_2d(axes=axes, alpha=0.4, label="prior", kinds=kinds)
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
@@ -66,8 +67,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
                               kinds=kinds)
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
-        # load prior from last round
-        fig.savefig(f"{root}/NRE_triangle_posterior.pdf")
+        fig.savefig(f"{root}/NRE_triangle_posterior_full.pdf")
 
     # data and param triangle plot
     if nreSettings.plot_triangle_plot_ext:

@@ -44,23 +44,7 @@ def execute():
     # broadcast samples to all ranks
     training_samples = comm_gen.bcast(training_samples, root=0)
     comm_gen.Barrier()
-    #### set up margarine for PolyChord Prior
-    # if rank_gen == 0:
-    #     training_samples_maf = sim.sample(nreSettings.n_weighted_samples)[nreSettings.targetKey]
-    #     weights = stats.multivariate_normal(mean=sim.mu, cov=sim.Sigma).logpdf(training_samples_maf)
-    # else:
-    #     training_samples_maf = torch.empty((nreSettings.n_weighted_samples, nreSettings.num_features))
-    #     weights = torch.empty((nreSettings.n_weighted_samples, 1))
-    # training_samples_maf = comm_gen.bcast(training_samples_maf, root=0)
-    # weights = comm_gen.bcast(weights, root=0)
-    # flow = MAF(training_samples_maf, weights=weights)
-    # comm_gen.Barrier()
-    # if rank_gen == 0:
-    #     flow.train(epochs=100, early_stop=True)
-    #     flow.save(filename="flow_MVG.pkl")
-    # comm_gen.Barrier()
-    # flow = MAF.load(filename="flow_MVG.pkl")
-    # nreSettings.flow = flow
+
     #### instantiate swyft network
     network = Network(nreSettings=nreSettings, obs=obs)
     dm = swyft.SwyftDataModule(data=training_samples, fractions=nreSettings.datamodule_fractions, num_workers=0,
