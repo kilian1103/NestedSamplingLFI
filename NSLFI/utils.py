@@ -70,9 +70,10 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
     root = nreSettings.root
     for rd in range(nreSettings.NRE_num_retrain_rounds + 1):
         current_root = f"{root}_round_{rd}"
-        network.load_state_dict(torch.load(f"{current_root}/{nreSettings.neural_network_file}"))
-        network.double()  # change to float64 precision of network
-        network_storage[f"round_{rd}"] = network
+        new_network = network.get_new_network()
+        new_network.load_state_dict(torch.load(f"{current_root}/{nreSettings.neural_network_file}"))
+        new_network.double()  # change to float64 precision of network
+        network_storage[f"round_{rd}"] = new_network
         root_storage[f"round_{rd}"] = current_root
     return root_storage, network_storage
 
