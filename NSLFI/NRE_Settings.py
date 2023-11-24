@@ -41,6 +41,8 @@ class NRE_Settings:
         self.NRE_start_from_round = 0
         self.termination_abs_dkl = 0.2
         self.n_DKL_estimates = 100
+        self.nlives_per_dim_dic = {rd: 25 * self.num_features for rd in
+                                   range(self.NRE_num_retrain_rounds + 1)}
         # plotting settings
         self.only_plot_mode = False
         self.true_contours_available = True

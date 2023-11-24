@@ -62,7 +62,10 @@ def execute():
                                             checkpoint_callback])
 
     #### set up polychord settings
-    nlive_per_dim = 1000
+    nlive_per_dim = 25
+    nlives_per_dim_dic = {rd: (rd + 1) * 25 * nreSettings.num_features for rd in
+                          range(nreSettings.NRE_num_retrain_rounds + 1)}
+    nreSettings.nlives_per_dim_dic = nlives_per_dim_dic
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
     polyset.file_root = "samples"
     polyset.base_dir = nreSettings.root
