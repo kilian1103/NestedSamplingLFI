@@ -49,9 +49,10 @@ class PolySwyft:
                 deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
                 if i > 0:
                     previous_network = self.network_storage[f"round_{i - 1}"]
-                    DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network,
+                    DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
                                                 current_samples=deadpoints.copy(), obs=self.obs)
                     self.dkl_storage.append(DKL)
+
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
             deadpoints = torch.as_tensor(deadpoints.to_numpy())
             self.training_samples = deadpoints
@@ -120,7 +121,7 @@ class PolySwyft:
         deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
         if rd >= 1:
             previous_network = self.network_storage[f"round_{rd - 1}"]
-            DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network,
+            DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
                                         current_samples=deadpoints, obs=self.obs)
             self.dkl_storage.append(DKL)
             self.logger.info(f"DKL of rd {rd} is: {DKL}")
