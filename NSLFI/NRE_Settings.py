@@ -47,6 +47,7 @@ class NRE_Settings:
         self.only_plot_mode = False
         self.true_contours_available = True
         self.plot_triangle_plot = True
+        self.triangle_zoom_start = 3
         self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
         self.plot_quantile_plot = True

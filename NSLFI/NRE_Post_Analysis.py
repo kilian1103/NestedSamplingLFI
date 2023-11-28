@@ -72,7 +72,8 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
         ### zoomed in triangle plot
         fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=True,
                                  ticks="outer")
-        for rd in range(nreSettings.NRE_num_retrain_rounds - 3, nreSettings.NRE_num_retrain_rounds + 1):
+        for rd in range(nreSettings.triangle_zoom_start,
+                        nreSettings.NRE_num_retrain_rounds + 1):
             nested = samples_storage[rd]
             nested.plot_2d(axes=axes, alpha=0.4, label=fr"$p(\theta|D)_{rd}$",
                            kinds=kinds)
