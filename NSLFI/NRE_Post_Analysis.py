@@ -69,6 +69,20 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
         fig.savefig(f"{root}/NRE_triangle_posterior_full.pdf")
 
+        ### zoomed in triangle plot
+        fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=True,
+                                 ticks="outer")
+        for rd in range(nreSettings.NRE_num_retrain_rounds - 3, nreSettings.NRE_num_retrain_rounds + 1):
+            nested = samples_storage[rd]
+            nested.plot_2d(axes=axes, alpha=0.4, label=fr"$p(\theta|D)_{rd}$",
+                           kinds=kinds)
+        if nreSettings.true_contours_available:
+            mcmc_true.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
+                              kinds=kinds)
+        axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
+                                ncols=nreSettings.NRE_num_retrain_rounds + 2)
+        fig.savefig(f"{root}/NRE_triangle_posterior_zoom.pdf")
+
     # data and param triangle plot
     if nreSettings.plot_triangle_plot_ext:
         kinds = {'lower': 'scatter_2d', 'diagonal': 'kde_1d'}
