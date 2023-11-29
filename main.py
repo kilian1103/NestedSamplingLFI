@@ -63,16 +63,12 @@ def execute():
 
     #### set up polychord settings
     nlive_per_dim = 25
-    nlives_per_dim_dic = {rd: (rd + 1) * 25 * nreSettings.num_features for rd in
-                          range(nreSettings.NRE_num_retrain_rounds + 1)}
-    nreSettings.nlives_per_dim_dic = nlives_per_dim_dic
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
     polyset.file_root = "samples"
     polyset.base_dir = nreSettings.root
     polyset.seed = nreSettings.seed
     polyset.nfail = nlive_per_dim * nreSettings.n_training_samples
-    polyset.nprior = nreSettings.n_training_samples
-    polyset.nlive = nlive_per_dim * nreSettings.num_features
+    polyset.nprior = nreSettings.n_weighted_samples
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
                           network=network, polyset=polyset, dm=dm, trainer=trainer)
 
