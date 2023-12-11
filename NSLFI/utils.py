@@ -40,7 +40,8 @@ def select_weighted_contour(data: NestedSamples, threshold: float) -> int:
 
 
 def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.SwyftModule,
-                          current_samples: anesthetic.Samples, obs: swyft.Sample) -> Tuple[float, float]:
+                          current_samples: anesthetic.Samples, previous_samples: anesthetic.Samples,
+                          obs: swyft.Sample) -> Tuple[float, float, float, float]:
     """Compute the KL divergence between the previous and current NRE."""
 
     samples = {nreSettings.targetKey: torch.as_tensor(current_samples.iloc[:, :nreSettings.num_features].to_numpy())}
@@ -53,14 +54,23 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
         DKL = (current_samples["logL"] - current_samples["logL_previous"]).mean()
         DKL_err = (current_samples["logL"] - current_samples["logL_previous"]).std() / np.sqrt(
             len(current_samples["logL"]))
+        DKL_corrected = 0
+        DKL_err_corrected = 0
     else:
-        current_samples["log_pq"] = current_samples["logL"] - current_samples["logL_previous"]
+        logXPrev = np.interp(x=current_samples["logL_previous"], xp=previous_samples.logL, fp=previous_samples.logX())
+        current_samples["log_pq"] = current_samples["logL"] - current_samples[
+            "logL_previous"]
+        current_samples["log_pq_corrected"] = current_samples["logL"] - current_samples[
+            "logL_previous"] + current_samples.logX() - logXPrev
         logw = current_samples.logw(nreSettings.n_DKL_estimates)
         logw -= logsumexp(logw, axis=0)
         DKL_estimates = (np.exp(logw).T * current_samples["log_pq"]).sum(axis=1)
+        DKL_estimates_corrected = ((np.exp(logw).T * current_samples["log_pq_corrected"]).sum(axis=1))
         DKL = DKL_estimates.mean()
         DKL_err = DKL_estimates.std()
-    return DKL, DKL_err
+        DKL_corrected = DKL_estimates_corrected.mean()
+        DKL_err_corrected = DKL_estimates_corrected.std()
+    return DKL, DKL_err, DKL_corrected, DKL_err_corrected
 
 
 def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule) -> Tuple[

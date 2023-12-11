@@ -30,6 +30,7 @@ class PolySwyft:
         self.network_storage = dict()
         self.root_storage = dict()
         self.dkl_storage = list()
+        self.deadpoints_storage = dict()
 
     def execute_NSNRE_cycle(self):
         # retrain NRE and sample new samples with NS loop
@@ -47,10 +48,12 @@ class PolySwyft:
                 self.network_storage[f"round_{i}"] = new_network
                 self.root_storage[f"round_{i}"] = root
                 deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
+                self.deadpoints_storage[i] = deadpoints
                 if i > 0:
                     previous_network = self.network_storage[f"round_{i - 1}"]
                     DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
-                                                current_samples=deadpoints.copy(), obs=self.obs)
+                                                current_samples=deadpoints.copy(), obs=self.obs,
+                                                previous_samples=self.deadpoints_storage[i - 1])
                     self.dkl_storage.append(DKL)
 
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
@@ -119,10 +122,12 @@ class PolySwyft:
 
         ### load deadpoints and compute KL divergence and reassign to training samples ###
         deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
+        self.deadpoints_storage[rd] = deadpoints
         if rd >= 1:
             previous_network = self.network_storage[f"round_{rd - 1}"]
             DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
-                                        current_samples=deadpoints, obs=self.obs)
+                                        current_samples=deadpoints, obs=self.obs,
+                                        previous_samples=self.deadpoints_storage[rd - 1])
             self.dkl_storage.append(DKL)
             self.logger.info(f"DKL of rd {rd} is: {DKL}")
         comm_gen.Barrier()

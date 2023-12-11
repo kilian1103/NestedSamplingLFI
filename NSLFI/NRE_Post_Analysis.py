@@ -40,13 +40,10 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
         full_joint = sim.sample(nreSettings.n_weighted_samples, conditions=cond)
         true_logratios = torch.as_tensor(full_joint[nreSettings.contourKey])
         posterior = full_joint[nreSettings.posteriorsKey]
-        posterior_theta = np.empty(shape=(len(posterior), nreSettings.num_features))
         weights = np.ones(shape=len(posterior))  # direct samples from posterior have weights 1
-        for i, sample in enumerate(posterior):
-            posterior_theta[i, :] = sample
 
         mcmc_true = MCMCSamples(
-            data=posterior_theta, weights=weights.squeeze(),
+            data=posterior, weights=weights.squeeze(),
             logL=true_logratios, labels=params_labels)
 
     # triangle plot
@@ -126,18 +123,22 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
             if nreSettings.true_contours_available:
                 previous_network = network_storage[f"round_{rd}"]
                 KDL_true = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network.eval(),
-                                                 current_samples=mcmc_true.copy(), obs=obs)
+                                                 current_samples=mcmc_true.copy(), obs=obs,
+                                                 previous_samples=samples_storage[rd])
                 dkl_storage_true.append(KDL_true)
             if rd != 0:
                 nested = samples_storage[rd]
                 previous_network = network_storage[f"round_{rd - 1}"]
                 KDL = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network.eval(),
-                                            current_samples=nested, obs=obs)
+                                            current_samples=nested, obs=obs, previous_samples=samples_storage[rd - 1])
                 dkl_storage.append(KDL)
         plt.figure()
         plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],
                      yerr=[x[1] for x in dkl_storage],
                      label=r"$KL \mathrm{NRE}_i / \mathrm{NRE}_{i-1}$")
+        plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[2] for x in dkl_storage],
+                     yerr=[x[3] for x in dkl_storage],
+                     label=r"$KL \mathrm{NRE}_i / \mathrm{NRE}_{i-1}, corr$")
         if nreSettings.true_contours_available:
             plt.errorbar(x=[x for x in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
                          y=[x[0] for x in dkl_storage_true],
