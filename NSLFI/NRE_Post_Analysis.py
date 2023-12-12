@@ -128,7 +128,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
                 dkl_storage_true.append(KDL_true)
             if rd != 0:
                 nested = samples_storage[rd]
-                previous_network = network_storage[rd]
+                previous_network = network_storage[rd - 1]
                 KDL = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network.eval(),
                                             current_samples=nested, obs=obs, previous_samples=samples_storage[rd - 1])
                 dkl_storage.append(KDL)
