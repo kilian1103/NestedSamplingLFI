@@ -13,7 +13,7 @@ from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.utils import compute_KL_divergence
 
 
-def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[str, swyft.SwyftModule],
+def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[int, swyft.SwyftModule],
                            nreSettings: NRE_Settings, polyset: PolyChordSettings, sim: swyft.Simulator,
                            obs: swyft.Sample):
     # set up labels for plotting
@@ -27,11 +27,11 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     params_idx_ext = [i for i in range(0, nreSettings.num_features + nreSettings.num_features_dataset)]
     samples_storage = []
     dkl_storage = []
-    root = root_storage[f"round_{nreSettings.NRE_num_retrain_rounds}"]
+    root = root_storage[nreSettings.NRE_num_retrain_rounds]
 
     # load data for plots
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-        samples = anesthetic.read_chains(root=f"{root_storage[f'round_{rd}']}/{polyset.file_root}")
+        samples = anesthetic.read_chains(root=f"{root_storage[rd]}/{polyset.file_root}")
         samples_storage.append(samples.copy())
 
     if nreSettings.true_contours_available:
@@ -121,14 +121,14 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     if nreSettings.plot_KL_divergence:
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             if nreSettings.true_contours_available:
-                previous_network = network_storage[f"round_{rd}"]
+                previous_network = network_storage[rd]
                 KDL_true = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network.eval(),
                                                  current_samples=mcmc_true.copy(), obs=obs,
                                                  previous_samples=samples_storage[rd])
                 dkl_storage_true.append(KDL_true)
             if rd != 0:
                 nested = samples_storage[rd]
-                previous_network = network_storage[f"round_{rd - 1}"]
+                previous_network = network_storage[rd]
                 KDL = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network.eval(),
                                             current_samples=nested, obs=obs, previous_samples=samples_storage[rd - 1])
                 dkl_storage.append(KDL)
@@ -152,7 +152,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[str, str], network_storage: Dict[s
     # plot quantile plot of training dataset
     if nreSettings.plot_quantile_plot:
         for i in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-            root = root_storage[f"round_{i}"]
+            root = root_storage[i]
             samples = read_chains(root=f"{root}/{polyset.file_root}")
             samples = samples.iloc[:, :nreSettings.num_features]
             plot_quantile_plot(samples=samples, nreSettings=nreSettings, root=root)

@@ -45,12 +45,12 @@ class PolySwyft:
                 new_network = self.network.get_new_network()
                 new_network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
                 new_network.double()  # change to float64 precision of network
-                self.network_storage[f"round_{i}"] = new_network
-                self.root_storage[f"round_{i}"] = root
+                self.network_storage[i] = new_network
+                self.root_storage[i] = root
                 deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
                 self.deadpoints_storage[i] = deadpoints
                 if i > 0:
-                    previous_network = self.network_storage[f"round_{i - 1}"]
+                    previous_network = self.network_storage[i - 1]
                     DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
                                                 current_samples=deadpoints.copy(), obs=self.obs,
                                                 previous_samples=self.deadpoints_storage[i - 1])
@@ -105,8 +105,8 @@ class PolySwyft:
         ### load saved network and save it in network_storage ###
         new_network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
         new_network.double()  # change to float64 precision of network
-        self.network_storage[f"round_{rd}"] = new_network
-        self.root_storage[f"round_{rd}"] = root
+        self.network_storage[rd] = new_network
+        self.root_storage[rd] = root
         self.logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
 
         ### start polychord section ###
@@ -124,7 +124,7 @@ class PolySwyft:
         deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
         self.deadpoints_storage[rd] = deadpoints
         if rd >= 1:
-            previous_network = self.network_storage[f"round_{rd - 1}"]
+            previous_network = self.network_storage[rd - 1]
             DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
                                         current_samples=deadpoints, obs=self.obs,
                                         previous_samples=self.deadpoints_storage[rd - 1])

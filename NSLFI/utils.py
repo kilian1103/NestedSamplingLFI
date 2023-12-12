@@ -74,7 +74,7 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
 
 
 def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule) -> Tuple[
-    Dict[str, str], Dict[str, swyft.SwyftModule]]:
+    Dict[int, str], Dict[int, swyft.SwyftModule]]:
     network_storage = {}
     root_storage = {}
     root = nreSettings.root
@@ -83,8 +83,8 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
         new_network = network.get_new_network()
         new_network.load_state_dict(torch.load(f"{current_root}/{nreSettings.neural_network_file}"))
         new_network.double()  # change to float64 precision of network
-        network_storage[f"round_{rd}"] = new_network
-        root_storage[f"round_{rd}"] = current_root
+        network_storage[rd] = new_network
+        root_storage[rd] = current_root
     return root_storage, network_storage
 
 
