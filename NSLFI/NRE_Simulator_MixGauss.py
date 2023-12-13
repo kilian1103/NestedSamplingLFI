@@ -18,7 +18,7 @@ class Simulator(swyft.Simulator):
         self.mu_theta = torch.randn(size=(self.a, self.n)) * 3  # random mean vec of parameter
         self.M = torch.randn(size=(self.a, self.d, self.n))  # random transform matrix of param to data space vec
         self.mu_data = torch.randn(size=(self.a, self.d)) * 3  # random mean vec of data
-        self.Sigma = 100 * torch.eye(self.n)  # cov matrix of parameter prior
+        self.Sigma = torch.eye(self.n)  # cov matrix of parameter prior
         self.S = torch.eye(self.d)  # cov matrix of dataset
         self.X = self.M @ self.Sigma  # covariance entries between data and parameter
         self.model = LinearMixtureModel(M=self.M, C=self.S, Sigma=self.Sigma, mu=self.mu_theta,
