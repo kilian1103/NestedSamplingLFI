@@ -27,10 +27,10 @@ class NRE_Settings:
         # network settings
         self.device = "cpu"
         self.dropout = 0.3
-        self.early_stopping_patience = 3
-        self.max_epochs = 50
+        self.early_stopping_patience = 5
+        self.max_epochs = 1000
         self.learning_rate_init = 0.001
-        self.learning_rate_decay = 0.1
+        self.learning_rate_decay = 0.95
         self.datamodule_fractions = [0.8, 0.1, 0.1]
         # polychord settings
         self.nderived = 0
@@ -47,7 +47,7 @@ class NRE_Settings:
         self.only_plot_mode = False
         self.true_contours_available = True
         self.plot_triangle_plot = True
-        self.triangle_zoom_start = 3
+        self.triangle_zoom_start = 0
         self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
         self.plot_quantile_plot = True
