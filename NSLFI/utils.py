@@ -41,7 +41,7 @@ def select_weighted_contour(data: NestedSamples, threshold: float) -> int:
 
 def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.SwyftModule,
                           current_samples: anesthetic.Samples, previous_samples: anesthetic.Samples,
-                          obs: swyft.Sample) -> Tuple[float, float, float, float]:
+                          obs: swyft.Sample) -> Tuple[float, float]:
     """Compute the KL divergence between the previous and current NRE."""
 
     samples = {nreSettings.targetKey: torch.as_tensor(current_samples.iloc[:, :nreSettings.num_features].to_numpy())}
@@ -51,26 +51,28 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
 
     if isinstance(current_samples, anesthetic.MCMCSamples):
         # MCMC samples for true samples do not have logw functionality
-        DKL = (current_samples["logL"] - current_samples["logL_previous"]).mean()
-        DKL_err = (current_samples["logL"] - current_samples["logL_previous"]).std() / np.sqrt(
-            len(current_samples["logL"]))
-        DKL_corrected = 0
-        DKL_err_corrected = 0
+        posterior = current_samples.iloc[:, :nreSettings.num_features].squeeze()
+        true_posterior = nreSettings.model.posterior(obs[nreSettings.obsKey].numpy().squeeze()).logpdf(posterior)
+        true_prior = nreSettings.model.prior().logpdf(posterior)
+        current_samples.logL = true_posterior
+        current_samples["logR"] = current_samples["logL_previous"]
+        DKL = (current_samples.logL - current_samples["logR"] - true_prior + previous_samples.logZ()).mean()
+        DKL_err = (current_samples.logL - current_samples[
+            "logR"] - true_prior + previous_samples.logZ()).std() / np.sqrt(
+            len(current_samples.logL))
     else:
         logXPrev = np.interp(x=current_samples["logL_previous"], xp=previous_samples.logL, fp=previous_samples.logX())
-        current_samples["log_pq"] = current_samples["logL"] - current_samples[
-            "logL_previous"]
-        current_samples["log_pq_corrected"] = current_samples["logL"] - current_samples[
-            "logL_previous"] + current_samples.logX() - logXPrev
+        logXnorm_current = logsumexp(-(current_samples.logdX() - current_samples.logX()))
+        logXnorm_previous = logsumexp(-(previous_samples.logdX() - previous_samples.logX()))
+        current_samples["log_pq"] = (current_samples["logL"] - current_samples[
+            "logL_previous"] - current_samples.logX() + logXPrev + logXnorm_current - logXnorm_previous -
+                                     current_samples.logZ() + previous_samples.logZ())
         logw = current_samples.logw(nreSettings.n_DKL_estimates)
         logw -= logsumexp(logw, axis=0)
         DKL_estimates = (np.exp(logw).T * current_samples["log_pq"]).sum(axis=1)
-        DKL_estimates_corrected = ((np.exp(logw).T * current_samples["log_pq_corrected"]).sum(axis=1))
         DKL = DKL_estimates.mean()
         DKL_err = DKL_estimates.std()
-        DKL_corrected = DKL_estimates_corrected.mean()
-        DKL_err_corrected = DKL_estimates_corrected.std()
-    return DKL, DKL_err, DKL_corrected, DKL_err_corrected
+    return DKL, DKL_err
 
 
 def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule) -> Tuple[

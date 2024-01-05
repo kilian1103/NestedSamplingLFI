@@ -94,7 +94,8 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
                      torch.as_tensor(full_joint[nreSettings.obsKey])), dim=1),
                 logL=true_logratios,
                 weights=weights, labels=params_labels_ext)
-            mcmc_true_ext = mcmc_true_ext.compress(nreSettings.n_compressed_weighted_samples).drop_duplicates()
+            mcmc_true_ext = mcmc_true_ext.compress(
+                nreSettings.n_compressed_weighted_samples).drop_duplicates()
             mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
                                   kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
 
@@ -135,9 +136,6 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
         plt.figure()
         plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in dkl_storage],
                      yerr=[x[1] for x in dkl_storage],
-                     label=r"$KL \mathrm{NRE}_i / \mathrm{NRE}_{i-1}$")
-        plt.errorbar(x=[x for x in range(1, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[2] for x in dkl_storage],
-                     yerr=[x[3] for x in dkl_storage],
                      label=r"$KL \mathrm{NRE}_i / \mathrm{NRE}_{i-1}, corr$")
         if nreSettings.true_contours_available:
             plt.errorbar(x=[x for x in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
