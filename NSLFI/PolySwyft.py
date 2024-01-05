@@ -40,20 +40,20 @@ class PolySwyft:
                     self.nreSettings.cyclic_rounds):
                 raise ValueError("NRE_start_from_round must be smaller than NRE_num_retrain_rounds")
             ### only execute this code when previous rounds are already trained ###
-            for i in range(0, self.nreSettings.NRE_start_from_round):
-                root = f"{self.nreSettings.root}_round_{i}"
+            for rd in range(0, self.nreSettings.NRE_start_from_round):
+                root = f"{self.nreSettings.root}_round_{rd}"
                 new_network = self.network.get_new_network()
                 new_network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
                 new_network.double()  # change to float64 precision of network
-                self.network_storage[i] = new_network
-                self.root_storage[i] = root
+                self.network_storage[rd] = new_network
+                self.root_storage[rd] = root
                 deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
-                self.deadpoints_storage[i] = deadpoints
-                if i > 0:
-                    previous_network = self.network_storage[i - 1]
+                self.deadpoints_storage[rd] = deadpoints
+                if rd > 0:
+                    previous_network = self.network_storage[rd - 1]
                     DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
                                                 current_samples=deadpoints.copy(), obs=self.obs,
-                                                previous_samples=self.deadpoints_storage[i - 1])
+                                                previous_samples=self.deadpoints_storage[rd - 1])
                     self.dkl_storage.append(DKL)
 
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
