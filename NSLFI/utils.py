@@ -57,9 +57,9 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
         current_samples.logL = true_posterior
         current_samples["logR"] = current_samples["logL_previous"]
         DKL = (current_samples.logL - current_samples["logR"] - true_prior + previous_samples.logZ()).mean()
-        DKL_err = (current_samples.logL - current_samples[
+        DKL_err = np.sqrt(((current_samples.logL - current_samples[
             "logR"] - true_prior + previous_samples.logZ()).std() / np.sqrt(
-            len(current_samples.logL))
+            len(current_samples.logL))) ** 2 + previous_samples.logZ(100).std() ** 2)
     else:
         current_samples["log_pq"] = (current_samples["logL"] - current_samples.logZ() - current_samples[
             "logL_previous"] + previous_samples.logZ())
@@ -67,7 +67,9 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
         logw -= logsumexp(logw, axis=0)
         DKL_estimates = (np.exp(logw).T * current_samples["log_pq"]).sum(axis=1)
         DKL = DKL_estimates.mean()
-        DKL_err = DKL_estimates.std()
+        DKL_err = np.sqrt(
+            DKL_estimates.std() ** 2 + current_samples.logZ(100).std() ** 2 + previous_samples.logZ(100).std() ** 2)
+
     return DKL, DKL_err
 
 
