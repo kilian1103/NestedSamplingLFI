@@ -11,7 +11,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from NSLFI.NRE_Network import Network
 from NSLFI.NRE_Post_Analysis import plot_analysis_of_NSNRE
 from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.NRE_Simulator_MultiGauss import Simulator
+from NSLFI.NRE_Simulator_MixGauss import Simulator
 from NSLFI.PolySwyft import PolySwyft
 from NSLFI.utils import reload_data_for_plotting
 
@@ -34,7 +34,7 @@ def execute():
     sim = Simulator(nreSettings=nreSettings)
     nreSettings.model = sim.model  # lsbi model
     # generate training dat and obs
-    obs = swyft.Sample(x=torch.tensor([nreSettings.num_features_dataset * [0]]))
+    obs = swyft.Sample(x=torch.tensor(sim.model.evidence().rvs()[None, :]))
     if rank_gen == 0:
         training_samples = torch.as_tensor(
             sim.sample(nreSettings.n_training_samples, targets=[nreSettings.targetKey])[
