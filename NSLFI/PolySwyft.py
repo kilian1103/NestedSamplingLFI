@@ -112,7 +112,7 @@ class PolySwyft:
         ### start polychord section ###
         ### Run PolyChord ###
         self.polyset.base_dir = root
-        self.polyset.nlive = self.nreSettings.nlives_per_dim_dic[rd]
+        self.polyset.nlive = self.nreSettings.nlives_per_round[rd]
         self.network.set_network(network=new_network)
         pypolychord.run_polychord(loglikelihood=self.network.logLikelihood,
                                   nDims=self.nreSettings.num_features,
