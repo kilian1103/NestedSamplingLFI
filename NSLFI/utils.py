@@ -35,7 +35,8 @@ def random_subset(dataset: Tensor, thinning_factor: float) -> Tensor:
 def select_weighted_contour(data: NestedSamples, threshold: float) -> int:
     """find the index of the sample that corresponds to the threshold of the cumulative weights."""
     cumulative_weights = data.get_weights().cumsum()
-    index = np.searchsorted(cumulative_weights / cumulative_weights[-1], threshold)
+    cumulative_weights_norm = cumulative_weights / cumulative_weights[-1]
+    index = np.searchsorted(cumulative_weights_norm, threshold)
     return index
 
 
