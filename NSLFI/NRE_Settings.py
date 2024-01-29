@@ -24,6 +24,8 @@ class NRE_Settings:
         self.num_features = 5
         self.num_features_dataset = 15
         self.num_mixture_components = 4
+        self.use_noise_resampling = True
+        self.n_noise_resampling_samples = 10
         # network settings
         self.device = "cpu"
         self.dropout = 0.3

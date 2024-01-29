@@ -98,7 +98,7 @@ class PolySwyft:
             new_network = retrain_next_round(root=root, training_data=self.training_samples,
                                              nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
                                              network=new_network, dm=self.dm,
-                                             trainer=new_trainer)
+                                             trainer=new_trainer, rd=rd)
         else:
             new_network = self.network.get_new_network()
         comm_gen.Barrier()
