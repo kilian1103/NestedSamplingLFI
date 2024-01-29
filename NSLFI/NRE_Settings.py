@@ -46,6 +46,8 @@ class NRE_Settings:
         self.nlives_per_dim_constant = 25
         self.nlives_per_round = {rd: self.nlives_per_dim_constant * self.num_features for rd in
                                  range(self.NRE_num_retrain_rounds + 1)}
+        self.use_dataset_clipping = True
+        self.dataset_posterior_clipping = 0.99
         # plotting settings
         self.only_plot_mode = False
         self.true_contours_available = True
@@ -53,6 +55,6 @@ class NRE_Settings:
         self.triangle_zoom_start = 0
         self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
-        self.plot_quantile_plot = True
+        self.plot_quantile_plot = False
         self.percentiles_of_quantile_plot = np.arange(0, 1.05, 0.05)
         self.n_compressed_weighted_samples = 100

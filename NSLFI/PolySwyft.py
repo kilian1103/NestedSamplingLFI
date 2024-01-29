@@ -11,7 +11,7 @@ from pypolychord import PolyChordSettings
 
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
-from NSLFI.utils import compute_KL_divergence
+from NSLFI.utils import compute_KL_divergence, select_weighted_contour
 
 
 class PolySwyft:
@@ -131,6 +131,10 @@ class PolySwyft:
             self.dkl_storage.append(DKL)
             self.logger.info(f"DKL of rd {rd} is: {DKL}")
         comm_gen.Barrier()
+        # TODO clipping 99% contour
+        if self.nreSettings.use_dataset_clipping:
+            index = select_weighted_contour(deadpoints, self.nreSettings.dataset_posterior_clipping)
+            deadpoints = deadpoints.truncate(index)
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         self.logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
