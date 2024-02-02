@@ -11,8 +11,8 @@ class Simulator(swyft.Simulator):
         self.nreSettings = nreSettings
         self.n = self.nreSettings.num_features
         self.d = self.nreSettings.num_features_dataset
-        self.m = torch.zeros(self.d)  # mean vec of dataset
-        self.M = torch.eye(n=self.d, m=self.n)  # transform matrix of dataset to parameter vee
+        self.m = torch.randn(self.d) * 3  # mean vec of dataset
+        self.M = torch.randn(size=(self.d, self.n))  # transform matrix of dataset to parameter vee
         self.C = torch.eye(self.d)  # cov matrix of dataset
         # C very small, or Sigma very big
         self.mu = torch.zeros(self.n)  # mean vec of parameter prior

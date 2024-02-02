@@ -34,6 +34,7 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
         else:
             sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
             samples.append(sample)
+    logger.info(f"Total number of samples for training: {len(samples)}")
     samples = reformat_samples(samples)
     training_data_swyft = swyft.Samples(samples)
     logger.info("Simulation done!")

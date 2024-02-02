@@ -15,7 +15,8 @@ class Simulator(swyft.Simulator):
         self.d = self.nreSettings.num_features_dataset
         self.a = self.nreSettings.num_mixture_components
         self.a_vec = self.a_sampler()
-        self.mu_theta = torch.randn(size=(self.a, self.n)) * 3  # random mean vec of parameter
+        # self.mu_theta = torch.randn(size=(1, self.n))  # random mean vec of parameter
+        self.mu_theta = torch.randn(size=(self.a, self.n)) * 3  #
         self.M = torch.randn(size=(self.a, self.d, self.n))  # random transform matrix of param to data space vec
         self.mu_data = torch.randn(size=(self.a, self.d)) * 3  # random mean vec of data
         self.Sigma = torch.eye(self.n)  # cov matrix of parameter prior
