@@ -31,7 +31,18 @@ def execute():
     logger.info('Started')
 
     #### instantiate swyft simulator
-    sim = Simulator(nreSettings=nreSettings)
+    n = nreSettings.num_features
+    d = nreSettings.num_features_dataset
+    a = nreSettings.num_mixture_components
+
+    # mu_theta = torch.randn(size=(1, n))  # random mean vec of parameter
+    mu_theta = torch.randn(size=(a, n)) * 3  #
+    M = torch.randn(size=(a, d, n))  # random transform matrix of param to data space vec
+    mu_data = torch.randn(size=(a, d)) * 3  # random mean vec of data
+    Sigma = torch.eye(n)  # cov matrix of parameter prior
+    S = 100_00 * torch.eye(d)  # cov matrix of dataset
+    sim = Simulator(nreSettings=nreSettings, mu_theta=mu_theta, M=M, mu_data=mu_data, Sigma=Sigma, S=S)
+
     nreSettings.model = sim.model  # lsbi model
     # generate training dat and obs
     obs = swyft.Sample(x=torch.tensor(sim.model.evidence().rvs()[None, :]))

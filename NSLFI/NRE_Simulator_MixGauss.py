@@ -8,22 +8,17 @@ from NSLFI.NRE_Settings import NRE_Settings
 
 
 class Simulator(swyft.Simulator):
-    def __init__(self, nreSettings: NRE_Settings):
+    def __init__(self, nreSettings: NRE_Settings, mu_theta: torch.Tensor, M: torch.Tensor, mu_data: torch.Tensor,
+                 Sigma: torch.Tensor, S: torch.Tensor):
         super().__init__()
         self.nreSettings = nreSettings
         self.n = self.nreSettings.num_features
         self.d = self.nreSettings.num_features_dataset
         self.a = self.nreSettings.num_mixture_components
         self.a_vec = self.a_sampler()
-        # self.mu_theta = torch.randn(size=(1, self.n))  # random mean vec of parameter
-        self.mu_theta = torch.randn(size=(self.a, self.n)) * 3  #
-        self.M = torch.randn(size=(self.a, self.d, self.n))  # random transform matrix of param to data space vec
-        self.mu_data = torch.randn(size=(self.a, self.d)) * 3  # random mean vec of data
-        self.Sigma = torch.eye(self.n)  # cov matrix of parameter prior
-        self.S = torch.eye(self.d)  # cov matrix of dataset
-        self.X = self.M @ self.Sigma  # covariance entries between data and parameter
-        self.model = LinearMixtureModel(M=self.M, C=self.S, Sigma=self.Sigma, mu=self.mu_theta,
-                                        m=self.mu_data, logA=np.log(self.a_vec), n=self.n, d=self.d, k=self.a)
+        self.X = M @ Sigma
+        self.model = LinearMixtureModel(M=M, C=S, Sigma=Sigma, mu=mu_theta,
+                                        m=mu_data, logA=np.log(self.a_vec), n=self.n, d=self.d, k=self.a)
 
     def a_sampler(self):
         a_components = np.random.rand(self.a)
