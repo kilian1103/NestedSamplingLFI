@@ -6,20 +6,14 @@ from NSLFI.NRE_Settings import NRE_Settings
 
 
 class Simulator(swyft.Simulator):
-    def __init__(self, nreSettings: NRE_Settings):
+    def __init__(self, nreSettings: NRE_Settings, m: torch.Tensor, M: torch.Tensor, C: torch.Tensor, mu: torch.Tensor,
+                 Sigma: torch.Tensor):
         super().__init__()
         self.nreSettings = nreSettings
         self.n = self.nreSettings.num_features
         self.d = self.nreSettings.num_features_dataset
-        self.m = torch.randn(self.d) * 3  # mean vec of dataset
-        self.M = torch.randn(size=(self.d, self.n))  # transform matrix of dataset to parameter vee
-        self.C = torch.eye(self.d)  # cov matrix of dataset
-        # C very small, or Sigma very big
-        self.mu = torch.zeros(self.n)  # mean vec of parameter prior
-        self.Sigma = 100 * torch.eye(self.n)  # cov matrix of parameter prior
-        self.Sigma_inv = torch.inverse(self.Sigma)
-        self.C_inv = torch.inverse(self.C)
-        self.model = LinearModel(M=self.M, C=self.C, Sigma=self.Sigma, mu=self.mu, m=self.m, n=self.n, d=self.d)
+        self.C_inv = torch.inverse(C)
+        self.model = LinearModel(M=M, C=C, Sigma=Sigma, mu=mu, m=m, n=self.n, d=self.d)
         # self.z_sampler = stats.multivariate_normal(mean=self.mu, cov=self.Sigma).rvs
         self.z_sampler = self.model.prior().rvs
 
