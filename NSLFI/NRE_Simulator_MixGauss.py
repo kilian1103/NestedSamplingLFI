@@ -9,7 +9,7 @@ from NSLFI.NRE_Settings import NRE_Settings
 
 class Simulator(swyft.Simulator):
     def __init__(self, nreSettings: NRE_Settings, mu_theta: torch.Tensor, M: torch.Tensor, mu_data: torch.Tensor,
-                 Sigma: torch.Tensor, S: torch.Tensor):
+                 Sigma: torch.Tensor, C: torch.Tensor):
         super().__init__()
         self.nreSettings = nreSettings
         self.n = self.nreSettings.num_features
@@ -17,7 +17,7 @@ class Simulator(swyft.Simulator):
         self.a = self.nreSettings.num_mixture_components
         self.a_vec = self.a_sampler()
         self.X = M @ Sigma
-        self.model = LinearMixtureModel(M=M, C=S, Sigma=Sigma, mu=mu_theta,
+        self.model = LinearMixtureModel(M=M, C=C, Sigma=Sigma, mu=mu_theta,
                                         m=mu_data, logA=np.log(self.a_vec), n=self.n, d=self.d, k=self.a)
 
     def a_sampler(self):

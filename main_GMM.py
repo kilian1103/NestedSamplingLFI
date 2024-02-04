@@ -35,13 +35,13 @@ def execute():
     d = nreSettings.num_features_dataset
     a = nreSettings.num_mixture_components
 
+    mu_data = torch.randn(size=(a, d)) * 3  # random mean vec of data
+    M = torch.randn(size=(a, d, n))  # random transform matrix of param to data space vec
+    C = torch.eye(d)  # cov matrix of dataset
     # mu_theta = torch.randn(size=(1, n))  # random mean vec of parameter
     mu_theta = torch.randn(size=(a, n)) * 3  #
-    M = torch.randn(size=(a, d, n))  # random transform matrix of param to data space vec
-    mu_data = torch.randn(size=(a, d)) * 3  # random mean vec of data
-    Sigma = torch.eye(n)  # cov matrix of parameter prior
-    S = 100_00 * torch.eye(d)  # cov matrix of dataset
-    sim = Simulator(nreSettings=nreSettings, mu_theta=mu_theta, M=M, mu_data=mu_data, Sigma=Sigma, S=S)
+    Sigma = 100 * torch.eye(n)  # cov matrix of parameter prior
+    sim = Simulator(nreSettings=nreSettings, mu_theta=mu_theta, M=M, mu_data=mu_data, Sigma=Sigma, C=C)
 
     nreSettings.model = sim.model  # lsbi model
     # generate training dat and obs
