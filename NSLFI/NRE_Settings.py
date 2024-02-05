@@ -15,8 +15,8 @@ class NRE_Settings:
         self.logger_name = f"{self.root}.log"
         self.seed = 234
         # simulator settings
-        self.n_training_samples = 30_0
-        self.n_weighted_samples = 10_000
+        self.n_training_samples = 30_0  # nsamples for initial training using simulator
+        self.n_weighted_samples = 10_000  # nsamples for evaluating NREs
         self.obsKey = "x"
         self.targetKey = "z"
         self.contourKey = "l"
@@ -34,6 +34,7 @@ class NRE_Settings:
         self.datamodule_fractions = [0.8, 0.1, 0.1]
         # polychord settings
         self.nderived = 0
+        self.n_prior_sampling = 10_000  # nsamples for prior sampling of polychord
         self.model = None
         # NSNRE settings
         self.cyclic_rounds = True
