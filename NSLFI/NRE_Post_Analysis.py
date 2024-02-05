@@ -10,7 +10,7 @@ from pypolychord import PolyChordSettings
 from swyft import collate_output as reformat_samples
 
 from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.utils import compute_KL_divergence
+from NSLFI.utils import compute_KL_divergence, select_weighted_contour
 
 
 def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[int, swyft.SwyftModule],
@@ -31,7 +31,16 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
 
     # load data for plots
     for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-        samples = anesthetic.read_chains(root=f"{root_storage[rd]}/{polyset.file_root}")
+        if nreSettings.use_livepoint_increasing:
+            samples = anesthetic.read_chains(
+                root=f"{root_storage[rd]}/{nreSettings.increased_livepoints_fileroot}/{polyset.file_root}")
+        else:
+            samples = anesthetic.read_chains(root=f"{root_storage[rd]}/{polyset.file_root}")
+
+        if nreSettings.use_dataset_clipping:
+            index = select_weighted_contour(samples, nreSettings.dataset_posterior_clipping)
+            samples = samples.truncate(index)
+
         samples_storage.append(samples.copy())
 
     if nreSettings.true_contours_available:
@@ -94,8 +103,6 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
                      torch.as_tensor(full_joint[nreSettings.obsKey])), dim=1),
                 logL=true_logratios,
                 weights=weights, labels=params_labels_ext)
-            mcmc_true_ext = mcmc_true_ext.compress(
-                nreSettings.n_compressed_weighted_samples).drop_duplicates()
             mcmc_true_ext.plot_2d(axes=axes, alpha=0.9, label="true", color="red",
                                   kinds={'lower': 'scatter_2d', 'diagonal': 'kde_1d'})
 
@@ -151,7 +158,11 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
     if nreSettings.plot_quantile_plot:
         for i in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             root = root_storage[i]
-            samples = read_chains(root=f"{root}/{polyset.file_root}")
+            if nreSettings.use_livepoint_increasing:
+                samples = anesthetic.read_chains(
+                    root=f"{root}/{nreSettings.increased_livepoints_fileroot}/{polyset.file_root}")
+            else:
+                samples = read_chains(root=f"{root}/{polyset.file_root}")
             samples = samples.iloc[:, :nreSettings.num_features]
             plot_quantile_plot(samples=samples, nreSettings=nreSettings, root=root)
 

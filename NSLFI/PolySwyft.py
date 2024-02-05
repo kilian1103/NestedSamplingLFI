@@ -1,5 +1,6 @@
 import copy
 import logging
+import os
 
 import anesthetic
 import pypolychord
@@ -47,7 +48,14 @@ class PolySwyft:
                 new_network.double()  # change to float64 precision of network
                 self.network_storage[rd] = new_network
                 self.root_storage[rd] = root
-                deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
+                if self.nreSettings.use_livepoint_increasing:
+                    deadpoints = anesthetic.read_chains(
+                        root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
+                else:
+                    deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
+                if self.nreSettings.use_dataset_clipping:
+                    index = select_weighted_contour(deadpoints, self.nreSettings.dataset_posterior_clipping)
+                    deadpoints = deadpoints.truncate(index)
                 self.deadpoints_storage[rd] = deadpoints
                 if rd > 0:
                     previous_network = self.network_storage[rd - 1]
@@ -122,6 +130,31 @@ class PolySwyft:
 
         ### load deadpoints and compute KL divergence and reassign to training samples ###
         deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
+
+        # TODO tune up livepoints at 99% contour
+        if self.nreSettings.use_livepoint_increasing:
+            index = select_weighted_contour(deadpoints, threshold=1 - self.nreSettings.livepoint_increase_contour)
+            logL = deadpoints.iloc[index, :].logL
+            try:
+                os.makedirs(f"{root}/{self.nreSettings.increased_livepoints_fileroot}")
+            except OSError:
+                self.logger.info("root folder already exists!")
+            self.polyset.base_dir = f"{root}/{self.nreSettings.increased_livepoints_fileroot}"
+            self.polyset.nlives = {logL: self.nreSettings.n_increased_livepoints}
+            pypolychord.run_polychord(loglikelihood=self.network.logLikelihood,
+                                      nDims=self.nreSettings.num_features,
+                                      nDerived=self.nreSettings.nderived, settings=self.polyset,
+                                      prior=self.network.prior, dumper=self.network.dumper)
+            self.polyset.nlives = {}
+            comm_gen.Barrier()
+
+            deadpoints = anesthetic.read_chains(
+                root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
+
+        if self.nreSettings.use_dataset_clipping:
+            index = select_weighted_contour(deadpoints, threshold=self.nreSettings.dataset_posterior_clipping)
+            deadpoints = deadpoints.truncate(index)
+
         self.deadpoints_storage[rd] = deadpoints
         if rd >= 1:
             previous_network = self.network_storage[rd - 1]
@@ -131,10 +164,6 @@ class PolySwyft:
             self.dkl_storage.append(DKL)
             self.logger.info(f"DKL of rd {rd} is: {DKL}")
         comm_gen.Barrier()
-        # TODO clipping 99% contour
-        if self.nreSettings.use_dataset_clipping:
-            index = select_weighted_contour(deadpoints, self.nreSettings.dataset_posterior_clipping)
-            deadpoints = deadpoints.truncate(index)
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         self.logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
