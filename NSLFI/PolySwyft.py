@@ -54,7 +54,7 @@ class PolySwyft:
                 else:
                     deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
                 if self.nreSettings.use_dataset_clipping:
-                    index = select_weighted_contour(deadpoints, self.nreSettings.dataset_posterior_clipping)
+                    index = select_weighted_contour(deadpoints, self.nreSettings.dataset_posterior_clipping_contour)
                     deadpoints = deadpoints.truncate(index)
                 self.deadpoints_storage[rd] = deadpoints
                 if rd > 0:
@@ -133,7 +133,8 @@ class PolySwyft:
 
         # TODO tune up livepoints at 99% contour
         if self.nreSettings.use_livepoint_increasing:
-            index = select_weighted_contour(deadpoints, threshold=1 - self.nreSettings.livepoint_increase_contour)
+            index = select_weighted_contour(deadpoints,
+                                            threshold=1 - self.nreSettings.livepoint_increase_posterior_contour)
             logL = deadpoints.iloc[index, :].logL
             try:
                 os.makedirs(f"{root}/{self.nreSettings.increased_livepoints_fileroot}")
@@ -152,7 +153,7 @@ class PolySwyft:
                 root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
 
         if self.nreSettings.use_dataset_clipping:
-            index = select_weighted_contour(deadpoints, threshold=self.nreSettings.dataset_posterior_clipping)
+            index = select_weighted_contour(deadpoints, threshold=self.nreSettings.dataset_posterior_clipping_contour)
             deadpoints = deadpoints.truncate(index)
 
         self.deadpoints_storage[rd] = deadpoints
