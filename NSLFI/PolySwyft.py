@@ -130,8 +130,7 @@ class PolySwyft:
 
         ### load deadpoints and compute KL divergence and reassign to training samples ###
         deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
-
-        # TODO tune up livepoints at 99% contour
+        comm_gen.Barrier()
         if self.nreSettings.use_livepoint_increasing:
             index = select_weighted_contour(deadpoints,
                                             threshold=1 - self.nreSettings.livepoint_increase_posterior_contour)
@@ -146,15 +145,16 @@ class PolySwyft:
                                       nDims=self.nreSettings.num_features,
                                       nDerived=self.nreSettings.nderived, settings=self.polyset,
                                       prior=self.network.prior, dumper=self.network.dumper)
-            self.polyset.nlives = {}
             comm_gen.Barrier()
+            self.polyset.nlives = {}
 
             deadpoints = anesthetic.read_chains(
                 root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
-
+            comm_gen.Barrier()
         if self.nreSettings.use_dataset_clipping:
             index = select_weighted_contour(deadpoints, threshold=self.nreSettings.dataset_posterior_clipping_contour)
             deadpoints = deadpoints.truncate(index)
+            comm_gen.Barrier()
 
         self.deadpoints_storage[rd] = deadpoints
         if rd >= 1:
