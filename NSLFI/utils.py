@@ -58,20 +58,20 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
         current_samples.logL = true_posterior
         current_samples["logR"] = current_samples["logL_previous"]
         logpqs = (current_samples["logL"].values[:, None] - current_samples["logR"].values[:, None] - true_prior[:,
-                                                                                                     None] +
+                                                                                                      None] +
                   previous_samples.logZ(
-            nreSettings.n_DKL_estimates).values)
+                      nreSettings.n_DKL_estimates).values)
         DKL_estimates = logpqs.mean(axis=0)
         DKL = DKL_estimates.mean()
         DKL_err = DKL_estimates.std()
     else:
         logw = current_samples.logw(nreSettings.n_DKL_estimates)
         logpqs = (current_samples["logL"].values[:, None] - current_samples.logZ(logw).values - current_samples[
-                                                                                                   "logL_previous"].values[
-                                                                                               :,
-                                                                                               None] +
+                                                                                                    "logL_previous"].values[
+                                                                                                :,
+                                                                                                None] +
                   previous_samples.logZ(
-            nreSettings.n_DKL_estimates).values)
+                      nreSettings.n_DKL_estimates).values)
         logw -= logsumexp(logw, axis=0)
         DKL_estimates = (np.exp(logw).T * logpqs.T).sum(axis=1)
         DKL = DKL_estimates.mean()
@@ -97,12 +97,3 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
 
 def reformat_obs_to_nre_format(obs: swyft.Sample, nreSettings: NRE_Settings) -> Dict[str, torch.Tensor]:
     return {nreSettings.obsKey: torch.tensor(obs[nreSettings.obsKey]).unsqueeze(0)}
-
-
-def get_swyft_dataset_fractions(fractions, N):
-    fractions = np.array(fractions)
-    fractions /= sum(fractions)
-    mu = N * fractions
-    n = np.floor(mu)
-    n[0] += N - sum(n)
-    return [int(v) for v in n]
