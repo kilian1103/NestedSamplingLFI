@@ -2,6 +2,7 @@ import logging
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 import swyft
 import torch
 import wandb
@@ -35,6 +36,7 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
             sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
             samples.append(sample)
     logger.info(f"Total number of samples for training: {len(samples)}")
+    np.random.shuffle(samples)
     samples = reformat_samples(samples)
     training_data_swyft = swyft.Samples(samples)
     logger.info("Simulation done!")
