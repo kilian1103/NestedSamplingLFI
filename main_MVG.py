@@ -39,7 +39,7 @@ def execute():
     C = torch.eye(d)  # cov matrix of dataset
     # C very small, or Sigma very big
     mu = torch.zeros(n)  # mean vec of parameter prior
-    Sigma = 10000 * torch.eye(n)  # cov matrix of parameter prior
+    Sigma = 100 * torch.eye(n)  # cov matrix of parameter prior
     sim = Simulator(nreSettings=nreSettings, m=m, M=M, C=C, mu=mu, Sigma=Sigma)
     nreSettings.model = sim.model  # lsbi model
 
@@ -58,7 +58,7 @@ def execute():
     #### instantiate swyft network
     network = Network(nreSettings=nreSettings, obs=obs)
     dm = swyft.SwyftDataModule(data=training_samples, fractions=nreSettings.datamodule_fractions, num_workers=0,
-                               batch_size=64, shuffle=False, lengths=None, on_after_load_sample=None)
+                               batch_size=64, shuffle=True, lengths=None, on_after_load_sample=None)
     early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
                                             patience=nreSettings.early_stopping_patience, mode='min')
     lr_monitor = LearningRateMonitor(logging_interval='step')
