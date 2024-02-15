@@ -1,6 +1,3 @@
-import numpy as np
-
-
 class NRE_Settings:
     def __init__(self):
         """NRE initialisation.
@@ -62,5 +59,3 @@ class NRE_Settings:
         self.triangle_zoom_start = 8
         self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
-        self.plot_quantile_plot = False
-        self.percentiles_of_quantile_plot = np.arange(0, 1.05, 0.05)

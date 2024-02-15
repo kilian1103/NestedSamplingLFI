@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import swyft
 import torch
-from anesthetic import MCMCSamples, make_2d_axes, read_chains
+from anesthetic import MCMCSamples, make_2d_axes
 from pypolychord import PolyChordSettings
 from swyft import collate_output as reformat_samples
 
@@ -153,18 +153,6 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
         plt.ylabel("KL divergence")
         plt.title("KL divergence between NRE rounds")
         plt.savefig(f"{root}/kl_divergence.pdf")
-
-    # plot quantile plot of training dataset
-    if nreSettings.plot_quantile_plot:
-        for i in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-            root = root_storage[i]
-            if nreSettings.use_livepoint_increasing:
-                samples = anesthetic.read_chains(
-                    root=f"{root}/{nreSettings.increased_livepoints_fileroot}/{polyset.file_root}")
-            else:
-                samples = read_chains(root=f"{root}/{polyset.file_root}")
-            samples = samples.iloc[:, :nreSettings.num_features]
-            plot_quantile_plot(samples=samples, nreSettings=nreSettings, root=root)
 
 
 def plot_quantile_plot(samples, nreSettings: NRE_Settings, root: str):
