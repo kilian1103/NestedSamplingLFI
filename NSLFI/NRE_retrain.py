@@ -45,10 +45,10 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
             except OSError:
                 logger.info("root folder already exists!")
             torch.save(
-                f=f"{root}/{nreSettings.increased_livepoints_fileroot}/{nreSettings.joint_training_data_fileroot}.pt",
+                f=f"{root}/{nreSettings.increased_livepoints_fileroot}/{nreSettings.joint_training_data_fileroot}",
                 obj=samples)
         else:
-            torch.save(f=f"{root}/{nreSettings.joint_training_data_fileroot}.pt", obj=samples)
+            torch.save(f=f"{root}/{nreSettings.joint_training_data_fileroot}", obj=samples)
 
     training_data_swyft = swyft.Samples(samples)
     logger.info("Simulation done!")

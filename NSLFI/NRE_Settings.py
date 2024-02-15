@@ -41,7 +41,7 @@ class NRE_Settings:
         self.NRE_num_retrain_rounds = 10
         self.NRE_start_from_round = 0
         self.save_joint_training_data = True  # save joint training data for NRE retraining
-        self.joint_training_data_fileroot = "joint_training_data"
+        self.joint_training_data_fileroot = "joint_training_data.pt"
         self.termination_abs_dkl = 0.2
         self.n_DKL_estimates = 100
         self.nlives_per_dim_constant = 25
