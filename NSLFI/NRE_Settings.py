@@ -40,6 +40,8 @@ class NRE_Settings:
         self.cyclic_rounds = True
         self.NRE_num_retrain_rounds = 10
         self.NRE_start_from_round = 0
+        self.save_joint_training_data = True  # save joint training data for NRE retraining
+        self.joint_training_data_fileroot = "joint_training_data"
         self.termination_abs_dkl = 0.2
         self.n_DKL_estimates = 100
         self.nlives_per_dim_constant = 25
@@ -51,7 +53,7 @@ class NRE_Settings:
         self.dataset_posterior_clipping_contour = 0.99  # zero point is at infinity
         self.use_livepoint_increasing = True
         self.livepoint_increase_posterior_contour = 0.99  # zero point is at likelihood peak
-        self.n_increased_livepoints = 3_000
+        self.n_increased_livepoints = 1_000
         self.increased_livepoints_fileroot = "enhanced_run"
         # plotting settings
         self.only_plot_mode = False

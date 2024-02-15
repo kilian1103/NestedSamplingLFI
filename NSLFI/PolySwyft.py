@@ -1,6 +1,5 @@
 import copy
 import logging
-import os
 
 import anesthetic
 import pypolychord
@@ -135,10 +134,6 @@ class PolySwyft:
             index = select_weighted_contour(deadpoints,
                                             threshold=1 - self.nreSettings.livepoint_increase_posterior_contour)
             logL = deadpoints.iloc[index, :].logL
-            try:
-                os.makedirs(f"{root}/{self.nreSettings.increased_livepoints_fileroot}")
-            except OSError:
-                self.logger.info("root folder already exists!")
             self.polyset.base_dir = f"{root}/{self.nreSettings.increased_livepoints_fileroot}"
             self.polyset.nlives = {logL: self.nreSettings.n_increased_livepoints}
             pypolychord.run_polychord(loglikelihood=self.network.logLikelihood,

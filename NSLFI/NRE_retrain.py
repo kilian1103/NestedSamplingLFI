@@ -2,7 +2,7 @@ import logging
 import os
 
 import matplotlib.pyplot as plt
-import numpy as np
+import sklearn
 import swyft
 import torch
 import wandb
@@ -35,8 +35,21 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
             sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
             samples.append(sample)
     logger.info(f"Total number of samples for training: {len(samples)}")
-    np.random.shuffle(samples)
+    samples = sklearn.utils.shuffle(samples, random_state=nreSettings.seed)
     samples = reformat_samples(samples)
+
+    if nreSettings.save_joint_training_data:
+        if nreSettings.use_livepoint_increasing:
+            try:
+                os.makedirs(f"{root}/{nreSettings.increased_livepoints_fileroot}")
+            except OSError:
+                logger.info("root folder already exists!")
+            torch.save(
+                f=f"{root}/{nreSettings.increased_livepoints_fileroot}/{nreSettings.joint_training_data_fileroot}.pt",
+                obj=samples)
+        else:
+            torch.save(f=f"{root}/{nreSettings.joint_training_data_fileroot}.pt", obj=samples)
+
     training_data_swyft = swyft.Samples(samples)
     logger.info("Simulation done!")
     logger.info("Setting up network for training!")
