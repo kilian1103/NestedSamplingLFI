@@ -122,6 +122,7 @@ class PolySwyft:
         self.polyset.base_dir = root
         self.polyset.nlive = self.nreSettings.nlives_per_round[rd]
         self.network.set_network(network=new_network)
+        comm_gen.barrier()
         pypolychord.run_polychord(loglikelihood=self.network.logLikelihood,
                                   nDims=self.nreSettings.num_features,
                                   nDerived=self.nreSettings.nderived, settings=self.polyset,
@@ -143,6 +144,7 @@ class PolySwyft:
 
             self.polyset.base_dir = f"{root}/{self.nreSettings.increased_livepoints_fileroot}"
             self.polyset.nlives = {logL: self.nreSettings.n_increased_livepoints}
+            comm_gen.Barrier()
             pypolychord.run_polychord(loglikelihood=self.network.logLikelihood,
                                       nDims=self.nreSettings.num_features,
                                       nDerived=self.nreSettings.nderived, settings=self.polyset,
