@@ -18,13 +18,12 @@ from NSLFI.utils import compute_KL_divergence, select_weighted_contour
 class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, training_samples: torch.Tensor,
-                 network: swyft.SwyftModule, polyset: PolyChordSettings, dm: swyft.SwyftDataModule,
+                 network: swyft.SwyftModule, polyset: PolyChordSettings,
                  trainer: swyft.SwyftTrainer):
         self.nreSettings = nreSettings
         self.polyset = polyset
         self.sim = sim
         self.obs = obs
-        self.dm = dm
         self.trainer = trainer
         self.training_samples = training_samples
         self.network = network
@@ -105,7 +104,7 @@ class PolySwyft:
             new_network = self.network.get_new_network()
             new_network = retrain_next_round(root=root, training_data=self.training_samples,
                                              nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
-                                             network=new_network, dm=self.dm,
+                                             network=new_network,
                                              trainer=new_trainer, rd=rd)
         else:
             new_network = self.network.get_new_network()

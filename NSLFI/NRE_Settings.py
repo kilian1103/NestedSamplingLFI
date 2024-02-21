@@ -28,7 +28,11 @@ class NRE_Settings:
         self.max_epochs = 1000
         self.learning_rate_init = 0.001
         self.learning_rate_decay = 0.95
-        self.datamodule_fractions = [0.8, 0.1, 0.1]
+        self.dm_kwargs = {
+            'fractions': [0.8, 0.1, 0.1],
+            'batch_size': 64,
+            'shuffle': False,
+        }
         # polychord settings
         self.nderived = 0
         self.n_prior_sampling = 10_000  # nsamples for prior sampling of polychord
@@ -44,7 +48,7 @@ class NRE_Settings:
         self.nlives_per_dim_constant = 25
         self.nlives_per_round = {rd: self.nlives_per_dim_constant * self.num_features for rd in
                                  range(self.NRE_num_retrain_rounds + 1)}
-        self.use_noise_resampling = False
+        self.use_noise_resampling = True
         self.n_noise_resampling_samples = 3
         self.use_dataset_clipping = False
         self.dataset_posterior_clipping_contour = 0.99  # zero point is at infinity

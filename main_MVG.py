@@ -57,8 +57,7 @@ def execute():
 
     #### instantiate swyft network
     network = Network(nreSettings=nreSettings, obs=obs)
-    dm = swyft.SwyftDataModule(data=training_samples, fractions=nreSettings.datamodule_fractions, num_workers=0,
-                               batch_size=64, shuffle=False, lengths=None, on_after_load_sample=None)
+
     early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
                                             patience=nreSettings.early_stopping_patience, mode='min')
     lr_monitor = LearningRateMonitor(logging_interval='step')
@@ -79,7 +78,7 @@ def execute():
     polyset.nfail = nreSettings.nlives_per_dim_constant * nreSettings.n_prior_sampling
     polyset.nprior = nreSettings.n_prior_sampling
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
-                          network=network, polyset=polyset, dm=dm, trainer=trainer)
+                          network=network, polyset=polyset, trainer=trainer)
 
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
