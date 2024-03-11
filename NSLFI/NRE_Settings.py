@@ -63,3 +63,4 @@ class NRE_Settings:
         self.triangle_zoom_start = 8
         self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
+        self.plot_KL_compression = True

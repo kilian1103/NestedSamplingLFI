@@ -10,7 +10,7 @@ from pypolychord import PolyChordSettings
 from swyft import collate_output as reformat_samples
 
 from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.utils import compute_KL_divergence, select_weighted_contour
+from NSLFI.utils import compute_KL_divergence, select_weighted_contour, compute_KL_compression
 
 
 def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[int, swyft.SwyftModule],
@@ -153,6 +153,22 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
         plt.ylabel("KL divergence")
         plt.title("KL divergence between NRE rounds")
         plt.savefig(f"{root}/kl_divergence.pdf")
+
+    if nreSettings.plot_KL_compression:
+        DKL_storage = []
+        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+            DKL = compute_KL_compression(samples_storage[rd], nreSettings)
+            DKL_storage.append(DKL)
+
+        plt.figure()
+        plt.errorbar(x=[x for x in range(0, nreSettings.NRE_num_retrain_rounds + 1)], y=[x[0] for x in DKL_storage],
+                     yerr=[x[1] for x in DKL_storage],
+                     label=r"$KL(P||\pi)$")
+        plt.legend()
+        plt.xlabel("round")
+        plt.ylabel("DKL")
+        plt.title("DKL compression of Prior to Posterior")
+        plt.savefig(f"{root}/kl_compression.pdf")
 
 
 def plot_quantile_plot(samples, nreSettings: NRE_Settings, root: str):

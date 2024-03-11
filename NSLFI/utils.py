@@ -80,6 +80,17 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
     return DKL, DKL_err
 
 
+def compute_KL_compression(samples: anesthetic.NestedSamples, nreSettings: NRE_Settings):
+    """Compute the Prior to Posterior DKL compression"""
+    logw = samples.logw(nreSettings.n_DKL_estimates)
+    logpqs = samples["logL"].values[:, None] - samples.logZ(logw).values
+    logw -= logsumexp(logw, axis=0)
+    DKL_estimates = (np.exp(logw).T * logpqs.T).sum(axis=1)
+    DKL = DKL_estimates.mean()
+    DKL_err = DKL_estimates.std()
+    return DKL, DKL_err
+
+
 def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule) -> Tuple[
     Dict[int, str], Dict[int, swyft.SwyftModule]]:
     network_storage = {}
