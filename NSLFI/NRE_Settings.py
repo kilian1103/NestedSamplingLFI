@@ -64,3 +64,4 @@ class NRE_Settings:
         self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
         self.plot_KL_compression = True
+        self.plot_logR_histogram = True

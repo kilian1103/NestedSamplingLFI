@@ -170,6 +170,17 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
         plt.title("DKL compression of Prior to Posterior")
         plt.savefig(f"{root}/kl_compression.pdf")
 
+    if nreSettings.plot_logR_histogram:
+        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+            samples = samples_storage[rd]
+            logRs = samples["logL"] - samples.logZ()
+            plt.hist(logRs, label=f"round {rd}", alpha=0.5)
+        plt.title(r"$\log r$ histogram")
+        plt.xlabel(r"$\log r$")
+        plt.ylabel("Frequency")
+        plt.legend()
+        plt.savefig("logR_histogram.pdf")
+
 
 def plot_quantile_plot(samples, nreSettings: NRE_Settings, root: str):
     samples = samples.drop_weights()
