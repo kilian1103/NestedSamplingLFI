@@ -51,9 +51,9 @@ class NRE_Settings:
         self.use_noise_resampling = True
         self.n_noise_resampling_samples = 3
         self.use_dataset_clipping = False
-        self.dataset_posterior_clipping_contour = 0.99  # zero point is at infinity
+        self.dataset_posterior_clipping_contour = 0.05  # zero point is at posterior peak
         self.use_livepoint_increasing = True
-        self.livepoint_increase_posterior_contour = 0.99  # zero point is at likelihood peak
+        self.livepoint_increase_posterior_contour = 0.99  # zero point is at posterior peak
         self.n_increased_livepoints = 1_000
         self.increased_livepoints_fileroot = "enhanced_run"
         # plotting settings

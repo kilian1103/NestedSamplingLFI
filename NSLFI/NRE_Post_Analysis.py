@@ -38,7 +38,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
             samples = anesthetic.read_chains(root=f"{root_storage[rd]}/{polyset.file_root}")
 
         if nreSettings.use_dataset_clipping:
-            index = select_weighted_contour(samples, nreSettings.dataset_posterior_clipping_contour)
+            index = select_weighted_contour(samples, 1 - nreSettings.dataset_posterior_clipping_contour)
             samples = samples.truncate(index)
 
         samples_storage.append(samples.copy())
