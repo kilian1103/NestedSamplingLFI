@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import swyft
 import torch
-from anesthetic import MCMCSamples, make_2d_axes
+from anesthetic import MCMCSamples, make_2d_axes, make_1d_axes
 from pypolychord import PolyChordSettings
 from swyft import collate_output as reformat_samples
 
@@ -179,7 +179,18 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
         plt.xlabel(r"$\log r$")
         plt.ylabel("Frequency")
         plt.legend()
-        plt.savefig("logR_histogram.pdf")
+        plt.savefig("logR_histogram_unweighted.pdf")
+
+    if nreSettings.plot_logR_pdf:
+        figs, axes = make_1d_axes("logR", figsize=(3.5, 3.5))
+        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+            samples = samples_storage[rd]
+            samples["logR"] = samples["logL"] - samples.logZ()
+            samples.plot_1d(axes=axes, label=f"round {rd}")
+        plt.xlabel(r"$\log r$")
+        plt.ylabel(r"$p(\log r)$")
+        plt.legend()
+        plt.savefig("logR_pdf.pdf", dpi=300, bbox_inches='tight')
 
 
 def plot_quantile_plot(samples, nreSettings: NRE_Settings, root: str):

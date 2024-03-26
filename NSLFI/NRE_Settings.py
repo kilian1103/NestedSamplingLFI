@@ -65,3 +65,4 @@ class NRE_Settings:
         self.plot_KL_divergence = True
         self.plot_KL_compression = True
         self.plot_logR_histogram = True
+        self.plot_logR_pdf = True
