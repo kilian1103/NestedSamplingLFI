@@ -26,7 +26,7 @@ class PolySwyft:
         self.obs = obs
         self.trainer = trainer
         self.training_samples = training_samples
-        self.network = network
+        self.network_model = network
         self.network_storage = dict()
         self.root_storage = dict()
         self.dkl_storage = list()
@@ -42,10 +42,11 @@ class PolySwyft:
             ### only execute this code when previous rounds are already trained ###
             for rd in range(0, self.nreSettings.NRE_start_from_round):
                 root = f"{self.nreSettings.root}_round_{rd}"
-                new_network = self.network.get_new_network()
-                new_network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
-                new_network.double()  # change to float64 precision of network
-                self.network_storage[rd] = new_network
+                network = self.network_model.get_new_network()
+                network.double()  # change to float64 precision of network
+                network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
+                network.eval()
+                self.network_storage[rd] = network
                 self.root_storage[rd] = root
                 if self.nreSettings.use_livepoint_increasing:
                     deadpoints = anesthetic.read_chains(
@@ -101,18 +102,19 @@ class PolySwyft:
                     # set the wandb project where this run will be logged
                     project=self.nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
             new_trainer = copy.deepcopy(self.trainer)
-            new_network = self.network.get_new_network()
-            new_network = retrain_next_round(root=root, training_data=self.training_samples,
-                                             nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
-                                             network=new_network,
-                                             trainer=new_trainer, rd=rd)
+            network = self.network_model.get_new_network()
+            network = retrain_next_round(root=root, training_data=self.training_samples,
+                                         nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
+                                         network=network,
+                                         trainer=new_trainer, rd=rd)
         else:
-            new_network = self.network.get_new_network()
+            network = self.network_model.get_new_network()
         comm_gen.Barrier()
         ### load saved network and save it in network_storage ###
-        new_network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
-        new_network.double()  # change to float64 precision of network
-        self.network_storage[rd] = new_network
+        network.double()  # change to float64 precision of network
+        network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
+        network.eval()
+        self.network_storage[rd] = network
         self.root_storage[rd] = root
         self.logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
 
@@ -120,12 +122,12 @@ class PolySwyft:
         ### Run PolyChord ###
         self.polyset.base_dir = root
         self.polyset.nlive = self.nreSettings.nlives_per_round[rd]
-        self.network.set_network(network=new_network)
+
         comm_gen.barrier()
-        pypolychord.run_polychord(loglikelihood=self.network.logLikelihood,
+        pypolychord.run_polychord(loglikelihood=network.logLikelihood,
                                   nDims=self.nreSettings.num_features,
                                   nDerived=self.nreSettings.nderived, settings=self.polyset,
-                                  prior=self.network.prior, dumper=self.network.dumper)
+                                  prior=network.prior, dumper=network.dumper)
         comm_gen.Barrier()
 
         ### load deadpoints and compute KL divergence and reassign to training samples ###
@@ -144,13 +146,12 @@ class PolySwyft:
             self.polyset.base_dir = f"{root}/{self.nreSettings.increased_livepoints_fileroot}"
             self.polyset.nlives = {logL: self.nreSettings.n_increased_livepoints}
             comm_gen.Barrier()
-            pypolychord.run_polychord(loglikelihood=self.network.logLikelihood,
+            pypolychord.run_polychord(loglikelihood=network.logLikelihood,
                                       nDims=self.nreSettings.num_features,
                                       nDerived=self.nreSettings.nderived, settings=self.polyset,
-                                      prior=self.network.prior, dumper=self.network.dumper)
+                                      prior=network.prior, dumper=network.dumper)
             comm_gen.Barrier()
             self.polyset.nlives = {}
-
             deadpoints = anesthetic.read_chains(
                 root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
             comm_gen.Barrier()
