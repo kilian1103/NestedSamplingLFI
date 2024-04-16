@@ -22,7 +22,7 @@ def execute():
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
     nreSettings = NRE_Settings()
-    seed_everything(nreSettings.seed)
+    seed_everything(nreSettings.seed, workers=True)
     logging.basicConfig(filename=nreSettings.logger_name, level=logging.INFO,
                         filemode="w")
     logger = logging.getLogger()
