@@ -1,7 +1,6 @@
 import logging
 import os
 
-import matplotlib.pyplot as plt
 import sklearn
 import swyft
 import torch
@@ -61,15 +60,5 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     if nreSettings.activate_wandb:
         wandb.finish()
     # get posterior samples
-    logger.info("Sampling from the prior using simulator!")
-    prior_samples = sim.sample(nreSettings.n_weighted_samples, targets=[nreSettings.targetKey])
-    logger.info("Inferring posterior samples using the trained network!")
-    with torch.no_grad():
-        predictions = trainer.infer(network, obs, prior_samples)
-    logger.info("Plotting posterior inference results!")
-    plt.figure()
-    swyft.corner(predictions, [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)], bins=50,
-                 smooth=1)
-    plt.savefig(f"{root}/NRE_predictions.pdf")
     torch.save(network.state_dict(), f"{root}/{nreSettings.neural_network_file}")
     return network
