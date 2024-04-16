@@ -23,10 +23,10 @@ def main():
     root = "swyft_example_099_contour_GMM_100d_1klive_samples_10Noise_pytorchlightning_refactor"
     roots = [f"{root}_round_{x}" for x in range(0, 11, 1)]
 
-    it = 4  # NRE to be retrained
+    it = 6  # NRE to be retrained
 
     nreSettings = NRE_Settings()
-    seed_everything(nreSettings.seed)
+    seed_everything(nreSettings.seed, workers=True)
     #### instantiate swyft simulator
     n = nreSettings.num_features
     d = nreSettings.num_features_dataset
