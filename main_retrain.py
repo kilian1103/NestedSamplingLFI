@@ -1,13 +1,12 @@
-import copy
 import os
 
 import anesthetic
-import numpy as np
 import pypolychord
 import sklearn
 import swyft
 import torch
 from mpi4py import MPI
+from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from swyft import collate_output as reformat_samples
@@ -21,14 +20,13 @@ def main():
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
-    root = "swyft_example_099_contour_GMM_100d_1klive_samples_10Noise"
-    roots = [f"{root}_round_{x}" for x in range(0, 5, 1)]
+    root = "swyft_example_099_contour_GMM_100d_1klive_samples_10Noise_pytorchlightning_refactor"
+    roots = [f"{root}_round_{x}" for x in range(0, 11, 1)]
 
     it = 4  # NRE to be retrained
 
     nreSettings = NRE_Settings()
-    np.random.seed(nreSettings.seed)
-    torch.manual_seed(nreSettings.seed)
+    seed_everything(nreSettings.seed)
     #### instantiate swyft simulator
     n = nreSettings.num_features
     d = nreSettings.num_features_dataset
@@ -47,18 +45,15 @@ def main():
     obs = swyft.Sample(x=torch.tensor(sim.model.evidence().rvs()[None, :]))
 
     network = Network(nreSettings=nreSettings, obs=obs)
-    dm = swyft.SwyftDataModule(data=[0], **nreSettings.dm_kwargs)
-    early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
-                                            patience=nreSettings.early_stopping_patience, mode='min')
-    lr_monitor = LearningRateMonitor(logging_interval='step')
-    checkpoint_callback = ModelCheckpoint(monitor='val_loss',
-                                          filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
 
-    trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
-                                 precision=64,
-                                 enable_progress_bar=True,
-                                 default_root_dir=nreSettings.root,
-                                 callbacks=[early_stopping_callback, lr_monitor, checkpoint_callback])
+    def get_callbacks():
+        early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
+                                                patience=nreSettings.early_stopping_patience, mode='min')
+        lr_monitor = LearningRateMonitor(logging_interval='step')
+        checkpoint_callback = ModelCheckpoint(monitor='val_loss',
+                                              filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
+
+        return [early_stopping_callback, lr_monitor, checkpoint_callback]
 
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
     polyset.seed = nreSettings.seed
@@ -122,10 +117,12 @@ def main():
     training_data_swyft = swyft.Samples(training_data)
     dm = swyft.SwyftDataModule(data=training_data_swyft, **nreSettings.dm_kwargs)
 
-    new_trainer = copy.deepcopy(trainer)
+    nreSettings.trainer_kwargs["callbacks"] = get_callbacks()
+    trainer = swyft.SwyftTrainer(**nreSettings.trainer_kwargs)
     new_network = network.get_new_network()
     nreSettings.neural_network_file = f"NRE_network_{rank_gen}_retrained.pt"
-    new_trainer.fit(new_network, dm)
+    seed_everything(nreSettings.seed + rank_gen, workers=True)  # for trainining different networks
+    trainer.fit(new_network, dm)
     root = roots[it]
     try:
         os.makedirs(root)
