@@ -19,7 +19,7 @@ class NRE_Settings:
         self.contourKey = "l"
         self.posteriorsKey = "post"
         self.num_features = 5
-        self.num_features_dataset = 15
+        self.num_features_dataset = 100
         self.num_mixture_components = 4
         # network settings
         self.device = "cpu"
@@ -33,6 +33,15 @@ class NRE_Settings:
             'batch_size': 64,
             'shuffle': False,
         }
+        self.trainer_kwargs = {"accelerator": self.device,
+                               "devices": 1,
+                               "max_epochs": self.max_epochs,
+                               "precision": 64,
+                               "enable_progress_bar": True,
+                               "default_root_dir": self.root,
+                               "callbacks": [],
+                               "deterministic": True,
+                               }
         # polychord settings
         self.nderived = 0
         self.n_prior_sampling = 10_000  # nsamples for prior sampling of polychord

@@ -1,10 +1,10 @@
 import logging
 
-import numpy as np
 import pypolychord
 import swyft
 import torch
 from mpi4py import MPI
+from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
@@ -22,8 +22,7 @@ def execute():
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
     nreSettings = NRE_Settings()
-    np.random.seed(nreSettings.seed)
-    torch.manual_seed(nreSettings.seed)
+    seed_everything(nreSettings.seed)
     logging.basicConfig(filename=nreSettings.logger_name, level=logging.INFO,
                         filemode="w")
     logger = logging.getLogger()
@@ -40,7 +39,7 @@ def execute():
     C = torch.eye(d)  # cov matrix of dataset
     # mu_theta = torch.randn(size=(1, n))  # random mean vec of parameter
     mu_theta = torch.randn(size=(a, n)) * 3  #
-    Sigma = 100 * torch.eye(n)  # cov matrix of parameter prior
+    Sigma = torch.eye(n)  # cov matrix of parameter prior
     sim = Simulator(nreSettings=nreSettings, mu_theta=mu_theta, M=M, mu_data=mu_data, Sigma=Sigma, C=C)
 
     nreSettings.model = sim.model  # lsbi model
@@ -59,17 +58,14 @@ def execute():
     #### instantiate swyft network
     network = Network(nreSettings=nreSettings, obs=obs)
 
-    early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
-                                            patience=nreSettings.early_stopping_patience, mode='min')
-    lr_monitor = LearningRateMonitor(logging_interval='step')
-    checkpoint_callback = ModelCheckpoint(monitor='val_loss',
-                                          filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
-    trainer = swyft.SwyftTrainer(accelerator=nreSettings.device, devices=1, max_epochs=nreSettings.max_epochs,
-                                 precision=64,
-                                 enable_progress_bar=True,
-                                 default_root_dir=nreSettings.root,
-                                 callbacks=[early_stopping_callback, lr_monitor,
-                                            checkpoint_callback])
+    #### create callbacks function for pytorch lightning trainer
+    def create_callbacks() -> list:
+        early_stopping_callback = EarlyStopping(monitor='val_loss', min_delta=0.,
+                                                patience=nreSettings.early_stopping_patience, mode='min')
+        lr_monitor = LearningRateMonitor(logging_interval='step')
+        checkpoint_callback = ModelCheckpoint(monitor='val_loss',
+                                              filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
+        return [early_stopping_callback, lr_monitor, checkpoint_callback]
 
     #### set up polychord settings
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
@@ -79,7 +75,7 @@ def execute():
     polyset.nfail = nreSettings.nlives_per_dim_constant * nreSettings.n_prior_sampling
     polyset.nprior = nreSettings.n_prior_sampling
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
-                          network=network, polyset=polyset, trainer=trainer)
+                          network=network, polyset=polyset, callbacks=create_callbacks)
 
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE

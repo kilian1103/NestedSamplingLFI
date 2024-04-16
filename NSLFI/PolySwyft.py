@@ -1,6 +1,6 @@
-import copy
 import logging
 import os
+from typing import Callable
 
 import anesthetic
 import pypolychord
@@ -19,12 +19,12 @@ class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, training_samples: torch.Tensor,
                  network: swyft.SwyftModule, polyset: PolyChordSettings,
-                 trainer: swyft.SwyftTrainer):
+                 callbacks: Callable):
         self.nreSettings = nreSettings
         self.polyset = polyset
         self.sim = sim
         self.obs = obs
-        self.trainer = trainer
+        self.callbacks = callbacks
         self.training_samples = training_samples
         self.network_model = network
         self.network_storage = dict()
@@ -101,12 +101,16 @@ class PolySwyft:
                 wandb.init(
                     # set the wandb project where this run will be logged
                     project=self.nreSettings.wandb_project_name, name=f"round_{rd}", sync_tensorboard=True)
-            new_trainer = copy.deepcopy(self.trainer)
+
+            self.nreSettings.trainer_kwargs["default_root_dir"] = root
+            self.nreSettings.trainer_kwargs["callbacks"] = self.callbacks()
+            trainer = swyft.SwyftTrainer(**self.nreSettings.trainer_kwargs)
+
             network = self.network_model.get_new_network()
             network = retrain_next_round(root=root, training_data=self.training_samples,
                                          nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
                                          network=network,
-                                         trainer=new_trainer, rd=rd)
+                                         trainer=trainer, rd=rd)
         else:
             network = self.network_model.get_new_network()
         comm_gen.Barrier()
