@@ -246,9 +246,9 @@ def compute_KL_divergence_truth(nreSettings: NRE_Settings, previous_network: swy
     true_posterior["logL_previous"] = predictions.logratios.numpy().squeeze()
     # MCMC samples for true samples do not have logw functionality
     samples = true_posterior.iloc[:, :nreSettings.num_features].squeeze()
-    true_posterior = nreSettings.model.posterior(obs[nreSettings.obsKey].numpy().squeeze()).logpdf(samples)
+    true_posterior_logL = nreSettings.model.posterior(obs[nreSettings.obsKey].numpy().squeeze()).logpdf(samples)
     true_prior = nreSettings.model.prior().logpdf(samples)
-    true_posterior.logL = true_posterior
+    true_posterior.logL = true_posterior_logL
     true_posterior["logR"] = true_posterior["logL_previous"]
     logpqs = (true_posterior["logL"].values[:, None] - true_posterior["logR"].values[:, None] - true_prior[:,
                                                                                                 None] +
