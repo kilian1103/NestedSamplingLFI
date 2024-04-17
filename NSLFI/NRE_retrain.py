@@ -57,5 +57,4 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     trainer.fit(network, dm)
     logger.info("Training done!")
     # get posterior samples
-    torch.save(network.state_dict(), f"{root}/{nreSettings.neural_network_file}")
     return network

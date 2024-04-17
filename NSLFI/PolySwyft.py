@@ -95,30 +95,26 @@ class PolySwyft:
 
         ### start NRE training section ###
         root = f"{self.nreSettings.root}_round_{rd}"
+        self.logger.info("retraining round: " + str(rd))
+        if self.nreSettings.activate_wandb:
+            self.nreSettings.wandb_kwargs["group"] = root
+            self.nreSettings.wandb_kwargs["name"] = f"round_{rd}"
+            wandb.init(**self.nreSettings.wandb_kwargs)
+        self.nreSettings.trainer_kwargs["default_root_dir"] = root
+        self.nreSettings.trainer_kwargs["callbacks"] = self.callbacks()
+        trainer = swyft.SwyftTrainer(**self.nreSettings.trainer_kwargs)
+        network = self.network_model.get_new_network()
+        network = retrain_next_round(root=root, training_data=self.training_samples,
+                                     nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
+                                     network=network,
+                                     trainer=trainer, rd=rd)
+        if self.nreSettings.activate_wandb:
+            wandb.finish(**self.nreSettings.wandb_finish_kwargs)
         if rank_gen == 0:
-            self.logger.info("retraining round: " + str(rd))
-            if self.nreSettings.activate_wandb:
-                self.nreSettings.wandb_kwargs["group"] = root
-                self.nreSettings.wandb_kwargs["name"] = f"round_{rd}"
-                wandb.init(**self.nreSettings.wandb_kwargs)
-            self.nreSettings.trainer_kwargs["default_root_dir"] = root
-            self.nreSettings.trainer_kwargs["callbacks"] = self.callbacks()
-            trainer = swyft.SwyftTrainer(**self.nreSettings.trainer_kwargs)
-
-            network = self.network_model.get_new_network()
-            network = retrain_next_round(root=root, training_data=self.training_samples,
-                                         nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
-                                         network=network,
-                                         trainer=trainer, rd=rd)
-            if self.nreSettings.activate_wandb:
-                wandb.finish(**self.nreSettings.wandb_finish_kwargs)
-        else:
-            network = self.network_model.get_new_network()
+            torch.save(network.state_dict(), f"{root}/{self.nreSettings.neural_network_file}")
         comm_gen.Barrier()
-        ### load saved network and save it in network_storage ###
-        network.double()  # change to float64 precision of network
-        network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
         network.eval()
+
         self.network_storage[rd] = network
         self.root_storage[rd] = root
         self.logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")

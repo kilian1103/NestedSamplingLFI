@@ -29,10 +29,8 @@ class NRE_Settings:
         self.num_features_dataset = 100
         self.num_mixture_components = 4
         # network settings
-        self.device = "cpu"
         self.dropout = 0.3
         self.early_stopping_patience = 5
-        self.max_epochs = 1000
         self.learning_rate_init = 0.001
         self.learning_rate_decay = 0.95
         self.dm_kwargs = {
@@ -40,9 +38,10 @@ class NRE_Settings:
             'batch_size': 64,
             'shuffle': False,
         }
-        self.trainer_kwargs = {"accelerator": self.device,
-                               "devices": 1,
-                               "max_epochs": self.max_epochs,
+        self.trainer_kwargs = {"accelerator": 'cpu',
+                               "devices": 10,
+                               "strategy": "ddp",
+                               "max_epochs": 1000,
                                "precision": 64,
                                "enable_progress_bar": True,
                                "default_root_dir": self.root,
