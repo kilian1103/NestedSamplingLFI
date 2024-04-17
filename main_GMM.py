@@ -45,14 +45,9 @@ def execute():
     nreSettings.model = sim.model  # lsbi model
     # generate training dat and obs
     obs = swyft.Sample(x=torch.tensor(sim.model.evidence().rvs()[None, :]))
-    if rank_gen == 0:
-        training_samples = torch.as_tensor(
-            sim.sample(nreSettings.n_training_samples, targets=[nreSettings.targetKey])[
-                nreSettings.targetKey])
-    else:
-        training_samples = torch.empty((nreSettings.n_training_samples, nreSettings.num_features))
-    # broadcast samples to all ranks
-    training_samples = comm_gen.bcast(training_samples, root=0)
+    training_samples = torch.as_tensor(
+        sim.sample(nreSettings.n_training_samples, targets=[nreSettings.targetKey])[
+            nreSettings.targetKey])
     comm_gen.Barrier()
 
     #### instantiate swyft network
