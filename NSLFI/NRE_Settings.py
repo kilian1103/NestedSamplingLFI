@@ -12,9 +12,7 @@ class NRE_Settings:
         self.seed = 234
         self.activate_wandb = False
         self.wandb_kwargs = {
-            'project': self.wandb_project_name,
-            'name': "round_0",
-            'group': self.root
+            'project': self.wandb_project_name
         }
         self.wandb_finish_kwargs = {
             'exit_code': None,

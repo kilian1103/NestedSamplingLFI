@@ -98,6 +98,7 @@ class PolySwyft:
         if rank_gen == 0:
             self.logger.info("retraining round: " + str(rd))
             if self.nreSettings.activate_wandb:
+                self.nreSettings.wandb_kwargs["group"] = root
                 self.nreSettings.wandb_kwargs["name"] = f"round_{rd}"
                 wandb.init(**self.nreSettings.wandb_kwargs)
             self.nreSettings.trainer_kwargs["default_root_dir"] = root
