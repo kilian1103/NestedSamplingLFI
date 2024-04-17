@@ -50,32 +50,17 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
         predictions = previous_network(obs, samples)
     current_samples["logL_previous"] = predictions.logratios.numpy().squeeze()
 
-    if isinstance(current_samples, anesthetic.MCMCSamples):
-        # MCMC samples for true samples do not have logw functionality
-        posterior = current_samples.iloc[:, :nreSettings.num_features].squeeze()
-        true_posterior = nreSettings.model.posterior(obs[nreSettings.obsKey].numpy().squeeze()).logpdf(posterior)
-        true_prior = nreSettings.model.prior().logpdf(posterior)
-        current_samples.logL = true_posterior
-        current_samples["logR"] = current_samples["logL_previous"]
-        logpqs = (current_samples["logL"].values[:, None] - current_samples["logR"].values[:, None] - true_prior[:,
-                                                                                                      None] +
-                  previous_samples.logZ(
-                      nreSettings.n_DKL_estimates).values)
-        DKL_estimates = logpqs.mean(axis=0)
-        DKL = DKL_estimates.mean()
-        DKL_err = DKL_estimates.std()
-    else:
-        logw = current_samples.logw(nreSettings.n_DKL_estimates)
-        logpqs = (current_samples["logL"].values[:, None] - current_samples.logZ(logw).values - current_samples[
-                                                                                                    "logL_previous"].values[
-                                                                                                :,
-                                                                                                None] +
-                  previous_samples.logZ(
-                      nreSettings.n_DKL_estimates).values)
-        logw -= logsumexp(logw, axis=0)
-        DKL_estimates = (np.exp(logw).T * logpqs.T).sum(axis=1)
-        DKL = DKL_estimates.mean()
-        DKL_err = DKL_estimates.std()
+    logw = current_samples.logw(nreSettings.n_DKL_estimates)
+    logpqs = (current_samples["logL"].values[:, None] - current_samples.logZ(logw).values - current_samples[
+                                                                                                "logL_previous"].values[
+                                                                                            :,
+                                                                                            None] +
+              previous_samples.logZ(
+                  nreSettings.n_DKL_estimates).values)
+    logw -= logsumexp(logw, axis=0)
+    DKL_estimates = (np.exp(logw).T * logpqs.T).sum(axis=1)
+    DKL = DKL_estimates.mean()
+    DKL_err = DKL_estimates.std()
 
     return DKL, DKL_err
 

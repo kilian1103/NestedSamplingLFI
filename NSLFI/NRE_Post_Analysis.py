@@ -1,4 +1,5 @@
 from typing import Dict
+from typing import Tuple
 
 import anesthetic
 import matplotlib.pyplot as plt
@@ -130,9 +131,10 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             if nreSettings.true_contours_available:
                 previous_network = network_storage[rd]
-                KDL_true = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network.eval(),
-                                                 current_samples=mcmc_true.copy(), obs=obs,
-                                                 previous_samples=samples_storage[rd])
+                KDL_true = compute_KL_divergence_truth(nreSettings=nreSettings,
+                                                       previous_network=previous_network.eval(),
+                                                       current_samples=mcmc_true.copy(), obs=obs,
+                                                       previous_samples=samples_storage[rd])
                 dkl_storage_true.append(KDL_true)
             if rd != 0:
                 nested = samples_storage[rd]
@@ -232,3 +234,27 @@ def plot_NRE_expansion_and_contraction_rate(root_storage: Dict[str, str], nreSet
     plt.ylabel("rate")
     plt.legend()
     plt.savefig(f"{root_storage[f'round_{nreSettings.NRE_num_retrain_rounds}']}/NRE_expansion_and_contraction_rate.pdf")
+
+
+def compute_KL_divergence_truth(nreSettings: NRE_Settings, previous_network: swyft.SwyftModule,
+                                true_posterior: anesthetic.Samples, previous_samples: anesthetic.Samples,
+                                obs: swyft.Sample) -> Tuple[float, float]:
+    swyft_samples = {
+        nreSettings.targetKey: torch.as_tensor(true_posterior.iloc[:, :nreSettings.num_features].to_numpy())}
+    with torch.no_grad():
+        predictions = previous_network(obs, swyft_samples)
+    true_posterior["logL_previous"] = predictions.logratios.numpy().squeeze()
+    # MCMC samples for true samples do not have logw functionality
+    samples = true_posterior.iloc[:, :nreSettings.num_features].squeeze()
+    true_posterior = nreSettings.model.posterior(obs[nreSettings.obsKey].numpy().squeeze()).logpdf(samples)
+    true_prior = nreSettings.model.prior().logpdf(samples)
+    true_posterior.logL = true_posterior
+    true_posterior["logR"] = true_posterior["logL_previous"]
+    logpqs = (true_posterior["logL"].values[:, None] - true_posterior["logR"].values[:, None] - true_prior[:,
+                                                                                                None] +
+              previous_samples.logZ(
+                  nreSettings.n_DKL_estimates).values)
+    DKL_estimates = logpqs.mean(axis=0)
+    DKL = DKL_estimates.mean()
+    DKL_err = DKL_estimates.std()
+    return (DKL, DKL_err)
