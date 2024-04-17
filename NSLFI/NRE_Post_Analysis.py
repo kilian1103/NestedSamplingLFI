@@ -133,7 +133,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
                 previous_network = network_storage[rd]
                 KDL_true = compute_KL_divergence_truth(nreSettings=nreSettings,
                                                        previous_network=previous_network.eval(),
-                                                       current_samples=mcmc_true.copy(), obs=obs,
+                                                       true_posterior=mcmc_true.copy(), obs=obs,
                                                        previous_samples=samples_storage[rd])
                 dkl_storage_true.append(KDL_true)
             if rd != 0:
