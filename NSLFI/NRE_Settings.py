@@ -12,11 +12,11 @@ class NRE_Settings:
         self.seed = 234
         self.activate_wandb = False
         self.wandb_kwargs = {
-            'project': self.wandb_project_name
-        }
-        self.wandb_finish_kwargs = {
-            'exit_code': None,
-            'quiet': None
+            'project': self.wandb_project_name,
+            'finish': {
+                'exit_code': None,
+                'quiet': None
+            }
         }
         # simulator settings
         self.n_training_samples = 30_0  # nsamples for initial training using simulator

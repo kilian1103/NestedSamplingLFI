@@ -97,6 +97,11 @@ class PolySwyft:
         root = f"{self.nreSettings.root}_round_{rd}"
         self.logger.info("retraining round: " + str(rd))
         if self.nreSettings.activate_wandb:
+            try:
+                self.finish_kwargs = self.nreSettings.wandb_kwargs.pop("finish")
+            except KeyError:
+                self.finish_kwargs = {'exit_code': None,
+                                      'quiet': None}
             self.nreSettings.wandb_kwargs["group"] = root
             self.nreSettings.wandb_kwargs["name"] = f"round_{rd}"
             wandb.init(**self.nreSettings.wandb_kwargs)
@@ -109,7 +114,7 @@ class PolySwyft:
                                      network=network,
                                      trainer=trainer, rd=rd)
         if self.nreSettings.activate_wandb:
-            wandb.finish(**self.nreSettings.wandb_finish_kwargs)
+            wandb.finish(self.finish_kwargs)
         if rank_gen == 0:
             torch.save(network.state_dict(), f"{root}/{self.nreSettings.neural_network_file}")
         comm_gen.Barrier()
