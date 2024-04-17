@@ -8,9 +8,18 @@ class NRE_Settings:
         self.root = "swyft_polychord_NSNRE"
         self.wandb_project_name = "NSNRE"
         self.neural_network_file = "NRE_network.pt"
-        self.activate_wandb = False
         self.logger_name = f"{self.root}.log"
         self.seed = 234
+        self.activate_wandb = False
+        self.wandb_kwargs = {
+            'project': self.wandb_project_name,
+            'name': "round_0",
+            'group': self.root
+        }
+        self.wandb_finish_kwargs = {
+            'exit_code': None,
+            'quiet': None
+        }
         # simulator settings
         self.n_training_samples = 30_0  # nsamples for initial training using simulator
         self.n_weighted_samples = 10_000  # nsamples for evaluating NREs

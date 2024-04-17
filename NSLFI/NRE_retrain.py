@@ -4,7 +4,6 @@ import os
 import sklearn
 import swyft
 import torch
-import wandb
 from swyft import collate_output as reformat_samples, Simulator
 from torch import Tensor
 
@@ -57,8 +56,6 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     dm = swyft.SwyftDataModule(data=training_data_swyft, **nreSettings.dm_kwargs)
     trainer.fit(network, dm)
     logger.info("Training done!")
-    if nreSettings.activate_wandb:
-        wandb.finish()
     # get posterior samples
     torch.save(network.state_dict(), f"{root}/{nreSettings.neural_network_file}")
     return network
