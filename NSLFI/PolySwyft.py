@@ -96,13 +96,12 @@ class PolySwyft:
         ### start NRE training section ###
         root = f"{self.nreSettings.root}_round_{rd}"
         self.logger.info("retraining round: " + str(rd))
-        if self.nreSettings.activate_wandb:
+        if self.nreSettings.activate_wandb and rank_gen == 0:
             try:
                 self.finish_kwargs = self.nreSettings.wandb_kwargs.pop("finish")
             except KeyError:
                 self.finish_kwargs = {'exit_code': None,
                                       'quiet': None}
-            self.nreSettings.wandb_kwargs["group"] = root
             self.nreSettings.wandb_kwargs["name"] = f"round_{rd}"
             wandb.init(**self.nreSettings.wandb_kwargs)
         self.nreSettings.trainer_kwargs["default_root_dir"] = root
@@ -113,8 +112,8 @@ class PolySwyft:
                                      nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
                                      network=network,
                                      trainer=trainer, rd=rd)
-        if self.nreSettings.activate_wandb:
-            wandb.finish(self.finish_kwargs)
+        if self.nreSettings.activate_wandb and rank_gen == 0:
+            wandb.finish(**self.finish_kwargs)
         if rank_gen == 0:
             torch.save(network.state_dict(), f"{root}/{self.nreSettings.neural_network_file}")
         comm_gen.Barrier()
