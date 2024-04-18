@@ -104,10 +104,13 @@ class PolySwyft:
                                       'quiet': None}
             self.nreSettings.wandb_kwargs["name"] = f"round_{rd}"
             wandb.init(**self.nreSettings.wandb_kwargs)
+
         self.nreSettings.trainer_kwargs["default_root_dir"] = root
         self.nreSettings.trainer_kwargs["callbacks"] = self.callbacks()
         trainer = swyft.SwyftTrainer(**self.nreSettings.trainer_kwargs)
         network = self.network_model.get_new_network()
+        network = comm_gen.bcast(network, root=0)
+
         network = retrain_next_round(root=root, training_data=self.training_samples,
                                      nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
                                      network=network,
