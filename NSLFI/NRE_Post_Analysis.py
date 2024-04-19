@@ -11,14 +11,14 @@ from pypolychord import PolyChordSettings
 from swyft import collate_output as reformat_samples
 
 from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.utils import compute_KL_divergence, select_weighted_contour, compute_KL_compression
+from NSLFI.utils import compute_KL_divergence, compute_KL_compression
 
 
 def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[int, swyft.SwyftModule],
                            nreSettings: NRE_Settings, polyset: PolyChordSettings, sim: swyft.Simulator,
                            obs: swyft.Sample):
     # set up labels for plotting
-    params = [f"{nreSettings.targetKey}[{i}]" for i in range(nreSettings.num_features)]
+    params = [fr"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)]
     params_idx = [i for i in range(0, nreSettings.num_features)]
     params_labels = {i: rf"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)}
 
@@ -37,11 +37,9 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
                 root=f"{root_storage[rd]}/{nreSettings.increased_livepoints_fileroot}/{polyset.file_root}")
         else:
             samples = anesthetic.read_chains(root=f"{root_storage[rd]}/{polyset.file_root}")
-
-        if nreSettings.use_dataset_clipping:
-            index = select_weighted_contour(samples, 1 - nreSettings.dataset_posterior_clipping_contour)
-            samples = samples.truncate(index)
-
+        labels = samples.get_labels()
+        labels[:nreSettings.num_features] = params
+        samples.set_labels(labels, inplace=True)
         samples_storage.append(samples.copy())
 
     if nreSettings.true_contours_available:
