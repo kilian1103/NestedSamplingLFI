@@ -19,7 +19,7 @@ from NSLFI.utils import compute_KL_divergence, select_weighted_contour
 
 class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
-                 obs: swyft.Sample, training_samples: torch.Tensor,
+                 obs: swyft.Sample, deadpoints: torch.Tensor,
                  network: swyft.SwyftModule, polyset: PolyChordSettings,
                  callbacks: Callable):
         self.nreSettings = nreSettings
@@ -27,7 +27,7 @@ class PolySwyft:
         self.sim = sim
         self.obs = obs
         self.callbacks = callbacks
-        self.training_samples = training_samples
+        self.current_deadpoints = deadpoints
         self.network_model = network
         self.network_storage = dict()
         self.root_storage = dict()
@@ -76,7 +76,7 @@ class PolySwyft:
 
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
             deadpoints = torch.as_tensor(deadpoints.to_numpy())
-            self.training_samples = deadpoints
+            self.current_deadpoints = deadpoints
 
         ### main cycle ###
         if self.nreSettings.cyclic_rounds:
@@ -121,7 +121,7 @@ class PolySwyft:
         network = self.network_model.get_new_network()
         network = comm_gen.bcast(network, root=0)
 
-        network = retrain_next_round(root=root, training_data=self.training_samples,
+        network = retrain_next_round(root=root, training_data=self.current_deadpoints,
                                      nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
                                      network=network,
                                      trainer=trainer, rd=rd)
@@ -197,5 +197,5 @@ class PolySwyft:
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         self.logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
-        self.training_samples = deadpoints
+        self.current_deadpoints = deadpoints
         return DKL

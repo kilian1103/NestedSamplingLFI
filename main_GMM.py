@@ -69,7 +69,7 @@ def execute():
     polyset.seed = nreSettings.seed
     polyset.nfail = nreSettings.nlives_per_dim_constant * nreSettings.n_prior_sampling
     polyset.nprior = nreSettings.n_prior_sampling
-    polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, training_samples=training_samples,
+    polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=training_samples,
                           network=network, polyset=polyset, callbacks=create_callbacks)
 
     if not nreSettings.only_plot_mode:
