@@ -54,25 +54,28 @@ class PolySwyft:
                     deadpoints = anesthetic.read_chains(
                         root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
                 else:
-                    deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
-                if self.nreSettings.use_dataset_clipping:
-                    # TODO make non-random seeding compatible
-                    logR_cutoff = float(self.nreSettings.dataset_logR_cutoff_sigma * deadpoints["logL"].std())
-                    rest = deadpoints[deadpoints.logL >= logR_cutoff]
-                    bools = np.random.choice([True, False], size=rest.shape[0],
-                                             p=[self.nreSettings.dataset_uniform_sampling_rate,
-                                                1 - self.nreSettings.dataset_uniform_sampling_rate])
-                    rest = rest[bools]
-                    deadpoints = deadpoints.truncate(logR_cutoff)
-                    deadpoints = pd.concat([deadpoints, rest], axis=0)
-                    deadpoints.drop_duplicates(inplace=True)
-                self.deadpoints_storage[rd] = deadpoints
+                    deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")  #
+
+                self.deadpoints_storage[rd] = deadpoints.copy()
+
                 if rd > 0:
                     previous_network = self.network_storage[rd - 1]
                     DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
-                                                current_samples=deadpoints.copy(), obs=self.obs,
+                                                current_samples=self.deadpoints_storage[rd], obs=self.obs,
                                                 previous_samples=self.deadpoints_storage[rd - 1])
                     self.dkl_storage.append(DKL)
+
+            if self.nreSettings.use_dataset_clipping:
+                # TODO make non-random seeding compatible
+                logR_cutoff = float(self.nreSettings.dataset_logR_cutoff_sigma * deadpoints["logL"].std())
+                rest = deadpoints[deadpoints.logL >= logR_cutoff]
+                bools = np.random.choice([True, False], size=rest.shape[0],
+                                         p=[self.nreSettings.dataset_uniform_sampling_rate,
+                                            1 - self.nreSettings.dataset_uniform_sampling_rate])
+                rest = rest[bools]
+                deadpoints = deadpoints.truncate(logR_cutoff)
+                deadpoints = pd.concat([deadpoints, rest], axis=0)
+                deadpoints.drop_duplicates(inplace=True)
 
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
             deadpoints = torch.as_tensor(deadpoints.to_numpy())
@@ -173,6 +176,17 @@ class PolySwyft:
             deadpoints = anesthetic.read_chains(
                 root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
             comm_gen.Barrier()
+
+        self.deadpoints_storage[rd] = deadpoints.copy()
+
+        if rd > 0:
+            previous_network = self.network_storage[rd - 1]
+            DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
+                                        current_samples=self.deadpoints_storage[rd], obs=self.obs,
+                                        previous_samples=self.deadpoints_storage[rd - 1])
+            self.dkl_storage.append(DKL)
+            self.logger.info(f"DKL of rd {rd} is: {DKL}")
+
         if self.nreSettings.use_dataset_clipping:
             logR_cutoff = float(self.nreSettings.dataset_logR_cutoff_sigma * deadpoints["logL"].std())
             rest = deadpoints[deadpoints.logL >= logR_cutoff]
@@ -183,16 +197,7 @@ class PolySwyft:
             deadpoints = deadpoints.truncate(logR_cutoff)
             deadpoints = pd.concat([deadpoints, rest], axis=0)
             deadpoints.drop_duplicates(inplace=True)
-            comm_gen.Barrier()
 
-        self.deadpoints_storage[rd] = deadpoints
-        if rd >= 1:
-            previous_network = self.network_storage[rd - 1]
-            DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
-                                        current_samples=deadpoints, obs=self.obs,
-                                        previous_samples=self.deadpoints_storage[rd - 1])
-            self.dkl_storage.append(DKL)
-            self.logger.info(f"DKL of rd {rd} is: {DKL}")
         comm_gen.Barrier()
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
