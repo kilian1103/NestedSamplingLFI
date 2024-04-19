@@ -3,6 +3,8 @@ import os
 from typing import Callable
 
 import anesthetic
+import numpy as np
+import pandas as pd
 import pypolychord
 import swyft
 import torch
@@ -54,8 +56,16 @@ class PolySwyft:
                 else:
                     deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
                 if self.nreSettings.use_dataset_clipping:
-                    index = select_weighted_contour(deadpoints, 1 - self.nreSettings.dataset_posterior_clipping_contour)
-                    deadpoints = deadpoints.truncate(index)
+                    # TODO make non-random seeding compatible
+                    logR_cutoff = float(self.nreSettings.dataset_logR_cutoff_sigma * deadpoints["logL"].std())
+                    rest = deadpoints[deadpoints.logL >= logR_cutoff]
+                    bools = np.random.choice([True, False], size=rest.shape[0],
+                                             p=[self.nreSettings.dataset_uniform_sampling_rate,
+                                                1 - self.nreSettings.dataset_uniform_sampling_rate])
+                    rest = rest[bools]
+                    deadpoints = deadpoints.truncate(logR_cutoff)
+                    deadpoints = pd.concat([deadpoints, rest], axis=0)
+                    deadpoints.drop_duplicates(inplace=True)
                 self.deadpoints_storage[rd] = deadpoints
                 if rd > 0:
                     previous_network = self.network_storage[rd - 1]
@@ -164,9 +174,15 @@ class PolySwyft:
                 root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
             comm_gen.Barrier()
         if self.nreSettings.use_dataset_clipping:
-            index = select_weighted_contour(deadpoints,
-                                            threshold=1 - self.nreSettings.dataset_posterior_clipping_contour)
-            deadpoints = deadpoints.truncate(index)
+            logR_cutoff = float(self.nreSettings.dataset_logR_cutoff_sigma * deadpoints["logL"].std())
+            rest = deadpoints[deadpoints.logL >= logR_cutoff]
+            bools = np.random.choice([True, False], size=rest.shape[0],
+                                     p=[self.nreSettings.dataset_uniform_sampling_rate,
+                                        1 - self.nreSettings.dataset_uniform_sampling_rate])
+            rest = rest[bools]
+            deadpoints = deadpoints.truncate(logR_cutoff)
+            deadpoints = pd.concat([deadpoints, rest], axis=0)
+            deadpoints.drop_duplicates(inplace=True)
             comm_gen.Barrier()
 
         self.deadpoints_storage[rd] = deadpoints

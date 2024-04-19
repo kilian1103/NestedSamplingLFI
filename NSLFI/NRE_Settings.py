@@ -39,7 +39,8 @@ class NRE_Settings:
             'shuffle': False,
         }
         self.trainer_kwargs = {"accelerator": 'cpu',
-                               "devices": 10,
+                               "devices": 30,
+                               "num_nodes": 1,
                                "strategy": "ddp",
                                "max_epochs": 1000,
                                "precision": 64,
@@ -64,9 +65,10 @@ class NRE_Settings:
         self.nlives_per_round = {rd: self.nlives_per_dim_constant * self.num_features for rd in
                                  range(self.NRE_num_retrain_rounds + 1)}
         self.use_noise_resampling = True
-        self.n_noise_resampling_samples = 3
-        self.use_dataset_clipping = False
-        self.dataset_posterior_clipping_contour = 0.05  # zero point is at posterior peak
+        self.n_noise_resampling_samples = 10
+        self.use_dataset_clipping = True
+        self.dataset_logR_cutoff_sigma = 1
+        self.dataset_uniform_sampling_rate = 0.2
         self.use_livepoint_increasing = True
         self.livepoint_increase_posterior_contour = 0.99  # zero point is at posterior peak
         self.n_increased_livepoints = 1_000
