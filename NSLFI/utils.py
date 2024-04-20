@@ -77,7 +77,8 @@ def compute_KL_compression(samples: anesthetic.NestedSamples, nreSettings: NRE_S
     return DKL, DKL_err
 
 
-def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule, polyset: PolyChordSettings) -> \
+def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule, polyset: PolyChordSettings,
+                             until_round: int, only_last_round=False) -> \
         Tuple[
             Dict[int, str], Dict[int, swyft.SwyftModule], Dict[int, anesthetic.NestedSamples]]:
     network_storage = {}
@@ -85,8 +86,11 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
     samples_storage = {}
     root = nreSettings.root
 
-    for rd in range(nreSettings.NRE_num_retrain_rounds + 1):
+    for rd in range(until_round + 1):
         # load root
+        if only_last_round and rd < until_round:
+            continue
+
         current_root = f"{root}_round_{rd}"
         root_storage[rd] = current_root
 

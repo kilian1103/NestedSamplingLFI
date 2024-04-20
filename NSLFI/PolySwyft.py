@@ -14,7 +14,7 @@ from pypolychord import PolyChordSettings
 
 from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
-from NSLFI.utils import compute_KL_divergence, select_weighted_contour
+from NSLFI.utils import compute_KL_divergence, select_weighted_contour, reload_data_for_plotting
 
 
 class PolySwyft:
@@ -42,31 +42,9 @@ class PolySwyft:
                     self.nreSettings.cyclic_rounds):
                 raise ValueError("NRE_start_from_round must be smaller than NRE_num_retrain_rounds")
             ### only execute this code when previous rounds are already trained ###
-            for rd in range(0, self.nreSettings.NRE_start_from_round):
-                root = f"{self.nreSettings.root}_round_{rd}"
-                network = self.network_model.get_new_network()
-                network.double()  # change to float64 precision of network
-                network.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
-                network.eval()
-                self.network_storage[rd] = network
-                self.root_storage[rd] = root
-                if self.nreSettings.use_livepoint_increasing:
-                    deadpoints = anesthetic.read_chains(
-                        root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
-                else:
-                    deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")  #
+            self._reload_data()
 
-                self.deadpoints_storage[rd] = deadpoints.copy()
-
-                if rd > 0:
-                    previous_network = self.network_storage[rd - 1]
-                    DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
-                                                current_samples=self.deadpoints_storage[rd], obs=self.obs,
-                                                previous_samples=self.deadpoints_storage[rd - 1])
-                    self.dkl_storage.append(DKL)
-
-                    del self.deadpoints_storage[rd - 1]  # save memory
-                    del self.network_storage[rd - 1]  # save memory
+            deadpoints = self.deadpoints_storage[self.nreSettings.NRE_start_from_round]
 
             if self.nreSettings.use_dataset_clipping:
                 # TODO make non-random seeding compatible
@@ -213,3 +191,13 @@ class PolySwyft:
         self.logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
         self.current_deadpoints = deadpoints
         return
+
+    def _reload_data(self):
+        root_storage, network_storage, samples_storage = reload_data_for_plotting(nreSettings=self.nreSettings,
+                                                                                  network=self.network_model,
+                                                                                  polyset=self.polyset,
+                                                                                  until_round=self.nreSettings.NRE_start_from_round,
+                                                                                  only_last_round=True)
+        self.root_storage = root_storage
+        self.network_storage = network_storage
+        self.deadpoints_storage = samples_storage

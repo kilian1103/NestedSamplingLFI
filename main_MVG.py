@@ -76,7 +76,8 @@ def execute():
         polySwyft.execute_NSNRE_cycle()
 
     root_storage, network_storage, samples_storage = reload_data_for_plotting(nreSettings=nreSettings, network=network,
-                                                                              polyset=polyset)
+                                                                              polyset=polyset,
+                                                                              until_round=nreSettings.NRE_num_retrain_rounds)
 
     if rank_gen == 0:
         # plot analysis of NSNSRE
