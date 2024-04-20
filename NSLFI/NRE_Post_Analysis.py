@@ -119,7 +119,7 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
         plt.xlabel(r"$\log r$")
         plt.ylabel("Frequency")
         plt.legend()
-        plt.savefig("logR_histogram_unweighted.pdf")
+        plt.savefig(f"{root}/logR_histogram_unweighted.pdf")
 
     if nreSettings.plot_logR_pdf:
         figs, axes = make_1d_axes("logR", figsize=(3.5, 3.5))
@@ -130,4 +130,4 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
         plt.xlabel(r"$\log r$")
         plt.ylabel(r"$p(\log r)$")
         plt.legend()
-        plt.savefig("logR_pdf.pdf", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{root}/logR_pdf.pdf", dpi=300, bbox_inches='tight')
