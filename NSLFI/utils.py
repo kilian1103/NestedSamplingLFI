@@ -7,6 +7,7 @@ import numpy as np
 import swyft
 import torch
 from anesthetic import NestedSamples
+from pypolychord import PolyChordSettings
 from scipy.special import logsumexp
 from torch import Tensor
 
@@ -76,19 +77,38 @@ def compute_KL_compression(samples: anesthetic.NestedSamples, nreSettings: NRE_S
     return DKL, DKL_err
 
 
-def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule) -> Tuple[
-    Dict[int, str], Dict[int, swyft.SwyftModule]]:
+def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule, polyset: PolyChordSettings) -> \
+        Tuple[
+            Dict[int, str], Dict[int, swyft.SwyftModule], Dict[int, anesthetic.NestedSamples]]:
     network_storage = {}
     root_storage = {}
+    samples_storage = {}
     root = nreSettings.root
+
     for rd in range(nreSettings.NRE_num_retrain_rounds + 1):
+        # load root
         current_root = f"{root}_round_{rd}"
+        root_storage[rd] = current_root
+
+        # load network
         new_network = network.get_new_network()
         new_network.load_state_dict(torch.load(f"{current_root}/{nreSettings.neural_network_file}"))
         new_network.double()  # change to float64 precision of network
         network_storage[rd] = new_network
-        root_storage[rd] = current_root
-    return root_storage, network_storage
+
+        # load samples
+        params = [fr"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)]
+        if nreSettings.use_livepoint_increasing:
+            samples = anesthetic.read_chains(
+                root=f"{root_storage[rd]}/{nreSettings.increased_livepoints_fileroot}/{polyset.file_root}")
+        else:
+            samples = anesthetic.read_chains(root=f"{root_storage[rd]}/{polyset.file_root}")
+        labels = samples.get_labels()
+        labels[:nreSettings.num_features] = params
+        samples.set_labels(labels, inplace=True)
+        samples_storage[rd] = samples
+
+    return root_storage, network_storage, samples_storage
 
 
 def reformat_obs_to_nre_format(obs: swyft.Sample, nreSettings: NRE_Settings) -> Dict[str, torch.Tensor]:

@@ -90,6 +90,9 @@ class PolySwyft:
         else:
             self._cyclic_kl()
 
+        del self.deadpoints_storage
+        del self.network_storage
+
     def _cyclic_rounds(self):
         DKL = 10
         for rd in range(self.nreSettings.NRE_start_from_round, self.nreSettings.NRE_num_retrain_rounds + 1):

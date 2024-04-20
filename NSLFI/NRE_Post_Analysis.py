@@ -1,5 +1,4 @@
-from typing import Dict
-from typing import Tuple
+from typing import Dict, Tuple
 
 import anesthetic
 import matplotlib.pyplot as plt
@@ -7,7 +6,6 @@ import numpy as np
 import swyft
 import torch
 from anesthetic import MCMCSamples, make_2d_axes, make_1d_axes
-from pypolychord import PolyChordSettings
 from swyft import collate_output as reformat_samples
 
 from NSLFI.NRE_Settings import NRE_Settings
@@ -15,32 +13,19 @@ from NSLFI.utils import compute_KL_divergence, compute_KL_compression
 
 
 def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[int, swyft.SwyftModule],
-                           nreSettings: NRE_Settings, polyset: PolyChordSettings, sim: swyft.Simulator,
+                           samples_storage: Dict[int, anesthetic.Samples],
+                           nreSettings: NRE_Settings, sim: swyft.Simulator,
                            obs: swyft.Sample):
     # set up labels for plotting
-    params = [fr"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)]
     params_idx = [i for i in range(0, nreSettings.num_features)]
     params_labels = {i: rf"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)}
-
     params_labels_ext = params_labels.copy()
     params_labels_ext.update(
         {nreSettings.num_features + j: rf"$D_{j}$" for j in range(nreSettings.num_features_dataset)})
     params_idx_ext = [i for i in range(0, nreSettings.num_features + nreSettings.num_features_dataset)]
-    samples_storage = []
+
     dkl_storage = []
     root = root_storage[nreSettings.NRE_num_retrain_rounds]
-
-    # load data for plots
-    for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-        if nreSettings.use_livepoint_increasing:
-            samples = anesthetic.read_chains(
-                root=f"{root_storage[rd]}/{nreSettings.increased_livepoints_fileroot}/{polyset.file_root}")
-        else:
-            samples = anesthetic.read_chains(root=f"{root_storage[rd]}/{polyset.file_root}")
-        labels = samples.get_labels()
-        labels[:nreSettings.num_features] = params
-        samples.set_labels(labels, inplace=True)
-        samples_storage.append(samples.copy())
 
     if nreSettings.true_contours_available:
         dkl_storage_true = []

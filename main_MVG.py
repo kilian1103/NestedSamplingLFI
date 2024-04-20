@@ -74,17 +74,15 @@ def execute():
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         polySwyft.execute_NSNRE_cycle()
-    else:
-        # load data for plotting if data is already generated
-        root_storage, network_storage = reload_data_for_plotting(nreSettings=nreSettings, network=network)
-        polySwyft.root_storage = root_storage
-        polySwyft.network_storage = network_storage
+
+    root_storage, network_storage, samples_storage = reload_data_for_plotting(nreSettings=nreSettings, network=network,
+                                                                              polyset=polyset)
 
     if rank_gen == 0:
         # plot analysis of NSNSRE
         plot_analysis_of_NSNRE(nreSettings=nreSettings, network_storage=polySwyft.network_storage,
-                               root_storage=polySwyft.root_storage,
-                               sim=sim, obs=obs, polyset=polyset)
+                               root_storage=polySwyft.root_storage, samples_storage=samples_storage,
+                               sim=sim, obs=obs)
     logger.info('Finished')
 
 
