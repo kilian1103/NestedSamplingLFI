@@ -94,20 +94,20 @@ class PolySwyft:
         del self.network_storage
 
     def _cyclic_rounds(self):
-        DKL = 10
         for rd in range(self.nreSettings.NRE_start_from_round, self.nreSettings.NRE_num_retrain_rounds + 1):
-            _ = self._cycle(DKL, rd)
+            self._cycle(rd)
 
     def _cyclic_kl(self):
-        DKL_info = (10, 10)
+        DKL_info = (100, 100)
         DKL, DKL_std = DKL_info
         rd = self.nreSettings.NRE_start_from_round
         while abs(DKL) >= self.nreSettings.termination_abs_dkl:
-            DKL, DKL_std = self._cycle(DKL_info, rd)
+            self._cycle(rd)
+            DKL, DKL_std = self.dkl_storage[rd]
             rd += 1
         self.nreSettings.NRE_num_retrain_rounds = rd - 1
 
-    def _cycle(self, DKL, rd):
+    def _cycle(self, rd):
         comm_gen = MPI.COMM_WORLD
         rank_gen = comm_gen.Get_rank()
         size_gen = comm_gen.Get_size()
@@ -212,4 +212,4 @@ class PolySwyft:
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         self.logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
         self.current_deadpoints = deadpoints
-        return DKL
+        return
