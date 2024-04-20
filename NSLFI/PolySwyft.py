@@ -34,7 +34,7 @@ class PolySwyft:
         self.network_model = network
         self.network_storage = dict()
         self.root_storage = dict()
-        self.dkl_storage = list()
+        self.dkl_storage = dict()
         self.deadpoints_storage = dict()
 
     def execute_NSNRE_cycle(self):
