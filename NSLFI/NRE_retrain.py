@@ -25,10 +25,14 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     except OSError:
         logger.info("root folder already exists!")
     logger.info(f"Simulating new {nreSettings.obsKey} using NS samples {nreSettings.targetKey} with Simulator!")
+
+    ### simulate joint distribution using deadpoints ###
     samples = []
     if rank_gen == 0:
         for point in training_data:
             cond = {nreSettings.targetKey: point.float()}
+
+            ### noise resampling ###
             if nreSettings.use_noise_resampling and rd > 0:
                 resampler = sim.get_resampler(targets=[nreSettings.obsKey])
                 for _ in range(nreSettings.n_noise_resampling_samples):
@@ -47,6 +51,7 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     samples = comm_gen.bcast(samples, root=0)
     samples = reformat_samples(samples)
 
+    ### save training data for NRE on disk ###
     if nreSettings.save_joint_training_data and rank_gen == 0:
         if nreSettings.use_livepoint_increasing:
             try:
@@ -60,6 +65,8 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
             torch.save(f=f"{root}/{nreSettings.joint_training_data_fileroot}", obj=samples)
 
     comm_gen.Barrier()
+
+    ### train network ###
     training_data_swyft = swyft.Samples(samples)
     logger.info("Simulation done!")
     logger.info("Setting up network for training!")
@@ -68,5 +75,5 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     dm = swyft.SwyftDataModule(data=training_data_swyft, **nreSettings.dm_kwargs)
     trainer.fit(network, dm)
     logger.info("Training done!")
-    # get posterior samples
+
     return network

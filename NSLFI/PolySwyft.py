@@ -37,18 +37,19 @@ class PolySwyft:
     def execute_NSNRE_cycle(self):
         # retrain NRE and sample new samples with NS loop
         self.logger = logging.getLogger(self.nreSettings.logger_name)
+
+        ### reload data if necessary to resume run ###
         if self.nreSettings.NRE_start_from_round > 0:
             if (self.nreSettings.NRE_start_from_round > self.nreSettings.NRE_num_retrain_rounds and
                     self.nreSettings.cyclic_rounds):
                 raise ValueError("NRE_start_from_round must be smaller than NRE_num_retrain_rounds")
-            ### only execute this code when previous rounds are already trained ###
             self._reload_data()
-
             deadpoints = self.deadpoints_storage[self.nreSettings.NRE_start_from_round - 1]
 
+            ### truncate last set of deadpoints for resuming training if neccessary ###
             if self.nreSettings.use_dataset_clipping:
                 # TODO make non-random seeding compatible
-                logR_cutoff = float(self.nreSettings.dataset_logR_cutoff_sigma * deadpoints["logL"].std())
+                logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
                 rest = deadpoints[deadpoints.logL >= logR_cutoff]
                 bools = np.random.choice([True, False], size=rest.shape[0],
                                          p=[self.nreSettings.dataset_uniform_sampling_rate,
@@ -58,11 +59,12 @@ class PolySwyft:
                 deadpoints = pd.concat([deadpoints, rest], axis=0)
                 deadpoints.drop_duplicates(inplace=True)
 
+            ### save current deadpoints for next training round ###
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
             deadpoints = torch.as_tensor(deadpoints.to_numpy())
             self.current_deadpoints = deadpoints
 
-        ### main cycle ###
+        ### execute main cycle ###
         if self.nreSettings.cyclic_rounds:
             self._cyclic_rounds()
         else:
@@ -93,6 +95,8 @@ class PolySwyft:
         ### start NRE training section ###
         root = f"{self.nreSettings.root}_round_{rd}"
         self.logger.info("retraining round: " + str(rd))
+
+        ### setup wandb ###
         if self.nreSettings.activate_wandb and rank_gen == 0:
             try:
                 self.finish_kwargs = self.nreSettings.wandb_kwargs.pop("finish")
@@ -102,33 +106,39 @@ class PolySwyft:
             self.nreSettings.wandb_kwargs["name"] = f"round_{rd}"
             wandb.init(**self.nreSettings.wandb_kwargs)
 
+        ### setup trainer ###
         self.nreSettings.trainer_kwargs["default_root_dir"] = root
         self.nreSettings.trainer_kwargs["callbacks"] = self.callbacks()
         trainer = swyft.SwyftTrainer(**self.nreSettings.trainer_kwargs)
+
+        ### setup network ###
         network = self.network_model.get_new_network()
         network = comm_gen.bcast(network, root=0)
-
         network = retrain_next_round(root=root, training_data=self.current_deadpoints,
                                      nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
                                      network=network,
                                      trainer=trainer, rd=rd)
+
         if self.nreSettings.activate_wandb and rank_gen == 0:
             wandb.finish(**self.finish_kwargs)
+
+        ### save network on disk ###
         if rank_gen == 0:
             torch.save(network.state_dict(), f"{root}/{self.nreSettings.neural_network_file}")
+
+        ### save network and root in memory###
         comm_gen.Barrier()
         network.eval()
-
         self.network_storage[rd] = network
         self.root_storage[rd] = root
         self.logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
 
         ### start polychord section ###
-        ### Run PolyChord ###
+        ### run PolyChord ###
         self.polyset.base_dir = root
         self.polyset.nlive = self.nreSettings.nlives_per_round[rd]
-
         comm_gen.barrier()
+
         pypolychord.run_polychord(loglikelihood=network.logLikelihood,
                                   nDims=self.nreSettings.num_features,
                                   nDerived=self.nreSettings.nderived, settings=self.polyset,
@@ -138,7 +148,11 @@ class PolySwyft:
         ### load deadpoints and compute KL divergence and reassign to training samples ###
         deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
         comm_gen.Barrier()
+
+        ### polychord round 2 section ###
         if self.nreSettings.use_livepoint_increasing:
+
+            ### choose contour to increase livepoints ###
             index = select_weighted_contour(deadpoints,
                                             threshold=1 - self.nreSettings.livepoint_increase_posterior_contour)
             logL = deadpoints.iloc[index, :].logL
@@ -148,6 +162,7 @@ class PolySwyft:
             except OSError:
                 self.logger.info("root folder already exists!")
 
+            ### run polychord round 2 ###
             self.polyset.base_dir = f"{root}/{self.nreSettings.increased_livepoints_fileroot}"
             self.polyset.nlives = {logL: self.nreSettings.n_increased_livepoints}
             comm_gen.Barrier()
@@ -163,6 +178,7 @@ class PolySwyft:
 
         self.deadpoints_storage[rd] = deadpoints.copy()
 
+        ### compute KL divergence ###
         if rd > 0:
             previous_network = self.network_storage[rd - 1]
             DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
@@ -174,8 +190,9 @@ class PolySwyft:
             del self.deadpoints_storage[rd - 1]  # save memory
             del self.network_storage[rd - 1]  # save memory
 
+        ### truncate deadpoints ###
         if self.nreSettings.use_dataset_clipping:
-            logR_cutoff = float(self.nreSettings.dataset_logR_cutoff_sigma * deadpoints["logL"].std())
+            logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
             rest = deadpoints[deadpoints.logL >= logR_cutoff]
             bools = np.random.choice([True, False], size=rest.shape[0],
                                      p=[self.nreSettings.dataset_uniform_sampling_rate,
@@ -184,8 +201,9 @@ class PolySwyft:
             deadpoints = deadpoints.truncate(logR_cutoff)
             deadpoints = pd.concat([deadpoints, rest], axis=0)
             deadpoints.drop_duplicates(inplace=True)
-
         comm_gen.Barrier()
+
+        ### save current deadpoints for next round ###
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         self.logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
