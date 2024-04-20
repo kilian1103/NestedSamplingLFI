@@ -2,18 +2,12 @@ import logging
 import os
 from typing import Callable
 
-import anesthetic
-import numpy as np
-import pandas as pd
 import pypolychord
-import swyft
-import torch
 import wandb
 from pypolychord import PolyChordSettings
 
-from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.NRE_retrain import retrain_next_round
-from NSLFI.utils import compute_KL_divergence, select_weighted_contour, reload_data_for_plotting
+from NSLFI.utils import *
 
 
 class PolySwyft:
@@ -48,6 +42,14 @@ class PolySwyft:
         Execute the sequential nested sampling neural ratio estimation cycle.
         :return:
         """
+        try:
+            from mpi4py import MPI
+        except ImportError:
+            raise ImportError("mpi4py is required for PolySwyft!")
+        comm_gen = MPI.COMM_WORLD
+        rank_gen = comm_gen.Get_rank()
+        size_gen = comm_gen.Get_size()
+
         self.logger = logging.getLogger(self.nreSettings.logger_name)
 
         ### reload data if necessary to resume run ###
@@ -60,17 +62,12 @@ class PolySwyft:
 
             ### truncate last set of deadpoints for resuming training if neccessary ###
             if self.nreSettings.use_dataset_clipping:
-                # TODO make non-random seeding compatible
                 logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
-                rest = deadpoints[deadpoints.logL >= logR_cutoff]
-                bools = np.random.choice([True, False], size=rest.shape[0],
-                                         p=[self.nreSettings.dataset_uniform_sampling_rate,
-                                            1 - self.nreSettings.dataset_uniform_sampling_rate])
-                rest = rest[bools]
-                deadpoints = deadpoints.truncate(logR_cutoff)
-                deadpoints = pd.concat([deadpoints, rest], axis=0)
-                deadpoints.drop_duplicates(inplace=True)
-
+                p = self.nreSettings.dataset_uniform_sampling_rate
+                if rank_gen == 0:
+                    deadpoints = truncate_deadpoints(deadpoints=deadpoints, logR_cutoff=logR_cutoff, p=p)
+                comm_gen.Barrier()
+                deadpoints = comm_gen.bcast(deadpoints, root=0)
             ### save current deadpoints for next training round ###
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
             deadpoints = torch.as_tensor(deadpoints.to_numpy())
@@ -212,14 +209,12 @@ class PolySwyft:
         ### truncate deadpoints ###
         if self.nreSettings.use_dataset_clipping:
             logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
-            rest = deadpoints[deadpoints.logL >= logR_cutoff]
-            bools = np.random.choice([True, False], size=rest.shape[0],
-                                     p=[self.nreSettings.dataset_uniform_sampling_rate,
-                                        1 - self.nreSettings.dataset_uniform_sampling_rate])
-            rest = rest[bools]
-            deadpoints = deadpoints.truncate(logR_cutoff)
-            deadpoints = pd.concat([deadpoints, rest], axis=0)
-            deadpoints.drop_duplicates(inplace=True)
+            p = self.nreSettings.dataset_uniform_sampling_rate
+            if rank_gen == 0:
+                deadpoints = truncate_deadpoints(deadpoints=deadpoints, logR_cutoff=logR_cutoff, p=p)
+            comm_gen.Barrier()
+            deadpoints = comm_gen.bcast(deadpoints, root=0)
+
         comm_gen.Barrier()
 
         ### save current deadpoints for next round ###

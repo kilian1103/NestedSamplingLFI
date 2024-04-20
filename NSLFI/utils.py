@@ -1,36 +1,16 @@
-import math
 from typing import Dict
 from typing import Tuple
 
 import anesthetic
 import numpy as np
+import pandas as pd
 import swyft
 import torch
 from anesthetic import NestedSamples
 from pypolychord import PolyChordSettings
 from scipy.special import logsumexp
-from torch import Tensor
 
 from NSLFI.NRE_Settings import NRE_Settings
-
-
-def random_subset(dataset: Tensor, thinning_factor: float) -> Tensor:
-    """
-    Randomly select a subset of the dataset.
-    :param dataset: torch.Tensor of shape (nsize, ndim)
-    :param thinning_factor: float between 0 and 1
-    :return: torch.Tensor of shape (nsize*thinning_factor, ndim)
-    """
-    if not isinstance(thinning_factor, int) and not isinstance(thinning_factor, float):
-        raise TypeError("thinning_factor must be a float or int type")
-    if thinning_factor > 1 or thinning_factor <= 0:
-        raise ValueError("thinning_factor must be between 0 and 1")
-    N = dataset.shape[0]  # Size of the dataset
-    num_samples = math.floor(thinning_factor * N)  # Number of samples in the random subset
-    if num_samples == 0:
-        raise ValueError("thinning_factor is too small")
-    indices = np.random.choice(N, num_samples, replace=False)  # Randomly select indices
-    return dataset[indices]  # Return the subset of the dataset
 
 
 def select_weighted_contour(data: NestedSamples, threshold: float) -> int:
@@ -185,5 +165,14 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
                                         current_samples=samples_storage[rd], obs=obs,
                                         previous_samples=samples_storage[rd - 1])
             dkl_storage[rd] = KDL
-
     return root_storage, network_storage, samples_storage, dkl_storage
+
+
+def truncate_deadpoints(deadpoints: anesthetic.NestedSamples, logR_cutoff: float, p: float) -> anesthetic.NestedSamples:
+    rest = deadpoints[deadpoints.logL >= logR_cutoff]
+    bools = np.random.choice([True, False], size=rest.shape[0], p=[p, 1 - p])
+    rest = rest[bools]
+    deadpoints = deadpoints.truncate(logR_cutoff)
+    deadpoints = pd.concat([deadpoints, rest], axis=0)
+    deadpoints.drop_duplicates(inplace=True)
+    return deadpoints
