@@ -22,6 +22,16 @@ class PolySwyft:
                  obs: swyft.Sample, deadpoints: torch.Tensor,
                  network: swyft.SwyftModule, polyset: PolyChordSettings,
                  callbacks: Callable):
+        """
+        Initialize the PolySwyft object.
+        :param nreSettings: A NRE_Settings object
+        :param sim: A swyft simulator object
+        :param obs: A swyft sample of the observed data
+        :param deadpoints: A torch.Tensor of the deadpoints
+        :param network: A swyft network object
+        :param polyset: A PolyChordSettings object
+        :param callbacks: A callable object for instantiating the new callbacks of the pl.trainer
+        """
         self.nreSettings = nreSettings
         self.polyset = polyset
         self.sim = sim
@@ -35,6 +45,10 @@ class PolySwyft:
         self.deadpoints_storage = dict()
 
     def execute_NSNRE_cycle(self):
+        """
+        Execute the sequential nested sampling neural ratio estimation cycle.
+        :return:
+        """
         self.logger = logging.getLogger(self.nreSettings.logger_name)
 
         ### reload data if necessary to resume run ###
@@ -114,7 +128,7 @@ class PolySwyft:
         ### setup network ###
         network = self.network_model.get_new_network()
         network = comm_gen.bcast(network, root=0)
-        network = retrain_next_round(root=root, training_data=self.current_deadpoints,
+        network = retrain_next_round(root=root, deadpoints=self.current_deadpoints,
                                      nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
                                      network=network,
                                      trainer=trainer, rd=rd)

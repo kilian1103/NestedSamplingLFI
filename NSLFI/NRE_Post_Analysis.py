@@ -13,6 +13,17 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
                            samples_storage: Dict[int, anesthetic.Samples], dkl_storage: Dict[int, Tuple[float, float]],
                            nreSettings: NRE_Settings,
                            obs: swyft.Sample, true_posterior: anesthetic.Samples = None):
+    """
+    Plot the analysis of the NSNRE.
+    :param root_storage: A dictionary of roots for each round
+    :param network_storage: A dictionary of networks for each round
+    :param samples_storage: A dictionary of samples for each round
+    :param dkl_storage: A dictionary of KL divergences for each round
+    :param nreSettings: A NRE_Settings object
+    :param obs: A Swyft sample of the observed data
+    :param true_posterior: An anesthetic samples object of the true posterior if available
+    :return:
+    """
     # set up labels for plotting
     params_idx = [i for i in range(0, nreSettings.num_features)]
     params_labels = {i: rf"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)}

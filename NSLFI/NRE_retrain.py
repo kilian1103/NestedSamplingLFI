@@ -11,10 +11,21 @@ from torch import Tensor
 from NSLFI.NRE_Settings import NRE_Settings
 
 
-def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settings,
-                       sim: Simulator,
-                       obs: swyft.Sample, network: swyft.SwyftModule, trainer: swyft.SwyftTrainer,
+def retrain_next_round(root: str, deadpoints: Tensor, nreSettings: NRE_Settings,
+                       sim: Simulator, network: swyft.SwyftModule, trainer: swyft.SwyftTrainer,
                        rd: int) -> swyft.SwyftModule:
+    """
+    Retrain the network for the next round of NSNRE.
+    :param root: A string of the root folder
+    :param deadpoints: A tensor of deadpoints
+    :param nreSettings: A NRE_Settings object
+    :param sim: A swyft simulator object
+    :param obs: A swyft sample of the observed data
+    :param network: A swyft network object
+    :param trainer: A swyft trainer object
+    :param rd: An integer of the round number
+    :return: A trained swyft network object
+    """
     logger = logging.getLogger(nreSettings.logger_name)
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
@@ -29,7 +40,7 @@ def retrain_next_round(root: str, training_data: Tensor, nreSettings: NRE_Settin
     ### simulate joint distribution using deadpoints ###
     samples = []
     if rank_gen == 0:
-        for point in training_data:
+        for point in deadpoints:
             cond = {nreSettings.targetKey: point.float()}
 
             ### noise resampling ###

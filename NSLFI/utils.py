@@ -16,10 +16,10 @@ from NSLFI.NRE_Settings import NRE_Settings
 
 def random_subset(dataset: Tensor, thinning_factor: float) -> Tensor:
     """
-    Randomly select a subset of the dataset
+    Randomly select a subset of the dataset.
     :param dataset: torch.Tensor of shape (nsize, ndim)
     :param thinning_factor: float between 0 and 1
-    :return:
+    :return: torch.Tensor of shape (nsize*thinning_factor, ndim)
     """
     if not isinstance(thinning_factor, int) and not isinstance(thinning_factor, float):
         raise TypeError("thinning_factor must be a float or int type")
@@ -34,7 +34,11 @@ def random_subset(dataset: Tensor, thinning_factor: float) -> Tensor:
 
 
 def select_weighted_contour(data: NestedSamples, threshold: float) -> int:
-    """find the index of the sample that corresponds to the threshold of the cumulative weights."""
+    """find the index of the posterior sample that corresponds iso-contour threshold.
+    :param data: An anesthetic NestedSamples object
+    :param threshold: A float between 0 and 1
+    :return: An integer index
+    """
     cumulative_weights = data.get_weights().cumsum()
     cumulative_weights_norm = cumulative_weights / cumulative_weights[-1]
     index = np.searchsorted(cumulative_weights_norm, threshold)
@@ -44,7 +48,15 @@ def select_weighted_contour(data: NestedSamples, threshold: float) -> int:
 def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.SwyftModule,
                           current_samples: anesthetic.Samples, previous_samples: anesthetic.Samples,
                           obs: swyft.Sample) -> Tuple[float, float]:
-    """Compute the KL divergence between the previous and current NRE."""
+    """
+    Compute the KL divergence between the previous NRE and the current NRE KL(P_{i}||P_{i-i}).
+    :param nreSettings: A NRE_Settings object
+    :param previous_network: A swyft network object
+    :param current_samples: An anesthetic samples object of the current samples
+    :param previous_samples: An anesthetic samples object of the previous samples
+    :param obs: A swyft sample of the observed data
+    :return: A tuple of the KL divergence and the error
+    """
 
     samples = {nreSettings.targetKey: torch.as_tensor(current_samples.iloc[:, :nreSettings.num_features].to_numpy())}
     with torch.no_grad():
@@ -69,6 +81,14 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
 def compute_KL_divergence_truth(nreSettings: NRE_Settings, previous_network: swyft.SwyftModule,
                                 true_posterior: anesthetic.Samples, previous_samples: anesthetic.Samples,
                                 obs: swyft.Sample) -> Tuple[float, float]:
+    """Compute the KL divergence between the previous NRE and the true posterior KL(P_{true}||P_{i}).
+    :param nreSettings: A NRE_Settings object
+    :param previous_network: A swyft network object
+    :param true_posterior: An anesthetic samples object of the true posterior
+    :param previous_samples: An anesthetic samples object of the previous samples
+    :param obs: A swyft sample of the observed data
+    :return: A tuple of the KL divergence and the error
+    """
     swyft_samples = {
         nreSettings.targetKey: torch.as_tensor(true_posterior.iloc[:, :nreSettings.num_features].to_numpy())}
     with torch.no_grad():
@@ -91,7 +111,12 @@ def compute_KL_divergence_truth(nreSettings: NRE_Settings, previous_network: swy
 
 
 def compute_KL_compression(samples: anesthetic.NestedSamples, nreSettings: NRE_Settings):
-    """Compute the Prior to Posterior DKL compression"""
+    """
+    Compute the KL compression of the samples, Prior to Posterior, KL(P||pi).
+    :param samples: An anesthetic NestedSamples object
+    :param nreSettings: A NRE_Settings object
+    :return: A tuple of the KL compression and the error
+    """
     logw = samples.logw(nreSettings.n_DKL_estimates)
     logpqs = samples["logL"].values[:, None] - samples.logZ(logw).values
     logw -= logsumexp(logw, axis=0)
@@ -106,6 +131,16 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
         Tuple[
             Dict[int, str], Dict[int, swyft.SwyftModule], Dict[int, anesthetic.NestedSamples], Dict[
                 int, Tuple[float, float]]]:
+    """
+    Reload the data for plotting.
+    :param nreSettings: A NRE_Settings object
+    :param network: A swyft network object
+    :param polyset: A PolyChordSettings object
+    :param until_round: An integer of the number of rounds to reload (inclusive)
+    :param only_last_round: A boolean to only reload the last round until_round
+    :return: A tuple of dictionaries of root_storage, network_storage, samples_storage, and dkl_storage
+    """
+
     network_storage = {}
     root_storage = {}
     samples_storage = {}
