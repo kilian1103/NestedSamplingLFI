@@ -98,7 +98,7 @@ def execute():
     if rank_gen == 0:
         # plot analysis of NSNSRE
         plot_analysis_of_NSNRE(nreSettings=nreSettings, network_storage=network_storage,
-                               root_storage=root_storage, samples_storage=samples_storage, dkl_storage=dkl_storage,
+                               samples_storage=samples_storage, dkl_storage=dkl_storage,
                                obs=obs, true_posterior=mcmc_true, root=root_storage[nreSettings.NRE_num_retrain_rounds])
     logger.info('Finished')
 
