@@ -129,7 +129,7 @@ class PolySwyft:
         network = self.network_model.get_new_network()
         network = comm_gen.bcast(network, root=0)
         network = retrain_next_round(root=root, deadpoints=self.current_deadpoints,
-                                     nreSettings=self.nreSettings, sim=self.sim, obs=self.obs,
+                                     nreSettings=self.nreSettings, sim=self.sim,
                                      network=network,
                                      trainer=trainer, rd=rd)
 
