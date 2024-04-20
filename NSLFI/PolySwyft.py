@@ -9,7 +9,6 @@ import pypolychord
 import swyft
 import torch
 import wandb
-from mpi4py import MPI
 from pypolychord import PolyChordSettings
 
 from NSLFI.NRE_Settings import NRE_Settings
@@ -102,6 +101,11 @@ class PolySwyft:
         self.nreSettings.NRE_num_retrain_rounds = rd - 1
 
     def _cycle(self, rd):
+        try:
+            from mpi4py import MPI
+        except ImportError:
+            raise ImportError("mpi4py is required for PolySwyft!")
+
         comm_gen = MPI.COMM_WORLD
         rank_gen = comm_gen.Get_rank()
         size_gen = comm_gen.Get_size()
@@ -198,7 +202,7 @@ class PolySwyft:
             DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
                                         current_samples=self.deadpoints_storage[rd], obs=self.obs,
                                         previous_samples=self.deadpoints_storage[rd - 1])
-            self.dkl_storage.append(DKL)
+            self.dkl_storage[rd] = DKL
             self.logger.info(f"DKL of rd {rd} is: {DKL}")
 
             ### delete previous deadpoints and network to save temporary memory, as saved on disk ###

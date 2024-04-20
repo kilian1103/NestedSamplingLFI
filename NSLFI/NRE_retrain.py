@@ -1,10 +1,8 @@
-import logging
 import os
 
 import sklearn
 import swyft
 import torch
-from mpi4py import MPI
 from swyft import collate_output as reformat_samples, Simulator
 from torch import Tensor
 
@@ -26,7 +24,12 @@ def retrain_next_round(root: str, deadpoints: Tensor, nreSettings: NRE_Settings,
     :param rd: An integer of the round number
     :return: A trained swyft network object
     """
-    logger = logging.getLogger(nreSettings.logger_name)
+    logger = nreSettings.logger
+    try:
+        from mpi4py import MPI
+    except ImportError:
+        raise ImportError("mpi4py is required for this function!")
+
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
