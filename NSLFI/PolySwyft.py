@@ -108,7 +108,7 @@ class PolySwyft:
 
         ### start NRE training section ###
         root = f"{self.nreSettings.root}_round_{rd}"
-        self.logger.info("retraining round: " + str(rd))
+        self.logger.info("training network round: " + str(rd))
 
         ### setup wandb ###
         if self.nreSettings.activate_wandb and rank_gen == 0:
@@ -125,7 +125,7 @@ class PolySwyft:
         self.nreSettings.trainer_kwargs["callbacks"] = self.callbacks()
         trainer = swyft.SwyftTrainer(**self.nreSettings.trainer_kwargs)
 
-        ### setup network ###
+        ### setup network and train network###
         network = self.network_model.get_new_network()
         network = comm_gen.bcast(network, root=0)
         network = retrain_next_round(root=root, deadpoints=self.current_deadpoints,
@@ -145,10 +145,10 @@ class PolySwyft:
         network.eval()
         self.network_storage[rd] = network
         self.root_storage[rd] = root
-        self.logger.info("Using Nested Sampling and trained NRE to generate new samples for the next round!")
 
         ### start polychord section ###
         ### run PolyChord ###
+        self.logger.info("Using PolyChord with trained NRE to generate deadpoints for the next round!")
         self.polyset.base_dir = root
         self.polyset.nlive = self.nreSettings.nlives_per_round[rd]
         comm_gen.barrier()
@@ -221,7 +221,7 @@ class PolySwyft:
         ### save current deadpoints for next round ###
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
-        self.logger.info(f"total data size for training for rd {rd + 1}: {deadpoints.shape[0]}")
+        self.logger.info(f"Number of deadpoints for next rd {rd + 1}: {deadpoints.shape[0]}")
         self.current_deadpoints = deadpoints
         return
 
