@@ -65,6 +65,9 @@ class PolySwyft:
                                                 previous_samples=self.deadpoints_storage[rd - 1])
                     self.dkl_storage.append(DKL)
 
+                    del self.deadpoints_storage[rd - 1]  # save memory
+                    del self.network_storage[rd - 1]  # save memory
+
             if self.nreSettings.use_dataset_clipping:
                 # TODO make non-random seeding compatible
                 logR_cutoff = float(self.nreSettings.dataset_logR_cutoff_sigma * deadpoints["logL"].std())
@@ -186,6 +189,9 @@ class PolySwyft:
                                         previous_samples=self.deadpoints_storage[rd - 1])
             self.dkl_storage.append(DKL)
             self.logger.info(f"DKL of rd {rd} is: {DKL}")
+
+            del self.deadpoints_storage[rd - 1]  # save memory
+            del self.network_storage[rd - 1]  # save memory
 
         if self.nreSettings.use_dataset_clipping:
             logR_cutoff = float(self.nreSettings.dataset_logR_cutoff_sigma * deadpoints["logL"].std())
