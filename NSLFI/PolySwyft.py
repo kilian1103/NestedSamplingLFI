@@ -44,7 +44,7 @@ class PolySwyft:
             ### only execute this code when previous rounds are already trained ###
             self._reload_data()
 
-            deadpoints = self.deadpoints_storage[self.nreSettings.NRE_start_from_round]
+            deadpoints = self.deadpoints_storage[self.nreSettings.NRE_start_from_round - 1]
 
             if self.nreSettings.use_dataset_clipping:
                 # TODO make non-random seeding compatible
@@ -196,7 +196,7 @@ class PolySwyft:
         root_storage, network_storage, samples_storage = reload_data_for_plotting(nreSettings=self.nreSettings,
                                                                                   network=self.network_model,
                                                                                   polyset=self.polyset,
-                                                                                  until_round=self.nreSettings.NRE_start_from_round,
+                                                                                  until_round=self.nreSettings.NRE_start_from_round - 1,
                                                                                   only_last_round=True)
         self.root_storage = root_storage
         self.network_storage = network_storage
