@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import numpy as np
 import pypolychord
@@ -24,8 +23,6 @@ def execute():
     comm_gen = MPI.COMM_WORLD
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
-
-    args = sys.argv
 
     nreSettings = NRE_Settings()
     seed_everything(nreSettings.seed, workers=True)
@@ -102,7 +99,7 @@ def execute():
         # plot analysis of NSNSRE
         plot_analysis_of_NSNRE(nreSettings=nreSettings, network_storage=network_storage,
                                root_storage=root_storage, samples_storage=samples_storage, dkl_storage=dkl_storage,
-                               obs=obs, true_posterior=mcmc_true)
+                               obs=obs, true_posterior=mcmc_true, root=root_storage[nreSettings.NRE_num_retrain_rounds])
     logger.info('Finished')
 
 

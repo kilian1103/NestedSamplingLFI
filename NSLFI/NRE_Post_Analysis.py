@@ -9,12 +9,13 @@ from NSLFI.NRE_Settings import NRE_Settings
 from NSLFI.utils import compute_KL_compression, compute_KL_divergence_truth
 
 
-def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[int, swyft.SwyftModule],
+def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModule],
                            samples_storage: Dict[int, anesthetic.Samples], dkl_storage: Dict[int, Tuple[float, float]],
                            nreSettings: NRE_Settings,
                            obs: swyft.Sample, true_posterior: anesthetic.Samples = None):
     """
     Plot the analysis of the NSNRE.
+    :param root: A string of the root directory to save the plots
     :param root_storage: A dictionary of roots for each round
     :param network_storage: A dictionary of networks for each round
     :param samples_storage: A dictionary of samples for each round
@@ -28,7 +29,6 @@ def plot_analysis_of_NSNRE(root_storage: Dict[int, str], network_storage: Dict[i
     params_idx = [i for i in range(0, nreSettings.num_features)]
     params_labels = {i: rf"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)}
 
-    root = root_storage[nreSettings.NRE_num_retrain_rounds]
     dkl_storage_true = {}
 
     # triangle plot
