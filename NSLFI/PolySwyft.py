@@ -35,7 +35,6 @@ class PolySwyft:
         self.deadpoints_storage = dict()
 
     def execute_NSNRE_cycle(self):
-        # retrain NRE and sample new samples with NS loop
         self.logger = logging.getLogger(self.nreSettings.logger_name)
 
         ### reload data if necessary to resume run ###
@@ -70,6 +69,7 @@ class PolySwyft:
         else:
             self._cyclic_kl()
 
+        ### delete temporary storage as results are saved on disk ###
         del self.deadpoints_storage
         del self.network_storage
 
@@ -187,8 +187,9 @@ class PolySwyft:
             self.dkl_storage.append(DKL)
             self.logger.info(f"DKL of rd {rd} is: {DKL}")
 
-            del self.deadpoints_storage[rd - 1]  # save memory
-            del self.network_storage[rd - 1]  # save memory
+            ### delete previous deadpoints and network to save temporary memory, as saved on disk ###
+            del self.deadpoints_storage[rd - 1]
+            del self.network_storage[rd - 1]
 
         ### truncate deadpoints ###
         if self.nreSettings.use_dataset_clipping:
