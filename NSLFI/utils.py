@@ -113,7 +113,3 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
         samples_storage[rd] = samples
 
     return root_storage, network_storage, samples_storage
-
-
-def reformat_obs_to_nre_format(obs: swyft.Sample, nreSettings: NRE_Settings) -> Dict[str, torch.Tensor]:
-    return {nreSettings.obsKey: torch.tensor(obs[nreSettings.obsKey]).unsqueeze(0)}
