@@ -61,13 +61,17 @@ class PolySwyft:
             deadpoints = self.deadpoints_storage[self.nreSettings.NRE_start_from_round - 1]
 
             ### truncate last set of deadpoints for resuming training if neccessary ###
-            if self.nreSettings.use_dataset_clipping:
+            if self.nreSettings.use_dataset_truncation:
                 logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
-                p = self.nreSettings.dataset_uniform_sampling_rate
-                if rank_gen == 0:
-                    deadpoints = truncate_deadpoints(deadpoints=deadpoints, logR_cutoff=logR_cutoff, p=p)
-                comm_gen.Barrier()
-                deadpoints = comm_gen.bcast(deadpoints, root=0)
+                deadpoints = deadpoints.truncate(logR_cutoff)
+                ### sample random deadpoints within omitted sample###
+                if self.nreSettings.use_dataset_random_sampling:
+                    p = self.nreSettings.dataset_uniform_sampling_rate
+                    if rank_gen == 0:
+                        deadpoints = random_subset_after_truncation(deadpoints=deadpoints, logR_cutoff=logR_cutoff, p=p)
+                    comm_gen.Barrier()
+                    deadpoints = comm_gen.bcast(deadpoints, root=0)
+
             ### save current deadpoints for next training round ###
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
             deadpoints = torch.as_tensor(deadpoints.to_numpy())
@@ -207,13 +211,16 @@ class PolySwyft:
             del self.network_storage[rd - 1]
 
         ### truncate deadpoints ###
-        if self.nreSettings.use_dataset_clipping:
+        if self.nreSettings.use_dataset_truncation:
             logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
-            p = self.nreSettings.dataset_uniform_sampling_rate
-            if rank_gen == 0:
-                deadpoints = truncate_deadpoints(deadpoints=deadpoints, logR_cutoff=logR_cutoff, p=p)
-            comm_gen.Barrier()
-            deadpoints = comm_gen.bcast(deadpoints, root=0)
+            deadpoints = deadpoints.truncate(logR_cutoff)
+            ### sample random deadpoints within omitted sample###
+            if self.nreSettings.use_dataset_random_sampling:
+                p = self.nreSettings.dataset_uniform_sampling_rate
+                if rank_gen == 0:
+                    deadpoints = random_subset_after_truncation(deadpoints=deadpoints, logR_cutoff=logR_cutoff, p=p)
+                comm_gen.Barrier()
+                deadpoints = comm_gen.bcast(deadpoints, root=0)
 
         comm_gen.Barrier()
 

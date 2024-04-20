@@ -1,9 +1,6 @@
 class NRE_Settings:
     def __init__(self):
         """NRE initialisation.
-
-        Settings for the (M)NRE algorithm
-
         """
         self.root = "swyft_polychord_NSNRE"
         self.wandb_project_name = "NSNRE"
@@ -66,8 +63,9 @@ class NRE_Settings:
                                  range(self.NRE_num_retrain_rounds + 1)}
         self.use_noise_resampling = True
         self.n_noise_resampling_samples = 10
-        self.use_dataset_clipping = True
+        self.use_dataset_truncation = True
         self.dataset_logR_cutoff = 0  # logR contour
+        self.use_dataset_random_sampling = True
         self.dataset_uniform_sampling_rate = 0.1
         self.use_livepoint_increasing = True
         self.livepoint_increase_posterior_contour = 0.99  # zero point is at posterior peak

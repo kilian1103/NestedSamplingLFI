@@ -168,11 +168,11 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
     return root_storage, network_storage, samples_storage, dkl_storage
 
 
-def truncate_deadpoints(deadpoints: anesthetic.NestedSamples, logR_cutoff: float, p: float) -> anesthetic.NestedSamples:
+def random_subset_after_truncation(deadpoints: anesthetic.NestedSamples, logR_cutoff: float,
+                                   p: float) -> anesthetic.NestedSamples:
     rest = deadpoints[deadpoints.logL >= logR_cutoff]
     bools = np.random.choice([True, False], size=rest.shape[0], p=[p, 1 - p])
     rest = rest[bools]
-    deadpoints = deadpoints.truncate(logR_cutoff)
     deadpoints = pd.concat([deadpoints, rest], axis=0)
     deadpoints.drop_duplicates(inplace=True)
     return deadpoints
