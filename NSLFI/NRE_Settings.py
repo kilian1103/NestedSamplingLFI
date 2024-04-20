@@ -67,18 +67,16 @@ class NRE_Settings:
         self.use_noise_resampling = True
         self.n_noise_resampling_samples = 10
         self.use_dataset_clipping = True
-        self.dataset_logR_cutoff_sigma = 1
-        self.dataset_uniform_sampling_rate = 0.2
+        self.dataset_logR_cutoff = 0  # logR contour
+        self.dataset_uniform_sampling_rate = 0.1
         self.use_livepoint_increasing = True
         self.livepoint_increase_posterior_contour = 0.99  # zero point is at posterior peak
         self.n_increased_livepoints = 1_000
         self.increased_livepoints_fileroot = "enhanced_run"
         # plotting settings
         self.only_plot_mode = False
-        self.true_contours_available = True
         self.plot_triangle_plot = True
         self.triangle_zoom_start = 8
-        self.plot_triangle_plot_ext = False
         self.plot_KL_divergence = True
         self.plot_KL_compression = True
         self.plot_logR_histogram = True

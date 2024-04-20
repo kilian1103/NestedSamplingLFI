@@ -212,11 +212,13 @@ class PolySwyft:
         return
 
     def _reload_data(self):
-        root_storage, network_storage, samples_storage = reload_data_for_plotting(nreSettings=self.nreSettings,
-                                                                                  network=self.network_model,
-                                                                                  polyset=self.polyset,
-                                                                                  until_round=self.nreSettings.NRE_start_from_round - 1,
-                                                                                  only_last_round=True)
+        root_storage, network_storage, samples_storage, dkl_storage = reload_data_for_plotting(
+            nreSettings=self.nreSettings,
+            network=self.network_model,
+            polyset=self.polyset,
+            until_round=self.nreSettings.NRE_start_from_round - 1,
+            only_last_round=True)
         self.root_storage = root_storage
         self.network_storage = network_storage
         self.deadpoints_storage = samples_storage
+        self.dkl_storage = dkl_storage

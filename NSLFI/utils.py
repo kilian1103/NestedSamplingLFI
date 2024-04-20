@@ -66,6 +66,30 @@ def compute_KL_divergence(nreSettings: NRE_Settings, previous_network: swyft.Swy
     return DKL, DKL_err
 
 
+def compute_KL_divergence_truth(nreSettings: NRE_Settings, previous_network: swyft.SwyftModule,
+                                true_posterior: anesthetic.Samples, previous_samples: anesthetic.Samples,
+                                obs: swyft.Sample) -> Tuple[float, float]:
+    swyft_samples = {
+        nreSettings.targetKey: torch.as_tensor(true_posterior.iloc[:, :nreSettings.num_features].to_numpy())}
+    with torch.no_grad():
+        predictions = previous_network(obs, swyft_samples)
+    true_posterior["logL_previous"] = predictions.logratios.numpy().squeeze()
+    # MCMC samples for true samples do not have logw functionality
+    samples = true_posterior.iloc[:, :nreSettings.num_features].squeeze()
+    true_posterior_logL = nreSettings.model.posterior(obs[nreSettings.obsKey].numpy().squeeze()).logpdf(samples)
+    true_prior = nreSettings.model.prior().logpdf(samples)
+    true_posterior.logL = true_posterior_logL
+    true_posterior["logR"] = true_posterior["logL_previous"]
+    logpqs = (true_posterior["logL"].values[:, None] - true_posterior["logR"].values[:, None] - true_prior[:,
+                                                                                                None] +
+              previous_samples.logZ(
+                  nreSettings.n_DKL_estimates).values)
+    DKL_estimates = logpqs.mean(axis=0)
+    DKL = DKL_estimates.mean()
+    DKL_err = DKL_estimates.std()
+    return (DKL, DKL_err)
+
+
 def compute_KL_compression(samples: anesthetic.NestedSamples, nreSettings: NRE_Settings):
     """Compute the Prior to Posterior DKL compression"""
     logw = samples.logw(nreSettings.n_DKL_estimates)
@@ -80,15 +104,22 @@ def compute_KL_compression(samples: anesthetic.NestedSamples, nreSettings: NRE_S
 def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModule, polyset: PolyChordSettings,
                              until_round: int, only_last_round=False) -> \
         Tuple[
-            Dict[int, str], Dict[int, swyft.SwyftModule], Dict[int, anesthetic.NestedSamples]]:
+            Dict[int, str], Dict[int, swyft.SwyftModule], Dict[int, anesthetic.NestedSamples], Dict[
+                int, Tuple[float, float]]]:
     network_storage = {}
     root_storage = {}
     samples_storage = {}
+    dkl_storage = {}
     root = nreSettings.root
+
+    try:
+        obs = network.obs
+    except AttributeError:
+        raise AttributeError("network object does not have an attribute 'obs'")
 
     for rd in range(until_round + 1):
         # load root
-        if only_last_round and rd < until_round:
+        if only_last_round and rd < until_round - 1:
             continue
 
         current_root = f"{root}_round_{rd}"
@@ -112,4 +143,12 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
         samples.set_labels(labels, inplace=True)
         samples_storage[rd] = samples
 
-    return root_storage, network_storage, samples_storage
+        # compute DKL
+        if rd > 0:
+            previous_network = network_storage[rd - 1]
+            KDL = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network.eval(),
+                                        current_samples=samples_storage[rd], obs=obs,
+                                        previous_samples=samples_storage[rd - 1])
+            dkl_storage[rd] = KDL
+
+    return root_storage, network_storage, samples_storage, dkl_storage
