@@ -242,3 +242,6 @@ class PolySwyft:
         self.network_storage = network_storage
         self.deadpoints_storage = samples_storage
         self.dkl_storage = dkl_storage
+
+        del self.network_storage[self.nreSettings.NRE_start_from_round - 2]
+        del self.deadpoints_storage[self.nreSettings.NRE_start_from_round - 2]
