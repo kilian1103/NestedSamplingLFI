@@ -132,9 +132,9 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
     except AttributeError:
         raise AttributeError("network object does not have an attribute 'obs'")
 
-    for rd in range(until_round + 1):
+    for rd in range(until_round):
         # load root
-        if only_last_round and rd < until_round - 1:
+        if only_last_round and rd < until_round - 2:
             continue
 
         current_root = f"{root}_round_{rd}"
@@ -160,6 +160,8 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
 
         # compute DKL
         if rd > 0:
+            if only_last_round and rd < until_round - 1:
+                continue
             previous_network = network_storage[rd - 1]
             KDL = compute_KL_divergence(nreSettings=nreSettings, previous_network=previous_network.eval(),
                                         current_samples=samples_storage[rd], obs=obs,

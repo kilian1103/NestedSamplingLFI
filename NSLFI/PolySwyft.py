@@ -236,7 +236,7 @@ class PolySwyft:
             nreSettings=self.nreSettings,
             network=self.network_model,
             polyset=self.polyset,
-            until_round=self.nreSettings.NRE_start_from_round - 1,
+            until_round=self.nreSettings.NRE_start_from_round,
             only_last_round=True)
         self.root_storage = root_storage
         self.network_storage = network_storage
