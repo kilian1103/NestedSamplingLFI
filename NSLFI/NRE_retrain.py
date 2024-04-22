@@ -88,6 +88,7 @@ def retrain_next_round(root: str, deadpoints: Tensor, nreSettings: NRE_Settings,
     # network = torch.compile(network)
     logger.info("Starting training of network!")
     dm = swyft.SwyftDataModule(data=training_data_swyft, **nreSettings.dm_kwargs)
+    network.train()
     trainer.fit(network, dm)
     logger.info("Training done!")
 
