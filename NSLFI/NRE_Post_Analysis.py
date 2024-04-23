@@ -122,12 +122,13 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             samples = samples_storage[rd]
             logRs = samples["logL"] - samples.logZ()
-            plt.hist(logRs, label=f"round {rd}", alpha=0.5)
+            plt.hist(samples["logL"], label=r"$\log r_{\mathrm{uncorr}}$", alpha=0.5, bins=50)
+            plt.hist(logRs, label=r"$\log r_{\mathrm{corr}}$", alpha=0.5, bins=50)
             plt.title(r"$\log r$ histogram")
             plt.xlabel(r"$\log r$")
             plt.ylabel("Frequency")
             plt.legend()
-            plt.savefig(f"{root}/{path}/logR_histogram_unweighted.pdf")
+            plt.savefig(f"{root}/{path}/logR_histogram_unweighted_{rd}.pdf")
             plt.close()
 
     if nreSettings.plot_logR_pdf:
@@ -137,30 +138,39 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         except OSError:
             print(f"{path}-folder already exists!")
 
-        figs, axes = make_1d_axes("logR", figsize=(3.5, 3.5))
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             samples = samples_storage[rd]
             samples["logR"] = samples["logL"] - samples.logZ()
+            figs, axes = make_1d_axes("logR", figsize=(3.5, 3.5))
             samples.plot_1d(axes=axes, label=f"round {rd}")
             plt.xlabel(r"$\log r$")
             plt.ylabel(r"$p(\log r)$")
             plt.legend()
-            plt.savefig(f"{root}/{path}/logR_pdf.pdf", dpi=300, bbox_inches='tight')
+            plt.savefig(f"{root}/{path}/logR_pdf_{rd}.pdf", dpi=300, bbox_inches='tight')
             plt.close()
 
     if nreSettings.plot_dataset_truncation:
-        totalsize = np.empty(nreSettings.NRE_num_retrain_rounds)
-        truncatedsize = np.empty(nreSettings.NRE_num_retrain_rounds)
+        totalsize = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
+        truncatedsize = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
+        num_samples_below_logR_zero = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
+        num_samples_below_logR_zero_corrected = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             samples = samples_storage[rd]
+            samples["logR"] = samples["logL"] - samples.logZ()
             logR_cutoff = float(nreSettings.dataset_logR_cutoff)
             deadpoints_truncated = samples.truncate(logR_cutoff)
             totalsize[rd] = samples.shape[0]
             truncatedsize[rd] = deadpoints_truncated.shape[0]
-        plt.plot(x=np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), y=totalsize, label="deadpoints size")
-        plt.plot(x=np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), y=truncatedsize,
-                 label="truncated deadpoints size")
+            num_samples_below_logR_zero[rd] = deadpoints_truncated[deadpoints_truncated.logL < 0].shape[0]
+            num_samples_below_logR_zero_corrected[rd] = deadpoints_truncated[deadpoints_truncated.logR < 0].shape[0]
+        plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), totalsize, label="total deadpoints")
+        plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), truncatedsize,
+                 label=r"trunc. deadpoints at $\log r_{\mathrm{uncorr.}} = {nreSettings.dataset_logR_cutoff}$")
+        plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), num_samples_below_logR_zero,
+                 label=r"trunc. deadpoints, $\log r_{\mathrm{uncorr.}} < 0$")
+        # plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), num_samples_below_logR_zero_corrected,
+        #  label=r"trunc. deadpoints, $\log r_{\mathrm{corr.}} < 0$")
         plt.xlabel(r"iteration")
-        plt.ylabel(rf"# of samples for $\log r = {nreSettings.dataset_logR_cutoff}$")
+        plt.ylabel(rf"# of samples")
         plt.legend()
         plt.savefig(f"{root}/dataset_truncation_metric.pdf")
