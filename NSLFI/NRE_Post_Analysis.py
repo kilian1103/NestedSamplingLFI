@@ -38,9 +38,9 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         kinds = {'lower': 'kde_2d', 'diagonal': 'kde_1d', 'upper': "scatter_2d"}
         fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=True,
                                  ticks="outer")
-        last_round_samples = samples_storage[nreSettings.NRE_num_retrain_rounds]
+        first_round_samples = samples_storage[0]
         # load prior from last round
-        prior = last_round_samples.prior()
+        prior = first_round_samples.prior()
         prior.plot_2d(axes=axes, alpha=0.4, label="prior", kinds=kinds)
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             nested = samples_storage[rd]
@@ -164,8 +164,9 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
             num_samples_below_logR_zero[rd] = deadpoints_truncated[deadpoints_truncated.logL < 0].shape[0]
             num_samples_below_logR_zero_corrected[rd] = deadpoints_truncated[deadpoints_truncated.logR < 0].shape[0]
         plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), totalsize, label="total deadpoints")
+        lbl = r"trunc. deadpoints at $\log r_{\mathrm{uncorr.}}$" + f" = {nreSettings.dataset_logR_cutoff}"
         plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), truncatedsize,
-                 label=r"trunc. deadpoints at $\log r_{\mathrm{uncorr.}} = {nreSettings.dataset_logR_cutoff}$")
+                 label=lbl)
         plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), num_samples_below_logR_zero,
                  label=r"trunc. deadpoints, $\log r_{\mathrm{uncorr.}} < 0$")
         # plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), num_samples_below_logR_zero_corrected,
