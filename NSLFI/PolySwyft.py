@@ -131,7 +131,11 @@ class PolySwyft:
         trainer = swyft.SwyftTrainer(**self.nreSettings.trainer_kwargs)
 
         ### setup network and train network###
-        network = self.network_model.get_new_network()
+        if self.nreSettings.active_learning_mode:
+            network = self.network_model
+        else:
+            network = self.network_model.get_new_network()
+
         network = comm_gen.bcast(network, root=0)
         network = retrain_next_round(root=root, deadpoints=self.current_deadpoints,
                                      nreSettings=self.nreSettings, sim=self.sim,
@@ -224,7 +228,11 @@ class PolySwyft:
 
         comm_gen.Barrier()
 
+        if self.nreSettings.use_posterior_compression:
+            deadpoints = deadpoints.compress()
+
         ### save current deadpoints for next round ###
+
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         self.logger.info(f"Number of deadpoints for next rd {rd + 1}: {deadpoints.shape[0]}")
@@ -236,7 +244,7 @@ class PolySwyft:
             nreSettings=self.nreSettings,
             network=self.network_model,
             polyset=self.polyset,
-            until_round=self.nreSettings.NRE_start_from_round,
+            until_round=self.nreSettings.NRE_start_from_round - 1,
             only_last_round=True)
         self.root_storage = root_storage
         self.network_storage = network_storage

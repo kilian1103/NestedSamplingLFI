@@ -51,6 +51,8 @@ class NRE_Settings:
         self.n_prior_sampling = 10_000  # nsamples for prior sampling of polychord
         self.model = None
         # NSNRE settings
+        self.active_learning_mode = False
+        self.use_posterior_compression = False
         self.cyclic_rounds = True
         self.NRE_num_retrain_rounds = 10
         self.NRE_start_from_round = 0
