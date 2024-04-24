@@ -178,3 +178,4 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         plt.ylabel(rf"# of samples")
         plt.legend()
         plt.savefig(f"{root}/dataset_truncation_metric.pdf")
+        plt.close()
