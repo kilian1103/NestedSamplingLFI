@@ -2,7 +2,8 @@ class NRE_Settings:
     def __init__(self):
         """NRE initialisation.
         """
-        self.root = "swyft_polychord_NSNRE"
+        self.root = "swyft_polychord_NSNRE"  # root directory
+        self.child_root = "round"  # root for each round: {root}/{child_root}
         self.wandb_project_name = "NSNRE"
         self.neural_network_file = "NRE_network.pt"
         self.logger_name = f"{self.root}.log"

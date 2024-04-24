@@ -136,7 +136,7 @@ def reload_data_for_plotting(nreSettings: NRE_Settings, network: swyft.SwyftModu
         if only_last_round and rd < until_round - 1:
             continue
 
-        current_root = f"{root}_round_{rd}"
+        current_root = f"{root}/{nreSettings.child_root}_{rd}"
         root_storage[rd] = current_root
 
         # load network

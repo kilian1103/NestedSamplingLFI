@@ -1,5 +1,6 @@
 import logging
 import os
+import pickle
 from typing import Callable
 
 import pypolychord
@@ -51,6 +52,16 @@ class PolySwyft:
         size_gen = comm_gen.Get_size()
 
         self.logger = logging.getLogger(self.nreSettings.logger_name)
+
+        ### create root folder ###
+        try:
+            os.makedirs(self.nreSettings.root)
+        except OSError:
+            self.logger.info("root folder already exists!")
+
+        ### save settings
+        with open(f'{self.nreSettings.root}/settings.pkl', 'wb') as file:
+            pickle.dump(self.nreSettings, file)
 
         ### reload data if necessary to resume run ###
         if self.nreSettings.NRE_start_from_round > 0:
@@ -112,7 +123,7 @@ class PolySwyft:
         size_gen = comm_gen.Get_size()
 
         ### start NRE training section ###
-        root = f"{self.nreSettings.root}_round_{rd}"
+        root = f"{self.nreSettings.root}/{self.nreSettings.child_root}_{rd}"
         self.logger.info("training network round: " + str(rd))
 
         ### setup wandb ###
@@ -122,7 +133,8 @@ class PolySwyft:
             except KeyError:
                 self.finish_kwargs = {'exit_code': None,
                                       'quiet': None}
-            self.nreSettings.wandb_kwargs["name"] = f"round_{rd}"
+            self.nreSettings.wandb_kwargs["name"] = f"{self.nreSettings.child_root}_{rd}"
+            self.nreSettings.wandb_kwargs["group"] = self.nreSettings.root
             wandb.init(**self.nreSettings.wandb_kwargs)
 
         ### setup trainer ###
@@ -232,7 +244,6 @@ class PolySwyft:
             deadpoints = deadpoints.compress()
 
         ### save current deadpoints for next round ###
-
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
         deadpoints = torch.as_tensor(deadpoints.to_numpy())
         self.logger.info(f"Number of deadpoints for next rd {rd + 1}: {deadpoints.shape[0]}")

@@ -144,7 +144,7 @@ def execute():
         # plot analysis of NSNSRE
         plot_analysis_of_NSNRE(nreSettings=nreSettings, network_storage=network_storage,
                                samples_storage=samples_storage, dkl_storage=dkl_storage,
-                               obs=obs, true_posterior=mcmc_true, root=root_storage[nreSettings.NRE_num_retrain_rounds])
+                               obs=obs, true_posterior=mcmc_true, root=nreSettings.root)
     logger.info('Finished')
 
 

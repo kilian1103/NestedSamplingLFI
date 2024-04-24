@@ -49,7 +49,7 @@ def retrain_next_round(root: str, deadpoints: Tensor, nreSettings: NRE_Settings,
             cond = {nreSettings.targetKey: point.float()}
 
             ### noise resampling ###
-            if nreSettings.use_noise_resampling and rd > 0:
+            if nreSettings.use_noise_resampling:
                 resampler = sim.get_resampler(targets=[nreSettings.obsKey])
                 for _ in range(nreSettings.n_noise_resampling_samples):
                     cond[nreSettings.obsKey] = None
@@ -70,16 +70,7 @@ def retrain_next_round(root: str, deadpoints: Tensor, nreSettings: NRE_Settings,
 
     ### save training data for NRE on disk ###
     if nreSettings.save_joint_training_data and rank_gen == 0:
-        if nreSettings.use_livepoint_increasing:
-            try:
-                os.makedirs(f"{root}/{nreSettings.increased_livepoints_fileroot}")
-            except OSError:
-                logger.info("root folder already exists!")
-            torch.save(
-                f=f"{root}/{nreSettings.increased_livepoints_fileroot}/{nreSettings.joint_training_data_fileroot}",
-                obj=samples)
-        else:
-            torch.save(f=f"{root}/{nreSettings.joint_training_data_fileroot}", obj=samples)
+        torch.save(f=f"{root}/{nreSettings.joint_training_data_fileroot}", obj=samples)
 
     comm_gen.Barrier()
 

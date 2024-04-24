@@ -68,6 +68,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         axes.iloc[-1, 0].legend(bbox_to_anchor=(len(axes) / 2, len(axes)), loc='lower center',
                                 ncols=nreSettings.NRE_num_retrain_rounds + 2)
         fig.savefig(f"{root}/NRE_triangle_posterior_zoom.pdf")
+        plt.close()
 
     # KL divergence plot
     if nreSettings.plot_KL_divergence:
@@ -94,6 +95,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         plt.ylabel("KL divergence")
         plt.title("KL divergence between NRE rounds")
         plt.savefig(f"{root}/kl_divergence.pdf")
+        plt.close()
 
     if nreSettings.plot_KL_compression:
         dkl_compression_storage = {}
@@ -111,6 +113,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         plt.ylabel("DKL")
         plt.title("DKL compression of Prior to Posterior")
         plt.savefig(f"{root}/kl_compression.pdf")
+        plt.close()
 
     if nreSettings.plot_logR_histogram:
         path = "logR_histogram"
@@ -149,7 +152,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
             plt.savefig(f"{root}/{path}/logR_pdf_{rd}.pdf", dpi=300, bbox_inches='tight')
             plt.close()
 
-    if nreSettings.plot_dataset_truncation:
+    if nreSettings.plot_dataset_truncation and nreSettings.use_dataset_truncation:
         totalsize = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
         truncatedsize = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
         num_samples_below_logR_zero = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
