@@ -143,7 +143,7 @@ class PolySwyft:
         trainer = swyft.SwyftTrainer(**self.nreSettings.trainer_kwargs)
 
         ### setup network and train network###
-        if self.nreSettings.active_learning_mode:
+        if self.nreSettings.continual_learning_mode:
             network = self.network_model
         else:
             network = self.network_model.get_new_network()
