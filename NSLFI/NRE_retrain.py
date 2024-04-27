@@ -1,15 +1,15 @@
 import os
 
+import numpy as np
 import sklearn
 import swyft
 import torch
 from swyft import collate_output as reformat_samples, Simulator
-from torch import Tensor
 
 from NSLFI.NRE_Settings import NRE_Settings
 
 
-def retrain_next_round(root: str, deadpoints: Tensor, nreSettings: NRE_Settings,
+def retrain_next_round(root: str, deadpoints: np.ndarray, nreSettings: NRE_Settings,
                        sim: Simulator, network: swyft.SwyftModule, trainer: swyft.SwyftTrainer,
                        rd: int) -> swyft.SwyftModule:
     """
@@ -46,10 +46,10 @@ def retrain_next_round(root: str, deadpoints: Tensor, nreSettings: NRE_Settings,
     samples = []
     if rank_gen == 0:
         for point in deadpoints:
-            cond = {nreSettings.targetKey: point.float()}
+            cond = {nreSettings.targetKey: point}
 
             ### noise resampling ###
-            if nreSettings.use_noise_resampling:
+            if nreSettings.use_noise_resampling and rd > 0:
                 resampler = sim.get_resampler(targets=[nreSettings.obsKey])
                 for _ in range(nreSettings.n_noise_resampling_samples):
                     cond[nreSettings.obsKey] = None
@@ -67,6 +67,13 @@ def retrain_next_round(root: str, deadpoints: Tensor, nreSettings: NRE_Settings,
     samples = comm_gen.bcast(samples, root=0)
     samples = reformat_samples(samples)
     logger.info("Simulation done!")
+
+    if nreSettings.continual_learning_mode and rd > 0:
+        previous_root = f"{nreSettings.root}/{nreSettings.child_root}_{rd - 1}"
+        previous_samples = torch.load(f=f"{previous_root}/{nreSettings.joint_training_data_fileroot}")
+        thetas = np.concatenate((previous_samples[nreSettings.targetKey], samples[nreSettings.targetKey]), axis=0)
+        Ds = np.concatenate((previous_samples[nreSettings.obsKey], samples[nreSettings.obsKey]), axis=0)
+        samples = {nreSettings.targetKey: thetas, nreSettings.obsKey: Ds}
 
     ### save training data for NRE on disk ###
     if nreSettings.save_joint_training_data and rank_gen == 0:

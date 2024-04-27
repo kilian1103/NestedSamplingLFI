@@ -13,7 +13,7 @@ from NSLFI.utils import *
 
 class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
-                 obs: swyft.Sample, deadpoints: torch.Tensor,
+                 obs: swyft.Sample, deadpoints: np.ndarray,
                  network: swyft.SwyftModule, polyset: PolyChordSettings,
                  callbacks: Callable):
         """
@@ -85,7 +85,7 @@ class PolySwyft:
 
             ### save current deadpoints for next training round ###
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
-            deadpoints = torch.as_tensor(deadpoints.to_numpy())
+            deadpoints = deadpoints.to_numpy()
             self.current_deadpoints = deadpoints
 
         ### execute main cycle ###
@@ -245,7 +245,7 @@ class PolySwyft:
 
         ### save current deadpoints for next round ###
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
-        deadpoints = torch.as_tensor(deadpoints.to_numpy())
+        deadpoints = deadpoints.to_numpy()
         self.logger.info(f"Number of deadpoints for next rd {rd + 1}: {deadpoints.shape[0]}")
         self.current_deadpoints = deadpoints
         return
