@@ -6,6 +6,7 @@ from typing import Callable
 import pypolychord
 import wandb
 from pypolychord import PolyChordSettings
+from pytorch_lightning.loggers import WandbLogger
 
 from NSLFI.NRE_retrain import retrain_next_round
 from NSLFI.utils import *
@@ -125,19 +126,25 @@ class PolySwyft:
         size_gen = comm_gen.Get_size()
 
         ### start NRE training section ###
-        root = f"{self.nreSettings.root}/{self.nreSettings.child_root}_{rd}"
         self.logger.info("training network round: " + str(rd))
+        root = f"{self.nreSettings.root}/{self.nreSettings.child_root}_{rd}"
+        ### create root folder ###
+        try:
+            os.makedirs(root)
+        except OSError:
+            self.logger.info("root folder already exists!")
 
         ### setup wandb ###
-        if self.nreSettings.activate_wandb and rank_gen == 0:
+        if self.nreSettings.activate_wandb:
             try:
                 self.finish_kwargs = self.nreSettings.wandb_kwargs.pop("finish")
             except KeyError:
                 self.finish_kwargs = {'exit_code': None,
                                       'quiet': None}
             self.nreSettings.wandb_kwargs["name"] = f"{self.nreSettings.child_root}_{rd}"
-            self.nreSettings.wandb_kwargs["group"] = self.nreSettings.root
-            wandb.init(**self.nreSettings.wandb_kwargs)
+            self.nreSettings.wandb_kwargs["save_dir"] = f"{self.nreSettings.root}/{self.nreSettings.child_root}_{rd}"
+            wandb_logger = WandbLogger(**self.nreSettings.wandb_kwargs)
+            self.nreSettings.trainer_kwargs["logger"] = wandb_logger
 
         ### setup trainer ###
         self.nreSettings.trainer_kwargs["default_root_dir"] = root

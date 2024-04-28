@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import sklearn
 import swyft
@@ -34,10 +32,6 @@ def retrain_next_round(root: str, deadpoints: np.ndarray, nreSettings: NRE_Setti
     rank_gen = comm_gen.Get_rank()
     size_gen = comm_gen.Get_size()
 
-    try:
-        os.makedirs(root)
-    except OSError:
-        logger.info("root folder already exists!")
     logger.info(
         f"Simulating joint training dataset ({nreSettings.obsKey}, {nreSettings.targetKey}) using deadpoints with "
         f"Simulator!")
