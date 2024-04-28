@@ -42,6 +42,7 @@ class NRE_Settings:
                                "num_nodes": 1,
                                "strategy": "ddp",
                                "max_epochs": 1000,
+                               "log_every_n_steps": 1,
                                "precision": 64,
                                "enable_progress_bar": True,
                                "default_root_dir": self.root,
