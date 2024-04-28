@@ -89,7 +89,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
             plt.errorbar(x=[i for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
                          y=[dkl_storage_true[i][0] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
                          yerr=[dkl_storage_true[i][1] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
-                         label=r"$KL \mathrm{True} / \mathrm{NRE}_i}$")
+                         label=r"$KL \mathrm{True} / \mathrm{NRE}_i$")
         plt.legend()
         plt.xlabel("round")
         plt.ylabel("KL divergence")

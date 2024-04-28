@@ -162,7 +162,7 @@ class PolySwyft:
                                      nreSettings=self.nreSettings, sim=self.sim,
                                      network=network,
                                      trainer=trainer, rd=rd)
-
+        comm_gen.Barrier()
         if self.nreSettings.activate_wandb and rank_gen == 0:
             wandb.finish(**self.finish_kwargs)
 
