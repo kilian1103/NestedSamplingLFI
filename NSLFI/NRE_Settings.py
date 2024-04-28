@@ -28,7 +28,7 @@ class NRE_Settings:
         self.num_mixture_components = 4
         # network settings
         self.dropout = 0.3
-        self.early_stopping_patience = 5
+        self.early_stopping_patience = 20
         self.learning_rate_init = 0.001
         self.learning_rate_decay = 0.95
         self.dm_kwargs = {
@@ -37,7 +37,7 @@ class NRE_Settings:
             'shuffle': False,
         }
         self.trainer_kwargs = {"accelerator": 'cpu',
-                               "devices": 30,
+                               "devices": 60,
                                "num_nodes": 1,
                                "strategy": "ddp",
                                "max_epochs": 1000,
@@ -49,7 +49,7 @@ class NRE_Settings:
                                }
         # polychord settings
         self.nderived = 0
-        self.n_prior_sampling = 10_000  # nsamples for prior sampling of polychord
+        self.n_prior_sampling = self.num_features * 25  # nsamples for prior sampling of polychord
         self.model = None
         # NSNRE settings
         self.continual_learning_mode = False
@@ -64,14 +64,14 @@ class NRE_Settings:
         self.nlives_per_dim_constant = 25
         self.nlives_per_round = {rd: self.nlives_per_dim_constant * self.num_features for rd in
                                  range(self.NRE_num_retrain_rounds + 1)}
-        self.use_noise_resampling = True
+        self.use_noise_resampling = False
         self.n_noise_resampling_samples = 10
-        self.use_dataset_truncation = True
-        self.dataset_logR_cutoff = 0  # logR contour
-        self.use_dataset_random_sampling = True
+        self.use_dataset_truncation = False
+        self.dataset_logR_cutoff = 3  # logR contour
+        self.use_dataset_random_sampling = False
         self.dataset_uniform_sampling_rate = 0.1
-        self.use_livepoint_increasing = True
-        self.livepoint_increase_posterior_contour = 0.99  # zero point is at posterior peak
+        self.use_livepoint_increasing = False
+        self.livepoint_increase_posterior_contour = 0.999  # zero point is at posterior peak
         self.n_increased_livepoints = 1_000
         self.increased_livepoints_fileroot = "enhanced_run"
         # plotting settings

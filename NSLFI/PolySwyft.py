@@ -70,6 +70,8 @@ class PolySwyft:
                 raise ValueError("NRE_start_from_round must be smaller than NRE_num_retrain_rounds")
             self._reload_data()
             deadpoints = self.deadpoints_storage[self.nreSettings.NRE_start_from_round - 1]
+            if self.nreSettings.continual_learning_mode:
+                self.network_model = self.network_storage[self.nreSettings.NRE_start_from_round - 1]
 
             ### truncate last set of deadpoints for resuming training if neccessary ###
             if self.nreSettings.use_dataset_truncation:
