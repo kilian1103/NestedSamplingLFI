@@ -15,7 +15,7 @@ class Network(swyft.SwyftModule):
         self.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=self.nreSettings.learning_rate_init),
                                                   torch.optim.lr_scheduler.ExponentialLR,
                                                   dict(gamma=self.nreSettings.learning_rate_decay, verbose=True))
-        self.network = swyft.LogRatioEstimator_Ndim(num_features=self.nreSettings.num_features, marginals=(
+        self.network = swyft.LogRatioEstimator_Ndim(num_features=self.nreSettings.num_summary_features, marginals=(
             tuple(dim for dim in range(self.nreSettings.num_features)),),
                                                     varnames=self.nreSettings.targetKey,
                                                     dropout=self.nreSettings.dropout, hidden_features=128, Lmax=0)
@@ -26,7 +26,7 @@ class Network(swyft.SwyftModule):
                                               torch.nn.ReLU(),
                                               torch.nn.Linear(32, 16),
                                               torch.nn.ReLU(),
-                                              torch.nn.Linear(16, self.nreSettings.num_features)
+                                              torch.nn.Linear(16, self.nreSettings.num_summary_features)
                                               )
 
     def forward(self, A, B):

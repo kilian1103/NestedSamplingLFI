@@ -27,6 +27,7 @@ class NRE_Settings:
         self.num_features_dataset = 100
         self.num_mixture_components = 4
         # network settings
+        self.num_summary_features = 5
         self.dropout = 0.3
         self.early_stopping_patience = 20
         self.learning_rate_init = 0.001
