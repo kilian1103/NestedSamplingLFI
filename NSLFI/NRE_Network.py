@@ -14,7 +14,7 @@ class Network(swyft.SwyftModule):
         self.obs = obs
         self.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=self.nreSettings.learning_rate_init),
                                                   torch.optim.lr_scheduler.ExponentialLR,
-                                                  dict(gamma=self.nreSettings.learning_rate_decay, verbose=True))
+                                                  dict(gamma=self.nreSettings.learning_rate_decay))
         self.network = swyft.LogRatioEstimator_Ndim(num_features=self.nreSettings.num_summary_features, marginals=(
             tuple(dim for dim in range(self.nreSettings.num_features)),),
                                                     varnames=self.nreSettings.targetKey,
