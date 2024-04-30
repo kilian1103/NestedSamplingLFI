@@ -56,6 +56,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
 
         ### zoomed in triangle plot
     if nreSettings.plot_triangle_plot_zoomed:
+        kinds = {'lower': 'kde_2d', 'diagonal': 'kde_1d', 'upper': "scatter_2d"}
         fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=True,
                                  ticks="outer")
         for rd in range(nreSettings.triangle_zoom_start,
