@@ -86,3 +86,4 @@ class NRE_Settings:
         self.plot_logR_histogram = True
         self.plot_logR_pdf = True
         self.plot_dataset_truncation = True
+        self.plot_training_data = True

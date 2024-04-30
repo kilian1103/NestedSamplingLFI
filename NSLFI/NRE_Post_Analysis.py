@@ -5,6 +5,7 @@ import anesthetic
 import matplotlib.pyplot as plt
 import numpy as np
 import swyft
+import torch
 from anesthetic import make_2d_axes, make_1d_axes
 
 from NSLFI.NRE_Settings import NRE_Settings
@@ -181,3 +182,20 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         plt.legend()
         plt.savefig(f"{root}/dataset_truncation_metric.pdf")
         plt.close()
+
+    if nreSettings.save_joint_training_data and nreSettings.plot_training_data:
+        path = "training_data"
+        try:
+            os.makedirs(f"{root}/{path}")
+        except OSError:
+            print(f"{path}-folder already exists!")
+
+        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+            joint = torch.load(f"{root}/{nreSettings.child_root}_{rd}/{nreSettings.joint_training_data_fileroot}")
+            plt.figure()
+            plt.scatter(joint[nreSettings.targetKey][:, 0], joint[nreSettings.targetKey][:, 1], s=2, alpha=0.05)
+            plt.xlabel(r"$\theta_0$")
+            plt.ylabel(r"$\theta_1$")
+            plt.title("training data distribution")
+            plt.savefig(f"{root}/{path}/training_data_{rd}.pdf")
+            plt.close()
