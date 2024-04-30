@@ -51,10 +51,10 @@ class NRE_Settings:
                                }
         # polychord settings
         self.nderived = 0
-        self.n_prior_sampling = self.num_features * 25  # nsamples for prior sampling of polychord
+        self.n_prior_sampling = 1_000  # nsamples for prior sampling of polychord
         self.model = None
         # NSNRE settings
-        self.continual_learning_mode = False
+        self.continual_learning_mode = True
         self.use_posterior_compression = False
         self.cyclic_rounds = True
         self.NRE_num_retrain_rounds = 10
@@ -79,6 +79,7 @@ class NRE_Settings:
         # plotting settings
         self.only_plot_mode = False
         self.plot_triangle_plot = True
+        self.plot_triangle_plot_zoomed = True
         self.triangle_zoom_start = 8
         self.plot_KL_divergence = True
         self.plot_KL_compression = True

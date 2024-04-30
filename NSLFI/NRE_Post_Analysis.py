@@ -55,6 +55,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         fig.savefig(f"{root}/NRE_triangle_posterior_full.pdf")
 
         ### zoomed in triangle plot
+    if nreSettings.plot_triangle_plot_zoomed:
         fig, axes = make_2d_axes(params_idx, labels=params_labels, lower=True, diagonal=True, upper=True,
                                  ticks="outer")
         for rd in range(nreSettings.triangle_zoom_start,
