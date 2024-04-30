@@ -64,7 +64,13 @@ def retrain_next_round(root: str, deadpoints: np.ndarray, nreSettings: NRE_Setti
 
     if nreSettings.continual_learning_mode and rd > 0:
         previous_root = f"{nreSettings.root}/{nreSettings.child_root}_{rd - 1}"
-        previous_samples = torch.load(f=f"{previous_root}/{nreSettings.joint_training_data_fileroot}")
+        try:
+            previous_samples = torch.load(f=f"{previous_root}/{nreSettings.joint_training_data_fileroot}")
+        except:
+            raise FileNotFoundError(
+                f"Could not find joint training data for round {rd - 1}! Activate "
+                f"nreSettings.save_joint_training_data = True and restart!")
+
         thetas = np.concatenate((previous_samples[nreSettings.targetKey], samples[nreSettings.targetKey]), axis=0)
         Ds = np.concatenate((previous_samples[nreSettings.obsKey], samples[nreSettings.obsKey]), axis=0)
         samples = {nreSettings.targetKey: thetas, nreSettings.obsKey: Ds}
