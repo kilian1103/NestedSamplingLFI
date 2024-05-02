@@ -37,28 +37,30 @@ def retrain_next_round(root: str, deadpoints: np.ndarray, nreSettings: NRE_Setti
         f"Simulator!")
 
     ### simulate joint distribution using deadpoints ###
-    samples = []
     if rank_gen == 0:
-        for point in deadpoints:
-            cond = {nreSettings.targetKey: point}
-
-            ### noise resampling ###
-            if nreSettings.use_noise_resampling and rd > 0:
-                resampler = sim.get_resampler(targets=[nreSettings.obsKey])
-                for _ in range(nreSettings.n_noise_resampling_samples):
-                    cond[nreSettings.obsKey] = None
-                    sample = resampler(cond)
-                    samples.append(sample)
-            else:
-                sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
-                samples.append(sample)
-        logger.info(f"Total number of samples for training the network: {len(samples)}")
-        samples = sklearn.utils.shuffle(samples)
+        data_chunks = np.array_split(deadpoints, size_gen)
     else:
-        logger.info(f"Core {rank_gen}: Simulating training data set! Waiting...")
-
+        data_chunks = None
+    data_chunk = comm_gen.scatter(data_chunks, root=0)
+    samples = []
+    for point in data_chunk:
+        cond = {nreSettings.targetKey: point}
+        ### noise resampling ###
+        if nreSettings.use_noise_resampling and rd > 0:
+            resampler = sim.get_resampler(targets=[nreSettings.obsKey])
+            for _ in range(nreSettings.n_noise_resampling_samples):
+                cond[nreSettings.obsKey] = None
+                sample = resampler(cond)
+                samples.append(sample)
+        else:
+            sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
+            samples.append(sample)
+    samples = comm_gen.allgather(samples)
+    samples = np.concatenate(samples, axis=0)
+    samples = samples.tolist()
+    logger.info(f"Total number of samples for training the network: {len(samples)}")
+    samples = sklearn.utils.shuffle(samples)
     comm_gen.Barrier()
-    samples = comm_gen.bcast(samples, root=0)
     samples = reformat_samples(samples)
     logger.info("Simulation done!")
 
