@@ -37,13 +37,10 @@ def retrain_next_round(root: str, deadpoints: np.ndarray, nreSettings: NRE_Setti
         f"Simulator!")
 
     ### simulate joint distribution using deadpoints ###
-    if rank_gen == 0:
-        data_chunks = np.array_split(deadpoints, size_gen)
-    else:
-        data_chunks = None
-    data_chunk = comm_gen.scatter(data_chunks, root=0)
+    deadpoints = np.array_split(deadpoints, size_gen)
+    deadpoints = deadpoints[rank_gen]
     samples = []
-    for point in data_chunk:
+    for point in deadpoints:
         cond = {nreSettings.targetKey: point}
         ### noise resampling ###
         if nreSettings.use_noise_resampling and rd > 0:
@@ -75,6 +72,7 @@ def retrain_next_round(root: str, deadpoints: np.ndarray, nreSettings: NRE_Setti
 
         thetas = np.concatenate((previous_samples[nreSettings.targetKey], samples[nreSettings.targetKey]), axis=0)
         Ds = np.concatenate((previous_samples[nreSettings.obsKey], samples[nreSettings.obsKey]), axis=0)
+        del previous_samples
         samples = {nreSettings.targetKey: thetas, nreSettings.obsKey: Ds}
 
     ### save training data for NRE on disk ###
@@ -84,10 +82,11 @@ def retrain_next_round(root: str, deadpoints: np.ndarray, nreSettings: NRE_Setti
     comm_gen.Barrier()
 
     ### train network ###
-    training_data_swyft = swyft.Samples(samples)
+    samples = swyft.Samples(samples)
     # network = torch.compile(network)
     logger.info("Starting training of network!")
-    dm = swyft.SwyftDataModule(data=training_data_swyft, **nreSettings.dm_kwargs)
+    dm = swyft.SwyftDataModule(data=samples, **nreSettings.dm_kwargs)
+    del samples
     network.train()
     trainer.fit(network, dm)
     logger.info("Training done!")
