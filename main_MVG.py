@@ -46,9 +46,14 @@ def execute():
 
     # generate training dat and obs
     obs = swyft.Sample(x=torch.tensor(sim.model.evidence().rvs()[None, :]))
-    training_samples = torch.as_tensor(
-        sim.sample(nreSettings.n_training_samples, targets=[nreSettings.targetKey])[
-            nreSettings.targetKey])
+    n_per_core = nreSettings.n_training_samples // size_gen
+    if rank_gen == 0:
+        n_per_core += nreSettings.n_training_samples % size_gen
+    deapoints = sim.sample(n_per_core, targets=[nreSettings.targetKey])[
+        nreSettings.targetKey]
+    comm_gen.Barrier()
+    deapoints = comm_gen.allgather(deapoints)
+    deapoints = np.concatenate(deapoints, axis=0)
     comm_gen.Barrier()
     ### generate true posterior for comparison
     cond = {nreSettings.obsKey: obs[nreSettings.obsKey].numpy().squeeze()}
@@ -80,7 +85,7 @@ def execute():
     polyset.seed = nreSettings.seed
     polyset.nfail = nreSettings.nlives_per_dim_constant * nreSettings.n_prior_sampling
     polyset.nprior = nreSettings.n_prior_sampling
-    polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=training_samples,
+    polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=deapoints,
                           network=network, polyset=polyset, callbacks=create_callbacks)
 
     if not nreSettings.only_plot_mode:
