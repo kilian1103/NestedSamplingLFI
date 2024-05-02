@@ -51,11 +51,11 @@ def execute():
     n_per_core = nreSettings.n_training_samples // size_gen
     if rank_gen == 0:
         n_per_core += nreSettings.n_training_samples % size_gen
-    deapoints = sim.sample(n_per_core, targets=[nreSettings.targetKey])[
+    deadpoints = sim.sample(n_per_core, targets=[nreSettings.targetKey])[
         nreSettings.targetKey]
     comm_gen.Barrier()
-    deapoints = comm_gen.allgather(deapoints)
-    deapoints = np.concatenate(deapoints, axis=0)
+    deadpoints = comm_gen.allgather(deadpoints)
+    deadpoints = np.concatenate(deadpoints, axis=0)
     comm_gen.Barrier()
 
     ### generate true posterior for comparison
@@ -88,9 +88,9 @@ def execute():
     polyset.seed = nreSettings.seed
     polyset.nfail = nreSettings.nlives_per_dim_constant * nreSettings.n_prior_sampling
     polyset.nprior = nreSettings.n_prior_sampling
-    polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=deapoints,
+    polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=deadpoints,
                           network=network, polyset=polyset, callbacks=create_callbacks)
-
+    del deadpoints
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE
         polySwyft.execute_NSNRE_cycle()
