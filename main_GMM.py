@@ -44,15 +44,17 @@ def execute():
     mu_theta = torch.randn(size=(a, n)) * 3  #
     Sigma = torch.eye(n)  # cov matrix of parameter prior
     sim = Simulator(nreSettings=nreSettings, mu_theta=mu_theta, M=M, mu_data=mu_data, Sigma=Sigma, C=C)
-
     nreSettings.model = sim.model  # lsbi model
+
     # generate training dat and obs
     obs = swyft.Sample(x=torch.tensor(sim.model.evidence().rvs()[None, :]))
     n_per_core = nreSettings.n_training_samples // size_gen
+    seed_everything(nreSettings.seed + rank_gen, workers=True)
     if rank_gen == 0:
         n_per_core += nreSettings.n_training_samples % size_gen
     deadpoints = sim.sample(n_per_core, targets=[nreSettings.targetKey])[
         nreSettings.targetKey]
+    seed_everything(nreSettings.seed, workers=True)
     comm_gen.Barrier()
     deadpoints = comm_gen.allgather(deadpoints)
     deadpoints = np.concatenate(deadpoints, axis=0)

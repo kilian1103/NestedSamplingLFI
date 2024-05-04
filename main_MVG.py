@@ -40,7 +40,7 @@ def execute():
     C = torch.eye(d)  # cov matrix of dataset
     # C very small, or Sigma very big
     mu = torch.zeros(n)  # mean vec of parameter prior
-    Sigma = 100 * torch.eye(n)  # cov matrix of parameter prior
+    Sigma = 10 * torch.eye(n)  # cov matrix of parameter prior
     sim = Simulator(nreSettings=nreSettings, m=m, M=M, C=C, mu=mu, Sigma=Sigma)
     nreSettings.model = sim.model  # lsbi model
 
@@ -49,12 +49,15 @@ def execute():
     n_per_core = nreSettings.n_training_samples // size_gen
     if rank_gen == 0:
         n_per_core += nreSettings.n_training_samples % size_gen
+    seed_everything(nreSettings.seed + rank_gen, workers=True)
     deadpoints = sim.sample(n_per_core, targets=[nreSettings.targetKey])[
         nreSettings.targetKey]
+    seed_everything(nreSettings.seed, workers=True)
     comm_gen.Barrier()
     deadpoints = comm_gen.allgather(deadpoints)
     deadpoints = np.concatenate(deadpoints, axis=0)
     comm_gen.Barrier()
+
     ### generate true posterior for comparison
     cond = {nreSettings.obsKey: obs[nreSettings.obsKey].numpy().squeeze()}
     full_joint = sim.sample(nreSettings.n_weighted_samples, conditions=cond)
