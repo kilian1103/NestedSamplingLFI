@@ -1,5 +1,4 @@
 import logging
-import os
 import pickle
 from typing import Callable
 
@@ -87,8 +86,15 @@ class PolySwyft:
                     deadpoints = comm_gen.bcast(deadpoints, root=0)
 
             ### save current deadpoints for next training round ###
-            deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
-            deadpoints = deadpoints.to_numpy()
+            deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
+            if self.nreSettings.use_livepoint_increasing:
+                # concatenate deadpoints from scan round as training data
+                previous_root = self.root_storage[self.nreSettings.NRE_start_from_round - 1]
+                previous_deadpoints = anesthetic.read_chains(root=f"{previous_root}/{self.polyset.file_root}")
+                previous_deadpoints = previous_deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
+                deadpoints = np.concatenate([deadpoints, previous_deadpoints], axis=0)
+                del previous_deadpoints
+
             self.current_deadpoints = deadpoints
 
         ### execute main cycle ###
@@ -253,8 +259,12 @@ class PolySwyft:
             deadpoints = deadpoints.compress()
 
         ### save current deadpoints for next round ###
-        deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features]
-        deadpoints = deadpoints.to_numpy()
+        deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
+        if self.nreSettings.use_livepoint_increasing:
+            # concatenate deadpoints from scanning round as training data
+            previous_deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
+            previous_deadpoints = previous_deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
+            deadpoints = np.concatenate([deadpoints, previous_deadpoints], axis=0)
         self.logger.info(f"Number of deadpoints for next rd {rd + 1}: {deadpoints.shape[0]}")
         self.current_deadpoints = deadpoints
         return
