@@ -54,8 +54,8 @@ def execute():
         n_per_core += nreSettings.n_training_samples % size_gen
     deadpoints = sim.sample(n_per_core, targets=[nreSettings.targetKey])[
         nreSettings.targetKey]
-    seed_everything(nreSettings.seed, workers=True)
     comm_gen.Barrier()
+    seed_everything(nreSettings.seed, workers=True)
     deadpoints = comm_gen.allgather(deadpoints)
     deadpoints = np.concatenate(deadpoints, axis=0)
     comm_gen.Barrier()
