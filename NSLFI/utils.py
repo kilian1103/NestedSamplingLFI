@@ -1,3 +1,4 @@
+import os
 from typing import Dict
 from typing import Tuple
 
@@ -177,3 +178,17 @@ def random_subset_after_truncation(deadpoints: anesthetic.NestedSamples, logR_cu
     deadpoints = pd.concat([deadpoints, rest], axis=0)
     deadpoints.drop_duplicates(inplace=True)
     return deadpoints
+
+
+def delete_previous_joint_training_data(until_rd: int, root: str, nreSettings: NRE_Settings):
+    """
+    Delete previous joint training data.
+    :param until_rd: An integer of the round number to delete until
+    :param root: A string of the root directory
+    """
+    for rd in range(until_rd):
+        try:
+            os.remove(f"{root}/{nreSettings.child_root}_{rd}/{nreSettings.joint_training_data_fileroot}")
+        except FileNotFoundError:
+            pass
+    return
