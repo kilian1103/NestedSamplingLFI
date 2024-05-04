@@ -255,9 +255,6 @@ class PolySwyft:
 
         comm_gen.Barrier()
 
-        if self.nreSettings.use_posterior_compression:
-            deadpoints = deadpoints.compress()
-
         ### save current deadpoints for next round ###
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
         if self.nreSettings.use_livepoint_increasing:
