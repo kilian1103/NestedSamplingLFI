@@ -51,11 +51,9 @@ class NRE_Settings:
                                }
         # polychord settings
         self.nderived = 0
-        self.n_prior_sampling = 1_000  # nsamples for prior sampling of polychord
         self.model = None
         # NSNRE settings
         self.continual_learning_mode = True
-        self.use_posterior_compression = False
         self.cyclic_rounds = True
         self.NRE_num_retrain_rounds = 10
         self.NRE_start_from_round = 0
@@ -63,15 +61,10 @@ class NRE_Settings:
         self.joint_training_data_fileroot = "joint_training_data.pt"
         self.termination_abs_dkl = 0.2
         self.n_DKL_estimates = 100
-        self.nlives_per_dim_constant = 25
-        self.nlives_per_round = {rd: self.nlives_per_dim_constant * self.num_features for rd in
-                                 range(self.NRE_num_retrain_rounds + 1)}
         self.use_noise_resampling = False
         self.n_noise_resampling_samples = 10
         self.use_dataset_truncation = False
         self.dataset_logR_cutoff = 3  # logR contour
-        self.use_dataset_random_sampling = False
-        self.dataset_uniform_sampling_rate = 0.1
         self.use_livepoint_increasing = False
         self.livepoint_increase_posterior_contour = 0.999  # zero point is at posterior peak
         self.n_increased_livepoints = 1_000

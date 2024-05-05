@@ -40,7 +40,7 @@ def execute():
     C = torch.eye(d)  # cov matrix of dataset
     # C very small, or Sigma very big
     mu = torch.zeros(n)  # mean vec of parameter prior
-    Sigma = 10 * torch.eye(n)  # cov matrix of parameter prior
+    Sigma = 100 * torch.eye(n)  # cov matrix of parameter prior
     sim = Simulator(nreSettings=nreSettings, m=m, M=M, C=C, mu=mu, Sigma=Sigma)
     nreSettings.model = sim.model  # lsbi model
 
@@ -86,8 +86,7 @@ def execute():
     polyset.file_root = "samples"
     polyset.base_dir = nreSettings.root
     polyset.seed = nreSettings.seed
-    polyset.nfail = nreSettings.nlives_per_dim_constant * nreSettings.n_prior_sampling
-    polyset.nprior = nreSettings.n_prior_sampling
+    polyset.nfail = nreSettings.n_training_samples
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=deadpoints,
                           network=network, polyset=polyset, callbacks=create_callbacks)
     del deadpoints

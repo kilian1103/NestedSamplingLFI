@@ -77,13 +77,6 @@ class PolySwyft:
             if self.nreSettings.use_dataset_truncation:
                 logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
                 deadpoints = deadpoints.truncate(logR_cutoff)
-                ### sample random deadpoints within omitted sample###
-                if self.nreSettings.use_dataset_random_sampling:
-                    p = self.nreSettings.dataset_uniform_sampling_rate
-                    if rank_gen == 0:
-                        deadpoints = random_subset_after_truncation(deadpoints=deadpoints, logR_cutoff=logR_cutoff, p=p)
-                    comm_gen.Barrier()
-                    deadpoints = comm_gen.bcast(deadpoints, root=0)
 
             ### save current deadpoints for next training round ###
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
@@ -186,7 +179,6 @@ class PolySwyft:
         ### run PolyChord ###
         self.logger.info("Using PolyChord with trained NRE to generate deadpoints for the next round!")
         self.polyset.base_dir = root
-        self.polyset.nlive = self.nreSettings.nlives_per_round[rd]
         comm_gen.barrier()
 
         pypolychord.run_polychord(loglikelihood=network.logLikelihood,
@@ -245,14 +237,6 @@ class PolySwyft:
         if self.nreSettings.use_dataset_truncation:
             logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
             deadpoints = deadpoints.truncate(logR_cutoff)
-            ### sample random deadpoints within omitted sample###
-            if self.nreSettings.use_dataset_random_sampling:
-                p = self.nreSettings.dataset_uniform_sampling_rate
-                if rank_gen == 0:
-                    deadpoints = random_subset_after_truncation(deadpoints=deadpoints, logR_cutoff=logR_cutoff, p=p)
-                comm_gen.Barrier()
-                deadpoints = comm_gen.bcast(deadpoints, root=0)
-
         comm_gen.Barrier()
 
         ### save current deadpoints for next round ###

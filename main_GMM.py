@@ -42,7 +42,7 @@ def execute():
     C = torch.eye(d)  # cov matrix of dataset
     # mu_theta = torch.randn(size=(1, n))  # random mean vec of parameter
     mu_theta = torch.randn(size=(a, n)) * 3  #
-    Sigma = torch.eye(n)  # cov matrix of parameter prior
+    Sigma = 10 * torch.eye(n)  # cov matrix of parameter prior
     sim = Simulator(nreSettings=nreSettings, mu_theta=mu_theta, M=M, mu_data=mu_data, Sigma=Sigma, C=C)
     nreSettings.model = sim.model  # lsbi model
 
@@ -88,8 +88,7 @@ def execute():
     polyset.file_root = "samples"
     polyset.base_dir = nreSettings.root
     polyset.seed = nreSettings.seed
-    polyset.nfail = nreSettings.nlives_per_dim_constant * nreSettings.n_prior_sampling
-    polyset.nprior = nreSettings.n_prior_sampling
+    polyset.nfail = nreSettings.n_training_samples
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=deadpoints,
                           network=network, polyset=polyset, callbacks=create_callbacks)
     del deadpoints
