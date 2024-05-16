@@ -17,7 +17,7 @@ class NRE_Settings:
             }
         }
         # simulator settings
-        self.n_training_samples = 30_0  # nsamples for initial training using simulator
+        self.n_training_samples = 100_000  # nsamples for initial training using simulator
         self.n_weighted_samples = 10_000  # nsamples for evaluating NREs
         self.obsKey = "x"
         self.targetKey = "z"
@@ -32,6 +32,8 @@ class NRE_Settings:
         self.early_stopping_patience = 20
         self.learning_rate_init = 0.001
         self.learning_rate_decay = 0.95
+        self.reset_learning_rate = True
+        self.optimizer_file = "optimizer_file.pt"
         self.dm_kwargs = {
             'fractions': [0.8, 0.1, 0.1],
             'batch_size': 64,

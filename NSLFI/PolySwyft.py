@@ -4,7 +4,6 @@ from typing import Callable
 
 import pypolychord
 import wandb
-from pypolychord import PolyChordSettings
 from pytorch_lightning.loggers import WandbLogger
 
 from NSLFI.NRE_retrain import retrain_next_round
@@ -80,13 +79,6 @@ class PolySwyft:
 
             ### save current deadpoints for next training round ###
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
-            if self.nreSettings.use_livepoint_increasing:
-                # concatenate deadpoints from scan round as training data
-                previous_root = self.root_storage[self.nreSettings.NRE_start_from_round - 1]
-                previous_deadpoints = anesthetic.read_chains(root=f"{previous_root}/{self.polyset.file_root}")
-                previous_deadpoints = previous_deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
-                deadpoints = np.concatenate([deadpoints, previous_deadpoints], axis=0)
-                del previous_deadpoints
 
             self.current_deadpoints = deadpoints
 
@@ -156,7 +148,16 @@ class PolySwyft:
         else:
             network = self.network_model.get_new_network()
 
-        network = comm_gen.bcast(network, root=0)
+        ### continue lr rate at last point
+        if self.nreSettings.continual_learning_mode and not self.nreSettings.reset_learning_rate and rd > 0:
+            previous_root = self.root_storage[rd - 1]
+            self.network_model.optimizers().load_state_dict(
+                torch.load(f"{previous_root}/{self.nreSettings.optimizer_file}"))
+            learning_rate = self.network_model.optimizers().state_dict()["param_groups"][0]["lr"]
+            self.network_model.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=learning_rate),
+                                                                    torch.optim.lr_scheduler.ExponentialLR,
+                                                                    dict(gamma=self.nreSettings.learning_rate_decay))
+
         network = retrain_next_round(root=root, deadpoints=self.current_deadpoints,
                                      nreSettings=self.nreSettings, sim=self.sim,
                                      network=network,
@@ -168,6 +169,13 @@ class PolySwyft:
         ### save network on disk ###
         if rank_gen == 0:
             torch.save(network.state_dict(), f"{root}/{self.nreSettings.neural_network_file}")
+            torch.save(network.optimizers().state_dict(), f"{root}/{self.nreSettings.optimizer_file}")
+
+        comm_gen.Barrier()
+
+        ### load network on disk (to sync across nodes) ###
+        if self.nreSettings.continual_learning_mode:
+            self.network_model.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
 
         ### save network and root in memory###
         comm_gen.Barrier()
@@ -241,11 +249,6 @@ class PolySwyft:
 
         ### save current deadpoints for next round ###
         deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
-        if self.nreSettings.use_livepoint_increasing:
-            # concatenate deadpoints from scanning round as training data
-            previous_deadpoints = anesthetic.read_chains(root=f"{root}/{self.polyset.file_root}")
-            previous_deadpoints = previous_deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
-            deadpoints = np.concatenate([deadpoints, previous_deadpoints], axis=0)
         self.logger.info(f"Number of deadpoints for next rd {rd + 1}: {deadpoints.shape[0]}")
         self.current_deadpoints = deadpoints
         return
