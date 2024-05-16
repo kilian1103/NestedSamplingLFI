@@ -84,39 +84,31 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
                                                        previous_samples=samples_storage[rd])
                 dkl_storage_true[rd] = KDL_true
         plt.figure()
+
         plt.errorbar(x=[i for i in range(1, nreSettings.NRE_num_retrain_rounds + 1)],
                      y=[dkl_storage[i][0] for i in range(1, nreSettings.NRE_num_retrain_rounds + 1)],
                      yerr=[dkl_storage[i][1] for i in range(1, nreSettings.NRE_num_retrain_rounds + 1)],
-                     label=r"$KL \mathrm{NRE}_i / \mathrm{NRE}_{i-1}, corr$")
+                     label=r"$\mathrm{KL} (\mathcal{P}_i / \mathcal{P}_{i-1})$")
         if true_posterior is not None:
             plt.errorbar(x=[i for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
                          y=[dkl_storage_true[i][0] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
                          yerr=[dkl_storage_true[i][1] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
-                         label=r"$KL \mathrm{True} / \mathrm{NRE}_i$")
+                         label=r"$\mathrm{KL}(\mathcal{P}_{\mathrm{True}} / \mathcal{P}_i)$")
+        if nreSettings.plot_KL_compression:
+            dkl_compression_storage = {}
+            for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+                DKL = compute_KL_compression(samples_storage[rd], nreSettings)
+                dkl_compression_storage[rd] = DKL
+            plt.errorbar(x=[i for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
+                             y=[dkl_compression_storage[i][0] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
+                             yerr=[dkl_compression_storage[i][1] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
+                             label=r"$\mathrm{KL}(\mathcal{P}_i||\pi)$")
         plt.legend()
-        plt.xlabel("round")
+        plt.xlabel("retrain round")
         plt.ylabel("KL divergence")
-        plt.title("KL divergence between NRE rounds")
         plt.savefig(f"{root}/kl_divergence.pdf")
         plt.close()
 
-    if nreSettings.plot_KL_compression:
-        dkl_compression_storage = {}
-        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-            DKL = compute_KL_compression(samples_storage[rd], nreSettings)
-            dkl_compression_storage[rd] = DKL
-
-        plt.figure()
-        plt.errorbar(x=[i for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
-                     y=[dkl_compression_storage[i][0] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
-                     yerr=[dkl_compression_storage[i][1] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
-                     label=r"$KL(P||\pi)$")
-        plt.legend()
-        plt.xlabel("round")
-        plt.ylabel("DKL")
-        plt.title("DKL compression of Prior to Posterior")
-        plt.savefig(f"{root}/kl_compression.pdf")
-        plt.close()
 
     if nreSettings.plot_logR_histogram:
         path = "logR_histogram"
