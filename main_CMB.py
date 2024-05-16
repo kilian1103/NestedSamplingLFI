@@ -59,14 +59,14 @@ def main():
     nreSettings.num_features_dataset = len(l)
 
     sim = Simulator(nreSettings=nreSettings, cmbs=cmbs, bins=bins, bin_centers=bin_centers, p_noise=pnoise, cp=cp)
-    # obs = swyft.Sample(x=torch.as_tensor(planck)[None, :])
+    obs = swyft.Sample(x=torch.as_tensor(planck)[None, :])
 
     # ['omegabh2', 'omegach2', 'tau', 'ns', 'As', 'h']
     theta_true = np.array([0.022, 0.12, 0.055, 0.965, 3.0, 0.67])
     sample_true = sim.sample(conditions={nreSettings.targetKey: theta_true})
-    obs = swyft.Sample(x=torch.as_tensor(sample_true[nreSettings.obsKey])[None, :])
+    # obs = swyft.Sample(x=torch.as_tensor(sample_true[nreSettings.obsKey])[None, :])
 
-    plt.plot(bin_centers, sample_true[nreSettings.obsKey], label="true")
+    plt.plot(bin_centers, sample_true[nreSettings.obsKey], label="best fit sample")
     plt.plot(bin_centers, planck, label="planck")
     for i in range(3):
         sample = sim.sample()
