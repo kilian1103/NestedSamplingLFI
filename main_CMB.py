@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import matplotlib.pyplot as plt
 import pypolychord
@@ -89,6 +90,14 @@ def main():
     deadpoints = np.concatenate(deadpoints, axis=0)
     comm_gen.Barrier()
 
+    num_sum = int(sys.argv[1])
+    lr_decay = float(sys.argv[2])
+    nreSettings.num_summary_features = num_sum
+    nreSettings.learning_rate_decay = lr_decay
+    nreSettings.root = nreSettings.root + f"_{num_sum}d_lr_{lr_decay}"
+    nreSettings.wandb_project_name = nreSettings.root
+    nreSettings.wandb_kwargs["project"] = nreSettings.wandb_project_name
+
     network = Network(nreSettings=nreSettings, obs=obs, cmbs=cmbs)
 
     #### create callbacks function for pytorch lightning trainer
@@ -100,6 +109,10 @@ def main():
                                               filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
         return [early_stopping_callback, lr_monitor, checkpoint_callback]
 
+    def lr_round_scheduler(rd: int)-> float:
+        lr = nreSettings.learning_rate_init * (nreSettings.learning_rate_decay ** (nreSettings.early_stopping_patience *rd))
+        return lr
+
     #### set up polychord settings
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
     polyset.file_root = "samples"
@@ -107,7 +120,7 @@ def main():
     polyset.seed = nreSettings.seed
     polyset.nfail = nreSettings.n_training_samples
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=deadpoints,
-                          network=network, polyset=polyset, callbacks=create_callbacks)
+                          network=network, polyset=polyset, callbacks=create_callbacks, lr_round_scheduler=lr_round_scheduler)
     del deadpoints
 
     if not nreSettings.only_plot_mode:
