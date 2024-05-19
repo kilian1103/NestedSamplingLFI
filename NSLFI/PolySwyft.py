@@ -14,7 +14,7 @@ class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, deadpoints: np.ndarray,
                  network: swyft.SwyftModule, polyset: PolyChordSettings,
-                 callbacks: Callable):
+                 callbacks: Callable, lr_round_scheduler: Callable = None):
         """
         Initialize the PolySwyft object.
         :param nreSettings: A NRE_Settings object
@@ -30,6 +30,7 @@ class PolySwyft:
         self.sim = sim
         self.obs = obs
         self.callbacks = callbacks
+        self.lr_round_scheduler = lr_round_scheduler
         self.current_deadpoints = deadpoints
         self.network_model = network
         self.network_storage = dict()
@@ -149,11 +150,8 @@ class PolySwyft:
             network = self.network_model.get_new_network()
 
         ### continue lr rate at last point
-        if self.nreSettings.continual_learning_mode and not self.nreSettings.reset_learning_rate and rd > 0:
-            previous_root = self.root_storage[rd - 1]
-            self.network_model.optimizers().load_state_dict(
-                torch.load(f"{previous_root}/{self.nreSettings.optimizer_file}"))
-            learning_rate = self.network_model.optimizers().state_dict()["param_groups"][0]["lr"]
+        if self.lr_round_scheduler is not None:
+            learning_rate = self.lr_round_scheduler(rd)
             self.network_model.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=learning_rate),
                                                                     torch.optim.lr_scheduler.ExponentialLR,
                                                                     dict(gamma=self.nreSettings.learning_rate_decay))
