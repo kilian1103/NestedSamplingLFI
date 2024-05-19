@@ -88,12 +88,12 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         plt.errorbar(x=[i for i in range(1, nreSettings.NRE_num_retrain_rounds + 1)],
                      y=[dkl_storage[i][0] for i in range(1, nreSettings.NRE_num_retrain_rounds + 1)],
                      yerr=[dkl_storage[i][1] for i in range(1, nreSettings.NRE_num_retrain_rounds + 1)],
-                     label=r"$\mathrm{KL} (\mathcal{P}_i / \mathcal{P}_{i-1})$")
+                     label=r"$\mathrm{KL} (\mathcal{P}_i||\mathcal{P}_{i-1})$")
         if true_posterior is not None:
             plt.errorbar(x=[i for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
                          y=[dkl_storage_true[i][0] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
                          yerr=[dkl_storage_true[i][1] for i in range(0, nreSettings.NRE_num_retrain_rounds + 1)],
-                         label=r"$\mathrm{KL}(\mathcal{P}_{\mathrm{True}} / \mathcal{P}_i)$")
+                         label=r"$\mathrm{KL}(\mathcal{P}_{\mathrm{True}}||\mathcal{P}_i)$")
         if nreSettings.plot_KL_compression:
             dkl_compression_storage = {}
             for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
@@ -106,7 +106,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         plt.legend()
         plt.xlabel("retrain round")
         plt.ylabel("KL divergence")
-        plt.savefig(f"{root}/kl_divergence.pdf")
+        plt.savefig(f"{root}/kl_divergence.pdf", dpi=300, bbox_inches='tight')
         plt.close()
 
 
