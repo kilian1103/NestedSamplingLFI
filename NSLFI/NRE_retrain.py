@@ -53,6 +53,7 @@ def retrain_next_round(root: str, deadpoints: np.ndarray, nreSettings: NRE_Setti
             sample = sim.sample(conditions=cond, targets=[nreSettings.obsKey])
             samples.append(sample)
 
+    del deadpoints
     comm_gen.Barrier()
     samples = comm_gen.allgather(samples)
     samples = np.concatenate(samples, axis=0)
@@ -86,6 +87,7 @@ def retrain_next_round(root: str, deadpoints: np.ndarray, nreSettings: NRE_Setti
         Ds = np.stack(joint[:, 1])
         del joint
         samples = {nreSettings.targetKey: thetas, nreSettings.obsKey: Ds}
+        del thetas, Ds
 
     comm_gen.Barrier()
     samples = comm_gen.bcast(samples, root=0)
