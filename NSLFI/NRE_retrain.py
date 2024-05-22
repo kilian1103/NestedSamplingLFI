@@ -3,7 +3,6 @@ import sklearn
 import swyft
 import torch
 from swyft import collate_output as reformat_samples, Simulator
-
 from NSLFI.NRE_Settings import NRE_Settings
 
 

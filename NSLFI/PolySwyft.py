@@ -152,9 +152,7 @@ class PolySwyft:
         ### continue lr rate at last point
         if self.lr_round_scheduler is not None:
             learning_rate = self.lr_round_scheduler(rd)
-            self.network_model.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=learning_rate),
-                                                                    torch.optim.lr_scheduler.ExponentialLR,
-                                                                    dict(gamma=self.nreSettings.learning_rate_decay))
+            self.network_model.optimizer_init.optim_args = dict(lr=learning_rate)
 
         network = retrain_next_round(root=root, deadpoints=self.current_deadpoints,
                                      nreSettings=self.nreSettings, sim=self.sim,
