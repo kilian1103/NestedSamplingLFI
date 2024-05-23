@@ -8,7 +8,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from NSLFI.NRE_retrain import retrain_next_round
 from NSLFI.utils import *
-
+import matplotlib.pyplot as plt
 
 class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
@@ -36,6 +36,7 @@ class PolySwyft:
         self.network_storage = dict()
         self.root_storage = dict()
         self.dkl_storage = dict()
+        self.dkl_compression_storage = dict()
         self.deadpoints_storage = dict()
 
     def execute_NSNRE_cycle(self):
@@ -224,6 +225,11 @@ class PolySwyft:
 
         self.deadpoints_storage[rd] = deadpoints.copy()
 
+        ### compute KL compression ###
+        #TODO implement reload dkl compression code
+        # DKL = compute_KL_compression(self.deadpoints_storage[rd], self.nreSettings)
+        # self.dkl_compression_storage[rd] = DKL
+
         ### compute KL divergence ###
         if rd > 0:
             previous_network = self.network_storage[rd - 1]
@@ -231,6 +237,23 @@ class PolySwyft:
                                         current_samples=self.deadpoints_storage[rd], obs=self.obs,
                                         previous_samples=self.deadpoints_storage[rd - 1])
             self.dkl_storage[rd] = DKL
+            #
+            # ### plot runtime KL divergence ###
+            # plt.figure()
+            # plt.errorbar(x=[i for i in range(1, len(self.dkl_storage)+1)],
+            #      y=[self.dkl_storage[rd][i][0] for i in range(1, len(self.dkl_storage)+1)],
+            #      yerr=[self.dkl_storage[rd][i][1] for i in range(1, len(self.dkl_storage)+1)],
+            #      label=r"$\mathrm{KL} (\mathcal{P}_i||\mathcal{P}_{i-1})$")
+            # plt.errorbar(x=[i for i in range(0, len(self.dkl_compression_storage))],
+            #              y=[self.dkl_compression_storage[i][0] for i in range(0, len(self.dkl_compression_storage))],
+            #              yerr=[self.dkl_compression_storage[i][1] for i in range(0, len(self.dkl_compression_storage))],
+            #              label=r"$\mathrm{KL}(\mathcal{P}_i||\pi)$")
+            # plt.legend()
+            # plt.xlabel("retrain round")
+            # plt.ylabel("KL divergence")
+            # plt.savefig(f"{root}/kl_divergence.pdf", dpi=300, bbox_inches='tight')
+            # plt.close()
+
             self.logger.info(f"DKL of rd {rd} is: {DKL}")
 
             ### delete previous deadpoints and network to save temporary memory, as saved on disk ###
