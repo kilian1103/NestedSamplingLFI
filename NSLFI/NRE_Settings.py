@@ -17,8 +17,8 @@ class NRE_Settings:
             }
         }
         # simulator settings
-        self.n_training_samples = 100_000  # nsamples for initial training using simulator
-        self.n_weighted_samples = 10_000  # nsamples for evaluating NREs
+        self.n_training_samples = 10_000  # nsamples for initial training using simulator
+        self.n_weighted_samples = 1_000  # nsamples for evaluating NREs
         self.obsKey = "x"
         self.targetKey = "z"
         self.contourKey = "l"
@@ -73,12 +73,11 @@ class NRE_Settings:
         self.increased_livepoints_fileroot = "enhanced_run"
         # plotting settings
         self.only_plot_mode = False
-        self.plot_triangle_plot = True
+        self.plot_triangle_plot = False
         self.plot_triangle_plot_zoomed = True
         self.triangle_zoom_start = 8
         self.plot_KL_divergence = True
-        self.plot_KL_compression = True
-        self.plot_logR_histogram = True
-        self.plot_logR_pdf = True
-        self.plot_dataset_truncation = True
-        self.plot_training_data = True
+        self.plot_logR_histogram = False
+        self.plot_logR_pdf = False
+        self.plot_dataset_truncation = False
+        self.plot_training_data = False
