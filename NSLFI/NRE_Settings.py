@@ -37,7 +37,7 @@ class NRE_Settings:
         self.dm_kwargs = {
             'fractions': [0.8, 0.1, 0.1],
             'batch_size': 64,
-            'shuffle': False,
+            'shuffle': True,
         }
         self.trainer_kwargs = {"accelerator": 'cpu',
                                "devices": 60,
