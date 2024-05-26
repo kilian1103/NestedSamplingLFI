@@ -77,7 +77,7 @@ class PolySwyft:
 
             ### post process deadpoints
             if self.deadpoints_processing is not None:
-                deadpoints = self.deadpoints_processing(deadpoints, rd=self.nreSettings.NRE_start_from_round)
+                deadpoints = self.deadpoints_processing(deadpoints, rd=self.nreSettings.NRE_start_from_round-1)
 
             ### save current deadpoints for next training round ###
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
