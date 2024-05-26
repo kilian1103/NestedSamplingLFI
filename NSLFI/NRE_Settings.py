@@ -64,9 +64,7 @@ class NRE_Settings:
         self.termination_abs_dkl = 0.2
         self.n_DKL_estimates = 100
         self.use_noise_resampling = False
-        self.n_noise_resampling_samples = 10
-        self.use_dataset_truncation = False
-        self.dataset_logR_cutoff = 3  # logR contour
+        self.n_noise_resampling_samples = 2
         self.use_livepoint_increasing = False
         self.livepoint_increase_posterior_contour = 0.999  # zero point is at posterior peak
         self.n_increased_livepoints = 1_000

@@ -146,33 +146,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
             plt.savefig(f"{root}/{path}/logR_pdf_{rd}.pdf", dpi=300, bbox_inches='tight')
             plt.close()
 
-    if nreSettings.plot_dataset_truncation and nreSettings.use_dataset_truncation:
-        totalsize = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
-        truncatedsize = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
-        num_samples_below_logR_zero = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
-        num_samples_below_logR_zero_corrected = np.empty(nreSettings.NRE_num_retrain_rounds + 1)
-        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
-            samples = samples_storage[rd]
-            samples["logR"] = samples["logL"] - samples.logZ()
-            logR_cutoff = float(nreSettings.dataset_logR_cutoff)
-            deadpoints_truncated = samples.truncate(logR_cutoff)
-            totalsize[rd] = samples.shape[0]
-            truncatedsize[rd] = deadpoints_truncated.shape[0]
-            num_samples_below_logR_zero[rd] = deadpoints_truncated[deadpoints_truncated.logL < 0].shape[0]
-            num_samples_below_logR_zero_corrected[rd] = deadpoints_truncated[deadpoints_truncated.logR < 0].shape[0]
-        plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), totalsize, label="total deadpoints")
-        lbl = r"trunc. deadpoints at $\log r_{\mathrm{uncorr.}}$" + f" = {nreSettings.dataset_logR_cutoff}"
-        plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), truncatedsize,
-                 label=lbl)
-        plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), num_samples_below_logR_zero,
-                 label=r"trunc. deadpoints, $\log r_{\mathrm{uncorr.}} < 0$")
-        # plt.plot(np.arange(0, nreSettings.NRE_num_retrain_rounds + 1), num_samples_below_logR_zero_corrected,
-        #  label=r"trunc. deadpoints, $\log r_{\mathrm{corr.}} < 0$")
-        plt.xlabel(r"iteration")
-        plt.ylabel(rf"# of samples")
-        plt.legend()
-        plt.savefig(f"{root}/dataset_truncation_metric.pdf")
-        plt.close()
+
 
     if nreSettings.save_joint_training_data and nreSettings.plot_training_data:
         path = "training_data"

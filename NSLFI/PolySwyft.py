@@ -14,7 +14,7 @@ class PolySwyft:
     def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, deadpoints: np.ndarray,
                  network: swyft.SwyftModule, polyset: PolyChordSettings,
-                 callbacks: Callable, lr_round_scheduler: Callable = None):
+                 callbacks: Callable, lr_round_scheduler: Callable = None, deadpoints_processing: Callable = None):
         """
         Initialize the PolySwyft object.
         :param nreSettings: A NRE_Settings object
@@ -31,6 +31,7 @@ class PolySwyft:
         self.obs = obs
         self.callbacks = callbacks
         self.lr_round_scheduler = lr_round_scheduler
+        self.deadpoints_processing = deadpoints_processing
         self.current_deadpoints = deadpoints
         self.network_model = network
         self.network_storage = dict()
@@ -74,10 +75,9 @@ class PolySwyft:
             if self.nreSettings.continual_learning_mode:
                 self.network_model = self.network_storage[self.nreSettings.NRE_start_from_round - 1]
 
-            ### truncate last set of deadpoints for resuming training if neccessary ###
-            if self.nreSettings.use_dataset_truncation:
-                logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
-                deadpoints = deadpoints.truncate(logR_cutoff)
+            ### post process deadpoints
+            if self.deadpoints_processing is not None:
+                deadpoints = self.deadpoints_processing(deadpoints, rd=self.nreSettings.NRE_start_from_round)
 
             ### save current deadpoints for next training round ###
             deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
@@ -260,10 +260,10 @@ class PolySwyft:
             del self.deadpoints_storage[rd - 1]
             del self.network_storage[rd - 1]
 
-        ### truncate deadpoints ###
-        if self.nreSettings.use_dataset_truncation:
-            logR_cutoff = float(self.nreSettings.dataset_logR_cutoff)
-            deadpoints = deadpoints.truncate(logR_cutoff)
+        ### post process deadpoints ###
+        if self.deadpoints_processing is not None:
+            deadpoints = self.deadpoints_processing(deadpoints, rd)
+
         comm_gen.Barrier()
 
         ### save current deadpoints for next round ###
