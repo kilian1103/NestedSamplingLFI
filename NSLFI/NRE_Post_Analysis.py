@@ -190,3 +190,19 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
             plt.title("training data distribution")
             plt.savefig(f"{root}/{path}/training_data_{rd}.pdf")
             plt.close()
+
+    if nreSettings.plot_statistical_power:
+        initial_size = nreSettings.n_training_samples
+        stats_power = np.empty(shape=(nreSettings.NRE_num_retrain_rounds + 1,))
+        for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
+            samples = samples_storage[rd]
+            size = samples.shape[0]
+            stats_power[rd] = size / initial_size
+            initial_size += size
+
+        plt.figure()
+        plt.plot(stats_power)
+        plt.xlabel("retrain round")
+        plt.ylabel("num new samples / num training samples")
+        plt.savefig(f"{root}/statistical_power.pdf")
+        plt.close()
