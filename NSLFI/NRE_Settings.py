@@ -77,6 +77,5 @@ class NRE_Settings:
         self.plot_KL_divergence = True
         self.plot_logR_histogram = False
         self.plot_logR_pdf = False
-        self.plot_dataset_truncation = False
         self.plot_training_data = False
         self.plot_statistical_power = True
