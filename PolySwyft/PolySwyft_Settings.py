@@ -2,13 +2,14 @@ class NRE_Settings:
     def __init__(self):
         """NRE initialisation.
         """
-        self.root = "swyft_polychord_NSNRE"  # root directory
+        self.root = "CMB_Will_dyn_lr_nonoise_6sum"
+        # root directory
         self.child_root = "round"  # root for each round: {root}/{child_root}
-        self.wandb_project_name = "NSNRE"
+        self.wandb_project_name = self.root
         self.neural_network_file = "NRE_network.pt"
         self.logger_name = f"{self.root}.log"
         self.seed = 234
-        self.activate_wandb = False
+        self.activate_wandb = True
         self.wandb_kwargs = {
             'project': self.wandb_project_name,
             'finish': {
@@ -23,21 +24,20 @@ class NRE_Settings:
         self.targetKey = "z"
         self.contourKey = "l"
         self.posteriorsKey = "post"
-        self.num_features = 5
+        self.num_features = 6
         self.num_features_dataset = 100
         self.num_mixture_components = 4
         # network settings
-        self.num_summary_features = 5
+        self.num_summary_features = 10
         self.dropout = 0.3
         self.early_stopping_patience = 20
         self.learning_rate_init = 0.001
-        self.learning_rate_decay = 0.95
-        self.reset_learning_rate = True
+        self.learning_rate_decay = 0.99
         self.optimizer_file = "optimizer_file.pt"
         self.dm_kwargs = {
             'fractions': [0.8, 0.1, 0.1],
             'batch_size': 64,
-            'shuffle': True,
+            'shuffle': False,
         }
         self.trainer_kwargs = {"accelerator": 'cpu',
                                "devices": 60,
@@ -57,7 +57,7 @@ class NRE_Settings:
         # NSNRE settings
         self.continual_learning_mode = True
         self.cyclic_rounds = True
-        self.NRE_num_retrain_rounds = 10
+        self.NRE_num_retrain_rounds = 20
         self.NRE_start_from_round = 0
         self.save_joint_training_data = True  # save joint training data for NRE retraining
         self.joint_training_data_fileroot = "joint_training_data.pt"
@@ -70,10 +70,10 @@ class NRE_Settings:
         self.n_increased_livepoints = 1_000
         self.increased_livepoints_fileroot = "enhanced_run"
         # plotting settings
-        self.only_plot_mode = False
+        self.only_plot_mode = True
         self.plot_triangle_plot = False
         self.plot_triangle_plot_zoomed = True
-        self.triangle_zoom_start = 8
+        self.triangle_zoom_start =16
         self.plot_KL_divergence = True
         self.plot_logR_histogram = False
         self.plot_logR_pdf = False

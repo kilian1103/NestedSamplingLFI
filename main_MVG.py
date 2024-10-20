@@ -1,3 +1,4 @@
+import gc
 import logging
 
 import numpy as np
@@ -10,12 +11,12 @@ from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
-from NSLFI.NRE_Network import Network
-from NSLFI.NRE_Post_Analysis import plot_analysis_of_NSNRE
-from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.NRE_Simulator_MultiGauss import Simulator
-from NSLFI.PolySwyft import PolySwyft
-from NSLFI.utils import reload_data_for_plotting
+from PolySwyft.PolySwyft_Network import Network
+from PolySwyft.PolySwyft_Post_Analysis import plot_analysis_of_NSNRE
+from PolySwyft.PolySwyft_Settings import NRE_Settings
+from PolySwyft.PolySwyft_Simulator_MultiGauss import Simulator
+from PolySwyft.PolySwyft import PolySwyft
+from PolySwyft.utils import reload_data_for_plotting
 
 
 def execute():
@@ -69,7 +70,7 @@ def execute():
         data=posterior, weights=weights.squeeze(),
         logL=true_logratios, labels=params_labels)
 
-    #### instantiate swyft network
+    #### instantiate swyft networ
     network = Network(nreSettings=nreSettings, obs=obs)
 
     #### create callbacks function for pytorch lightning trainer
@@ -81,14 +82,19 @@ def execute():
                                               filename='NRE_{epoch}_{val_loss:.2f}_{train_loss:.2f}', mode='min')
         return [early_stopping_callback, lr_monitor, checkpoint_callback]
 
+    def lr_round_scheduler(rd: int)-> float:
+        lr = nreSettings.learning_rate_init * (nreSettings.learning_rate_decay ** (nreSettings.early_stopping_patience*rd))
+        return lr
+
     #### set up polychord settings
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
     polyset.file_root = "samples"
     polyset.base_dir = nreSettings.root
     polyset.seed = nreSettings.seed
     polyset.nfail = nreSettings.n_training_samples
+    polyset.nlive = 100*nreSettings.num_features
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=deadpoints,
-                          network=network, polyset=polyset, callbacks=create_callbacks)
+                          network=network, polyset=polyset, callbacks=create_callbacks, lr_round_scheduler=lr_round_scheduler)
     del deadpoints
     if not nreSettings.only_plot_mode:
         ### execute main cycle of NSNRE

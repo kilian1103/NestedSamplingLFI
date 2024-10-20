@@ -1,6 +1,8 @@
+
 import logging
 import sys
 
+import anesthetic
 import matplotlib.pyplot as plt
 import pypolychord
 from cmblike.cmb import CMB
@@ -10,11 +12,11 @@ from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
-from NSLFI.NRE_Network_CMB import Network
-from NSLFI.NRE_Post_Analysis import plot_analysis_of_NSNRE
-from NSLFI.NRE_Simulator_CMB import Simulator
-from NSLFI.PolySwyft import PolySwyft
-from NSLFI.utils import *
+from PolySwyft.PolySwyft_Network_CMB import Network
+from PolySwyft.PolySwyft_Post_Analysis import plot_analysis_of_NSNRE
+from PolySwyft.PolySwyft_Simulator_CMB import Simulator
+from PolySwyft.PolySwyft import PolySwyft
+from PolySwyft.utils import *
 
 
 def main():
@@ -43,40 +45,32 @@ def main():
     first_bin_width = 1
     second_bin_width = 30
     divider = 30
-    first_bins = np.array([np.arange(2, divider, first_bin_width), np.arange(2, divider, first_bin_width)]).T  # 2 to 29
-    second_bins = np.array([np.arange(divider, l_max - second_bin_width, second_bin_width),
-                            np.arange(divider + second_bin_width, l_max, second_bin_width)]).T  # 30 to 2508
-    last_bin = np.array([[second_bins[-1, 1], l_max]])  # remainder
-    bins = np.concatenate([first_bins, second_bins, last_bin])
-    bin_centers = np.concatenate([first_bins[:, 0], np.mean(bins[divider - 2:], axis=1)])
-
-    # planck noise
-    pnoise = planck_noise(bin_centers).calculate_noise()
-
-    # binned planck data
-    planck = np.loadtxt('data/planck_unbinned.txt', usecols=[1])
-    planck = cmbs.rebin(planck, bins=bins)
+    bins = np.array([np.arange(2, l_max, 1), np.arange(2, l_max, 1)]).T  # 2 to 2508
+    #first_bins = np.array([np.arange(2, divider, first_bin_width), np.arange(2, divider, first_bin_width)]).T  # 2 to 29
+    #second_bins = np.array([np.arange(divider, l_max - second_bin_width, second_bin_width),
+     #                       np.arange(divider + second_bin_width, l_max, second_bin_width)]).T  # 30 to 2508
+    #last_bin = np.array([[second_bins[-1, 1], l_max]])  # remainder
+    #bins = np.concatenate([first_bins, second_bins, last_bin])
+    bin_centers = bins[:, 0]
+    #bin_centers = np.concatenate([first_bins[:, 0], np.mean(bins[divider - 2:], axis=1)])
     l = bin_centers.copy()
     nreSettings.num_features_dataset = len(l)
 
+
+    # planck noise
+    #pnoise, _ = planck_noise().calculate_noise()
+    pnoise = None
+
+    # binned planck data, not using real data for now
+    #planck = np.loadtxt('data/planck_unbinned.txt', usecols=[1])
+    #planck = cmbs.rebin(planck, bins=bins)
     sim = Simulator(nreSettings=nreSettings, cmbs=cmbs, bins=bins, bin_centers=bin_centers, p_noise=pnoise, cp=cp)
-    obs = swyft.Sample(x=torch.as_tensor(planck)[None, :])
+    # obs = swyft.Sample(x=torch.as_tensor(planck)[None, :])
 
     # ['omegabh2', 'omegach2', 'tau', 'ns', 'As', 'h']
     theta_true = np.array([0.022, 0.12, 0.055, 0.965, 3.0, 0.67])
     sample_true = sim.sample(conditions={nreSettings.targetKey: theta_true})
-    # obs = swyft.Sample(x=torch.as_tensor(sample_true[nreSettings.obsKey])[None, :])
-
-    plt.plot(bin_centers, sample_true[nreSettings.obsKey], label="best fit sample")
-    plt.plot(bin_centers, planck, label="planck")
-    for i in range(3):
-        sample = sim.sample()
-        plt.plot(bin_centers, sample[nreSettings.obsKey])
-    plt.xlabel(r'$\ell$')
-    plt.ylabel(r'$\ell(\ell+1)C_{\ell}/2\pi$')
-    plt.legend()
-    plt.savefig("sim_planck_samples.pdf")
-    plt.close()
+    obs = swyft.Sample(x=torch.as_tensor(sample_true[nreSettings.obsKey])[None, :])
 
     n_per_core = nreSettings.n_training_samples // size_gen
     seed_everything(nreSettings.seed + rank_gen, workers=True)
@@ -90,11 +84,6 @@ def main():
     deadpoints = np.concatenate(deadpoints, axis=0)
     comm_gen.Barrier()
 
-    num_sum = int(sys.argv[1])
-    lr_decay = float(sys.argv[2])
-    nreSettings.num_summary_features = num_sum
-    nreSettings.learning_rate_decay = lr_decay
-    nreSettings.root = nreSettings.root + f"_{num_sum}d_lr_{lr_decay}"
     nreSettings.wandb_project_name = nreSettings.root
     nreSettings.wandb_kwargs["project"] = nreSettings.wandb_project_name
 
@@ -113,12 +102,16 @@ def main():
         lr = nreSettings.learning_rate_init * (nreSettings.learning_rate_decay ** (nreSettings.early_stopping_patience *rd))
         return lr
 
+    def compress_deadpoints(deadpoints: anesthetic.NestedSamples, rd: int)-> anesthetic.NestedSamples:
+        return deadpoints.posterior_points()
+
     #### set up polychord settings
     polyset = pypolychord.PolyChordSettings(nreSettings.num_features, nDerived=nreSettings.nderived)
     polyset.file_root = "samples"
     polyset.base_dir = nreSettings.root
     polyset.seed = nreSettings.seed
     polyset.nfail = nreSettings.n_training_samples
+    polyset.nlive = nreSettings.num_features * 100
     polySwyft = PolySwyft(nreSettings=nreSettings, sim=sim, obs=obs, deadpoints=deadpoints,
                           network=network, polyset=polyset, callbacks=create_callbacks, lr_round_scheduler=lr_round_scheduler)
     del deadpoints

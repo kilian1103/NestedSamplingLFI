@@ -3,13 +3,12 @@ from typing import Tuple, List, Any
 import numpy as np
 import swyft
 import torch
-from cmblike.cmb import CMB
 
-from NSLFI.NRE_Settings import NRE_Settings
+from PolySwyft.PolySwyft_Settings import NRE_Settings
 
 
 class Network(swyft.SwyftModule):
-    def __init__(self, nreSettings: NRE_Settings, obs: swyft.Sample, cmbs: CMB):
+    def __init__(self, nreSettings: NRE_Settings, obs: swyft.Sample):
         super().__init__()
         self.nreSettings = nreSettings
         self.obs = obs
@@ -19,9 +18,8 @@ class Network(swyft.SwyftModule):
         self.network = swyft.LogRatioEstimator_Ndim(num_features=self.nreSettings.num_summary_features, marginals=(
             tuple(dim for dim in range(self.nreSettings.num_features)),),
                                                     varnames=self.nreSettings.targetKey,
-                                                    dropout=self.nreSettings.dropout, hidden_features=64, Lmax=0,
-                                                    num_blocks=3)
-        self.cmbs = cmbs
+                                                    dropout=self.nreSettings.dropout, hidden_features=128, Lmax=0)
+
         self.summarizer = torch.nn.Sequential(torch.nn.Linear(self.nreSettings.num_features_dataset, 32),
                                               torch.nn.ReLU(),
                                               torch.nn.Linear(32, 32),
@@ -37,7 +35,7 @@ class Network(swyft.SwyftModule):
 
     def prior(self, cube) -> np.ndarray:
         """Transforms the unit cube to the prior cube."""
-        theta = self.cmbs.prior(cube=cube)
+        theta = self.nreSettings.model.prior().bijector(x=cube)
         return theta
 
     def logLikelihood(self, theta: np.ndarray) -> Tuple[Any, List]:
@@ -58,4 +56,4 @@ class Network(swyft.SwyftModule):
         print("Last dead point: {}".format(dead[-1]))
 
     def get_new_network(self):
-        return Network(nreSettings=self.nreSettings, obs=self.obs, cmbs=self.cmbs)
+        return Network(nreSettings=self.nreSettings, obs=self.obs)

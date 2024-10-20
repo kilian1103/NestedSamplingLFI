@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Callable
 
 import anesthetic
 import matplotlib.pyplot as plt
@@ -8,14 +8,15 @@ import swyft
 import torch
 from anesthetic import make_2d_axes, make_1d_axes
 
-from NSLFI.NRE_Settings import NRE_Settings
-from NSLFI.utils import compute_KL_compression, compute_KL_divergence_truth
+from PolySwyft.PolySwyft_Settings import NRE_Settings
+from PolySwyft.utils import compute_KL_compression, compute_KL_divergence_truth
+
 
 
 def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModule],
                            samples_storage: Dict[int, anesthetic.Samples], dkl_storage: Dict[int, Tuple[float, float]],
                            nreSettings: NRE_Settings,
-                           obs: swyft.Sample, true_posterior: anesthetic.Samples = None):
+                           obs: swyft.Sample, true_posterior: anesthetic.Samples = None, deadpoints_processing: Callable = None):
     """
     Plot the analysis of the NSNRE.
     :param root: A string of the root directory to save the plots
@@ -28,6 +29,10 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
     :param true_posterior: An anesthetic samples object of the true posterior if available
     :return:
     """
+    from matplotlib import rc
+    rc('text', usetex=True)
+    rc('font', family='serif')
+
     # set up labels for plotting
     params_idx = [i for i in range(0, nreSettings.num_features)]
     params_labels = {i: rf"${nreSettings.targetKey}_{i}$" for i in range(nreSettings.num_features)}
@@ -83,7 +88,7 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
                                                        true_posterior=true_posterior.copy(), obs=obs,
                                                        previous_samples=samples_storage[rd])
                 dkl_storage_true[rd] = KDL_true
-        plt.figure()
+        plt.figure(figsize=(3.5, 3.5))
 
         plt.errorbar(x=[i for i in range(1, nreSettings.NRE_num_retrain_rounds + 1)],
                      y=[dkl_storage[i][0] for i in range(1, nreSettings.NRE_num_retrain_rounds + 1)],
@@ -170,6 +175,8 @@ def plot_analysis_of_NSNRE(root: str, network_storage: Dict[int, swyft.SwyftModu
         stats_power = np.empty(shape=(nreSettings.NRE_num_retrain_rounds + 1,))
         for rd in range(0, nreSettings.NRE_num_retrain_rounds + 1):
             samples = samples_storage[rd]
+            if deadpoints_processing is not None:
+                samples = deadpoints_processing(samples, rd)
             size = samples.shape[0]
             stats_power[rd] = size / initial_size
             initial_size += size

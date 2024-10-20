@@ -6,8 +6,8 @@ import pypolychord
 import wandb
 from pytorch_lightning.loggers import WandbLogger
 
-from NSLFI.NRE_retrain import retrain_next_round
-from NSLFI.utils import *
+from PolySwyft.PolySwyft_retrain import retrain_next_round
+from PolySwyft.utils import *
 import matplotlib.pyplot as plt
 
 class PolySwyft:

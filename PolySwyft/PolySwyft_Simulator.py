@@ -2,7 +2,7 @@ import numpy as np
 import scipy.stats as stats
 import swyft
 
-from NSLFI.NRE_Settings import NRE_Settings
+from PolySwyft.PolySwyft_Settings import NRE_Settings
 
 
 class Simulator(swyft.Simulator):

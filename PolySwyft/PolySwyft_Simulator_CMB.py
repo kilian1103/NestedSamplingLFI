@@ -2,7 +2,7 @@ import numpy as np
 import swyft
 from cmblike.cmb import CMB
 
-from NSLFI.NRE_Settings import NRE_Settings
+from PolySwyft.PolySwyft_Settings import NRE_Settings
 
 
 class Simulator(swyft.Simulator):

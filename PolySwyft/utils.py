@@ -11,7 +11,7 @@ from anesthetic import NestedSamples
 from pypolychord import PolyChordSettings
 from scipy.special import logsumexp
 
-from NSLFI.NRE_Settings import NRE_Settings
+from PolySwyft.PolySwyft_Settings import NRE_Settings
 
 
 def select_weighted_contour(data: NestedSamples, threshold: float) -> int:

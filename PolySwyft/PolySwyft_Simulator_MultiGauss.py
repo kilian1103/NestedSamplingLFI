@@ -1,28 +1,19 @@
-import numpy as np
 import swyft
 import torch
-from lsbi.model import LinearMixtureModel
+from lsbi.model import LinearModel
 
-from NSLFI.NRE_Settings import NRE_Settings
+from PolySwyft.PolySwyft_Settings import NRE_Settings
 
 
 class Simulator(swyft.Simulator):
-    def __init__(self, nreSettings: NRE_Settings, mu_theta: torch.Tensor, M: torch.Tensor, mu_data: torch.Tensor,
-                 Sigma: torch.Tensor, C: torch.Tensor):
+    def __init__(self, nreSettings: NRE_Settings, m: torch.Tensor, M: torch.Tensor, C: torch.Tensor, mu: torch.Tensor,
+                 Sigma: torch.Tensor):
         super().__init__()
         self.nreSettings = nreSettings
         self.n = self.nreSettings.num_features
         self.d = self.nreSettings.num_features_dataset
-        self.a = self.nreSettings.num_mixture_components
-        self.a_vec = self.a_sampler()
-        self.X = M @ Sigma
-        self.model = LinearMixtureModel(M=M, C=C, Sigma=Sigma, mu=mu_theta,
-                                        m=mu_data, logA=np.log(self.a_vec), n=self.n, d=self.d, k=self.a)
-
-    def a_sampler(self):
-        a_components = np.random.rand(self.a)
-        a_components = a_components / a_components.sum()
-        return a_components
+        self.C_inv = torch.inverse(C)
+        self.model = LinearModel(M=M, C=C, Sigma=Sigma, mu=mu, m=m, n=self.n, d=self.d)
 
     def logratio(self, x, z):
         logratio = self.model.likelihood(z).logpdf(x) - self.model.evidence().logpdf(x)
