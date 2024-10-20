@@ -11,13 +11,13 @@ from PolySwyft.utils import *
 import matplotlib.pyplot as plt
 
 class PolySwyft:
-    def __init__(self, nreSettings: NRE_Settings, sim: swyft.Simulator,
+    def __init__(self, polyswyftSettings: PolySwyft_Settings, sim: swyft.Simulator,
                  obs: swyft.Sample, deadpoints: np.ndarray,
                  network: swyft.SwyftModule, polyset: PolyChordSettings,
                  callbacks: Callable, lr_round_scheduler: Callable = None, deadpoints_processing: Callable = None):
         """
         Initialize the PolySwyft object.
-        :param nreSettings: A NRE_Settings object
+        :param polyswyftSettings: A PolySwyft_Settings object
         :param sim: A swyft simulator object
         :param obs: A swyft sample of the observed data
         :param deadpoints: A torch.Tensor of the deadpoints
@@ -25,7 +25,7 @@ class PolySwyft:
         :param polyset: A PolyChordSettings object
         :param callbacks: A callable object for instantiating the new callbacks of the pl.trainer
         """
-        self.nreSettings = nreSettings
+        self.polyswyftSettings = polyswyftSettings
         self.polyset = polyset
         self.sim = sim
         self.obs = obs
@@ -53,39 +53,39 @@ class PolySwyft:
         rank_gen = comm_gen.Get_rank()
         size_gen = comm_gen.Get_size()
 
-        self.logger = logging.getLogger(self.nreSettings.logger_name)
+        self.logger = logging.getLogger(self.polyswyftSettings.logger_name)
 
         ### create root folder ###
         try:
-            os.makedirs(self.nreSettings.root)
+            os.makedirs(self.polyswyftSettings.root)
         except OSError:
             self.logger.info("root folder already exists!")
 
         ### save settings
-        with open(f'{self.nreSettings.root}/settings.pkl', 'wb') as file:
-            pickle.dump(self.nreSettings, file)
+        with open(f'{self.polyswyftSettings.root}/settings.pkl', 'wb') as file:
+            pickle.dump(self.polyswyftSettings, file)
 
         ### reload data if necessary to resume run ###
-        if self.nreSettings.NRE_start_from_round > 0:
-            if (self.nreSettings.NRE_start_from_round > self.nreSettings.NRE_num_retrain_rounds and
-                    self.nreSettings.cyclic_rounds):
+        if self.polyswyftSettings.NRE_start_from_round > 0:
+            if (self.polyswyftSettings.NRE_start_from_round > self.polyswyftSettings.NRE_num_retrain_rounds and
+                    self.polyswyftSettings.cyclic_rounds):
                 raise ValueError("NRE_start_from_round must be smaller than NRE_num_retrain_rounds")
             self._reload_data()
-            deadpoints = self.deadpoints_storage[self.nreSettings.NRE_start_from_round - 1]
-            if self.nreSettings.continual_learning_mode:
-                self.network_model = self.network_storage[self.nreSettings.NRE_start_from_round - 1]
+            deadpoints = self.deadpoints_storage[self.polyswyftSettings.NRE_start_from_round - 1]
+            if self.polyswyftSettings.continual_learning_mode:
+                self.network_model = self.network_storage[self.polyswyftSettings.NRE_start_from_round - 1]
 
             ### post process deadpoints
             if self.deadpoints_processing is not None:
-                deadpoints = self.deadpoints_processing(deadpoints, rd=self.nreSettings.NRE_start_from_round-1)
+                deadpoints = self.deadpoints_processing(deadpoints, rd=self.polyswyftSettings.NRE_start_from_round - 1)
 
             ### save current deadpoints for next training round ###
-            deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
+            deadpoints = deadpoints.iloc[:, :self.polyswyftSettings.num_features].to_numpy()
 
             self.current_deadpoints = deadpoints
 
         ### execute main cycle ###
-        if self.nreSettings.cyclic_rounds:
+        if self.polyswyftSettings.cyclic_rounds:
             self._cyclic_rounds()
         else:
             self._cyclic_kl()
@@ -95,18 +95,18 @@ class PolySwyft:
         del self.network_storage
 
     def _cyclic_rounds(self):
-        for rd in range(self.nreSettings.NRE_start_from_round, self.nreSettings.NRE_num_retrain_rounds + 1):
+        for rd in range(self.polyswyftSettings.NRE_start_from_round, self.polyswyftSettings.NRE_num_retrain_rounds + 1):
             self._cycle(rd)
 
     def _cyclic_kl(self):
         DKL_info = (100, 100)
         DKL, DKL_std = DKL_info
-        rd = self.nreSettings.NRE_start_from_round
-        while abs(DKL) >= self.nreSettings.termination_abs_dkl:
+        rd = self.polyswyftSettings.NRE_start_from_round
+        while abs(DKL) >= self.polyswyftSettings.termination_abs_dkl:
             self._cycle(rd)
             DKL, DKL_std = self.dkl_storage[rd]
             rd += 1
-        self.nreSettings.NRE_num_retrain_rounds = rd - 1
+        self.polyswyftSettings.NRE_num_retrain_rounds = rd - 1
 
     def _cycle(self, rd):
         try:
@@ -120,7 +120,7 @@ class PolySwyft:
 
         ### start NRE training section ###
         self.logger.info("training network round: " + str(rd))
-        root = f"{self.nreSettings.root}/{self.nreSettings.child_root}_{rd}"
+        root = f"{self.polyswyftSettings.root}/{self.polyswyftSettings.child_root}_{rd}"
         ### create root folder ###
         try:
             os.makedirs(root)
@@ -128,24 +128,24 @@ class PolySwyft:
             self.logger.info("root folder already exists!")
 
         ### setup wandb ###
-        if self.nreSettings.activate_wandb:
+        if self.polyswyftSettings.activate_wandb:
             try:
-                self.finish_kwargs = self.nreSettings.wandb_kwargs.pop("finish")
+                self.finish_kwargs = self.polyswyftSettings.wandb_kwargs.pop("finish")
             except KeyError:
                 self.finish_kwargs = {'exit_code': None,
                                       'quiet': None}
-            self.nreSettings.wandb_kwargs["name"] = f"{self.nreSettings.child_root}_{rd}"
-            self.nreSettings.wandb_kwargs["save_dir"] = f"{self.nreSettings.root}/{self.nreSettings.child_root}_{rd}"
-            wandb_logger = WandbLogger(**self.nreSettings.wandb_kwargs)
-            self.nreSettings.trainer_kwargs["logger"] = wandb_logger
+            self.polyswyftSettings.wandb_kwargs["name"] = f"{self.polyswyftSettings.child_root}_{rd}"
+            self.polyswyftSettings.wandb_kwargs["save_dir"] = f"{self.polyswyftSettings.root}/{self.polyswyftSettings.child_root}_{rd}"
+            wandb_logger = WandbLogger(**self.polyswyftSettings.wandb_kwargs)
+            self.polyswyftSettings.trainer_kwargs["logger"] = wandb_logger
 
         ### setup trainer ###
-        self.nreSettings.trainer_kwargs["default_root_dir"] = root
-        self.nreSettings.trainer_kwargs["callbacks"] = self.callbacks()
-        trainer = swyft.SwyftTrainer(**self.nreSettings.trainer_kwargs)
+        self.polyswyftSettings.trainer_kwargs["default_root_dir"] = root
+        self.polyswyftSettings.trainer_kwargs["callbacks"] = self.callbacks()
+        trainer = swyft.SwyftTrainer(**self.polyswyftSettings.trainer_kwargs)
 
         ### setup network and train network###
-        if self.nreSettings.continual_learning_mode:
+        if self.polyswyftSettings.continual_learning_mode:
             network = self.network_model
         else:
             network = self.network_model.get_new_network()
@@ -156,23 +156,23 @@ class PolySwyft:
             self.network_model.optimizer_init.optim_args = dict(lr=learning_rate)
 
         network = retrain_next_round(root=root, deadpoints=self.current_deadpoints,
-                                     nreSettings=self.nreSettings, sim=self.sim,
+                                     polyswyftSettings=self.polyswyftSettings, sim=self.sim,
                                      network=network,
                                      trainer=trainer, rd=rd)
         comm_gen.Barrier()
-        if self.nreSettings.activate_wandb and rank_gen == 0:
+        if self.polyswyftSettings.activate_wandb and rank_gen == 0:
             wandb.finish(**self.finish_kwargs)
 
         ### save network on disk ###
         if rank_gen == 0:
-            torch.save(network.state_dict(), f"{root}/{self.nreSettings.neural_network_file}")
-            torch.save(network.optimizers().state_dict(), f"{root}/{self.nreSettings.optimizer_file}")
+            torch.save(network.state_dict(), f"{root}/{self.polyswyftSettings.neural_network_file}")
+            torch.save(network.optimizers().state_dict(), f"{root}/{self.polyswyftSettings.optimizer_file}")
 
         comm_gen.Barrier()
 
         ### load network on disk (to sync across nodes) ###
-        if self.nreSettings.continual_learning_mode:
-            self.network_model.load_state_dict(torch.load(f"{root}/{self.nreSettings.neural_network_file}"))
+        if self.polyswyftSettings.continual_learning_mode:
+            self.network_model.load_state_dict(torch.load(f"{root}/{self.polyswyftSettings.neural_network_file}"))
 
         ### save network and root in memory###
         comm_gen.Barrier()
@@ -187,8 +187,8 @@ class PolySwyft:
         comm_gen.barrier()
 
         pypolychord.run_polychord(loglikelihood=network.logLikelihood,
-                                  nDims=self.nreSettings.num_features,
-                                  nDerived=self.nreSettings.nderived, settings=self.polyset,
+                                  nDims=self.polyswyftSettings.num_features,
+                                  nDerived=self.polyswyftSettings.nderived, settings=self.polyset,
                                   prior=network.prior, dumper=network.dumper)
         comm_gen.Barrier()
 
@@ -197,43 +197,43 @@ class PolySwyft:
         comm_gen.Barrier()
 
         ### polychord round 2 section ###
-        if self.nreSettings.use_livepoint_increasing:
+        if self.polyswyftSettings.use_livepoint_increasing:
 
             ### choose contour to increase livepoints ###
             index = select_weighted_contour(deadpoints,
-                                            threshold=1 - self.nreSettings.livepoint_increase_posterior_contour)
+                                            threshold=1 - self.polyswyftSettings.livepoint_increase_posterior_contour)
             logL = deadpoints.iloc[index, :].logL
 
             try:
-                os.makedirs(f"{root}/{self.nreSettings.increased_livepoints_fileroot}")
+                os.makedirs(f"{root}/{self.polyswyftSettings.increased_livepoints_fileroot}")
             except OSError:
                 self.logger.info("root folder already exists!")
 
             ### run polychord round 2 ###
-            self.polyset.base_dir = f"{root}/{self.nreSettings.increased_livepoints_fileroot}"
-            self.polyset.nlives = {logL: self.nreSettings.n_increased_livepoints}
+            self.polyset.base_dir = f"{root}/{self.polyswyftSettings.increased_livepoints_fileroot}"
+            self.polyset.nlives = {logL: self.polyswyftSettings.n_increased_livepoints}
             comm_gen.Barrier()
             pypolychord.run_polychord(loglikelihood=network.logLikelihood,
-                                      nDims=self.nreSettings.num_features,
-                                      nDerived=self.nreSettings.nderived, settings=self.polyset,
+                                      nDims=self.polyswyftSettings.num_features,
+                                      nDerived=self.polyswyftSettings.nderived, settings=self.polyset,
                                       prior=network.prior, dumper=network.dumper)
             comm_gen.Barrier()
             self.polyset.nlives = {}
             deadpoints = anesthetic.read_chains(
-                root=f"{root}/{self.nreSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
+                root=f"{root}/{self.polyswyftSettings.increased_livepoints_fileroot}/{self.polyset.file_root}")
             comm_gen.Barrier()
 
         self.deadpoints_storage[rd] = deadpoints.copy()
 
         ### compute KL compression ###
         #TODO implement reload dkl compression code
-        # DKL = compute_KL_compression(self.deadpoints_storage[rd], self.nreSettings)
+        # DKL = compute_KL_compression(self.deadpoints_storage[rd], self.polyswyftSettings)
         # self.dkl_compression_storage[rd] = DKL
 
         ### compute KL divergence ###
         if rd > 0:
             previous_network = self.network_storage[rd - 1]
-            DKL = compute_KL_divergence(nreSettings=self.nreSettings, previous_network=previous_network.eval(),
+            DKL = compute_KL_divergence(polyswyftSettings=self.polyswyftSettings, previous_network=previous_network.eval(),
                                         current_samples=self.deadpoints_storage[rd], obs=self.obs,
                                         previous_samples=self.deadpoints_storage[rd - 1])
             self.dkl_storage[rd] = DKL
@@ -267,22 +267,22 @@ class PolySwyft:
         comm_gen.Barrier()
 
         ### save current deadpoints for next round ###
-        deadpoints = deadpoints.iloc[:, :self.nreSettings.num_features].to_numpy()
+        deadpoints = deadpoints.iloc[:, :self.polyswyftSettings.num_features].to_numpy()
         self.logger.info(f"Number of deadpoints for next rd {rd + 1}: {deadpoints.shape[0]}")
         self.current_deadpoints = deadpoints
         return
 
     def _reload_data(self):
         root_storage, network_storage, samples_storage, dkl_storage = reload_data_for_plotting(
-            nreSettings=self.nreSettings,
+            polyswyftSettings=self.polyswyftSettings,
             network=self.network_model,
             polyset=self.polyset,
-            until_round=self.nreSettings.NRE_start_from_round - 1,
+            until_round=self.polyswyftSettings.NRE_start_from_round - 1,
             only_last_round=True)
         self.root_storage = root_storage
         self.network_storage = network_storage
         self.deadpoints_storage = samples_storage
         self.dkl_storage = dkl_storage
 
-        del self.network_storage[self.nreSettings.NRE_start_from_round - 2]
-        del self.deadpoints_storage[self.nreSettings.NRE_start_from_round - 2]
+        del self.network_storage[self.polyswyftSettings.NRE_start_from_round - 2]
+        del self.deadpoints_storage[self.polyswyftSettings.NRE_start_from_round - 2]

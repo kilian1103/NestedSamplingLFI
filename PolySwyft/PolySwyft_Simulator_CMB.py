@@ -2,13 +2,13 @@ import numpy as np
 import swyft
 from cmblike.cmb import CMB
 
-from PolySwyft.PolySwyft_Settings import NRE_Settings
+from PolySwyft.PolySwyft_Settings import PolySwyft_Settings
 
 
 class Simulator(swyft.Simulator):
-    def __init__(self, nreSettings: NRE_Settings, cmbs: CMB, bins, bin_centers, p_noise, cp=False):
+    def __init__(self, polyswyftSettings: PolySwyft_Settings, cmbs: CMB, bins, bin_centers, p_noise, cp=False):
         super().__init__()
-        self.nreSettings = nreSettings
+        self.polyswyftSettings = polyswyftSettings
         self.cmbs = cmbs
         self.bins = bins
         self.bin_centers = bin_centers
@@ -17,7 +17,7 @@ class Simulator(swyft.Simulator):
         self.cp = cp
 
     def prior(self):
-        cube = np.random.uniform(0, 1, self.nreSettings.num_features)
+        cube = np.random.uniform(0, 1, self.polyswyftSettings.num_features)
         theta = self.cmbs.prior(cube=cube)
         return theta
 
@@ -27,6 +27,6 @@ class Simulator(swyft.Simulator):
 
     def build(self, graph):
         # prior
-        z = graph.node(self.nreSettings.targetKey, self.prior)
+        z = graph.node(self.polyswyftSettings.targetKey, self.prior)
         # likelihood
-        x = graph.node(self.nreSettings.obsKey, self.likelihood, z)
+        x = graph.node(self.polyswyftSettings.obsKey, self.likelihood, z)

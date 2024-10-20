@@ -2,16 +2,16 @@ import numpy as np
 import scipy.stats as stats
 import swyft
 
-from PolySwyft.PolySwyft_Settings import NRE_Settings
+from PolySwyft.PolySwyft_Settings import PolySwyft_Settings
 
 
 class Simulator(swyft.Simulator):
-    def __init__(self, nreSettings: NRE_Settings, bounds_z=None, bimodal=True):
+    def __init__(self, polyswyftSettings: PolySwyft_Settings, bounds_z=None, bimodal=True):
         super().__init__()
-        self.nreSettings = nreSettings
+        self.polyswyftSettings = polyswyftSettings
         self.z_sampler = swyft.RectBoundSampler(
-            [stats.uniform(self.nreSettings.sim_prior_lower, self.nreSettings.prior_width),
-             stats.uniform(self.nreSettings.sim_prior_lower, self.nreSettings.prior_width),
+            [stats.uniform(self.polyswyftSettings.sim_prior_lower, self.polyswyftSettings.prior_width),
+             stats.uniform(self.polyswyftSettings.sim_prior_lower, self.polyswyftSettings.prior_width),
              ],
             bounds=bounds_z
         )
@@ -27,7 +27,7 @@ class Simulator(swyft.Simulator):
         return z
 
     def build(self, graph):
-        z = graph.node(self.nreSettings.targetKey, self.z_sampler)
-        x = graph.node(self.nreSettings.obsKey, lambda z: self.f(z) + np.random.randn(self.nreSettings.num_features), z)
-        l = graph.node(self.nreSettings.contourKey, lambda z: -stats.norm.logpdf(self.f(z)).sum(),
+        z = graph.node(self.polyswyftSettings.targetKey, self.z_sampler)
+        x = graph.node(self.polyswyftSettings.obsKey, lambda z: self.f(z) + np.random.randn(self.polyswyftSettings.num_features), z)
+        l = graph.node(self.polyswyftSettings.contourKey, lambda z: -stats.norm.logpdf(self.f(z)).sum(),
                        z)  # return -ln p(x=0|z) for cross-checks

@@ -1,4 +1,4 @@
-class NRE_Settings:
+class PolySwyft_Settings:
     def __init__(self):
         """NRE initialisation.
         """

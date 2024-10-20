@@ -5,35 +5,35 @@ import swyft
 import torch
 from cmblike.cmb import CMB
 
-from PolySwyft.PolySwyft_Settings import NRE_Settings
+from PolySwyft.PolySwyft_Settings import PolySwyft_Settings
 
 
 class Network(swyft.SwyftModule):
-    def __init__(self, nreSettings: NRE_Settings, obs: swyft.Sample, cmbs: CMB):
+    def __init__(self, polyswyftSettings: PolySwyft_Settings, obs: swyft.Sample, cmbs: CMB):
         super().__init__()
-        self.nreSettings = nreSettings
+        self.polyswftSettings = polyswyftSettings
         self.obs = obs
-        self.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=self.nreSettings.learning_rate_init),
+        self.optimizer_init = swyft.OptimizerInit(torch.optim.Adam, dict(lr=self.polyswftSettings.learning_rate_init),
                                                   torch.optim.lr_scheduler.ExponentialLR,
-                                                  dict(gamma=self.nreSettings.learning_rate_decay))
-        self.network = swyft.LogRatioEstimator_Ndim(num_features=self.nreSettings.num_summary_features, marginals=(
-            tuple(dim for dim in range(self.nreSettings.num_features)),),
-                                                    varnames=self.nreSettings.targetKey,
-                                                    dropout=self.nreSettings.dropout, hidden_features=64, Lmax=0,
+                                                  dict(gamma=self.polyswftSettings.learning_rate_decay))
+        self.network = swyft.LogRatioEstimator_Ndim(num_features=self.polyswftSettings.num_summary_features, marginals=(
+            tuple(dim for dim in range(self.polyswftSettings.num_features)),),
+                                                    varnames=self.polyswftSettings.targetKey,
+                                                    dropout=self.polyswftSettings.dropout, hidden_features=64, Lmax=0,
                                                     num_blocks=3)
         self.cmbs = cmbs
-        self.summarizer = torch.nn.Sequential(torch.nn.Linear(self.nreSettings.num_features_dataset, 32),
+        self.summarizer = torch.nn.Sequential(torch.nn.Linear(self.polyswftSettings.num_features_dataset, 32),
                                               torch.nn.ReLU(),
                                               torch.nn.Linear(32, 32),
                                               torch.nn.ReLU(),
                                               torch.nn.Linear(32, 16),
                                               torch.nn.ReLU(),
-                                              torch.nn.Linear(16, self.nreSettings.num_summary_features)
+                                              torch.nn.Linear(16, self.polyswftSettings.num_summary_features)
                                               )
 
     def forward(self, A, B):
-        s = self.summarizer(A[self.nreSettings.obsKey])
-        return self.network(s, B[self.nreSettings.targetKey])
+        s = self.summarizer(A[self.polyswftSettings.obsKey])
+        return self.network(s, B[self.polyswftSettings.targetKey])
 
     def prior(self, cube) -> np.ndarray:
         """Transforms the unit cube to the prior cube."""
@@ -46,7 +46,7 @@ class Network(swyft.SwyftModule):
         # check if list of datapoints or single datapoint
         if theta.ndim == 1:
             theta = theta.unsqueeze(0)
-        s = self.summarizer(self.obs[self.nreSettings.obsKey])
+        s = self.summarizer(self.obs[self.polyswftSettings.obsKey])
         prediction = self.network(s, theta)
         if prediction.logratios[:, 0].shape[0] == 1:
             return float(prediction.logratios[:, 0]), []
@@ -58,4 +58,4 @@ class Network(swyft.SwyftModule):
         print("Last dead point: {}".format(dead[-1]))
 
     def get_new_network(self):
-        return Network(nreSettings=self.nreSettings, obs=self.obs, cmbs=self.cmbs)
+        return Network(polyswyftSettings=self.polyswftSettings, obs=self.obs, cmbs=self.cmbs)
